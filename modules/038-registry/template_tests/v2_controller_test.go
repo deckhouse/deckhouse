@@ -1677,6 +1677,24 @@ var _ = Describe("Module :: registry :: helm template :: v2 garbage collection",
 		// what authorizes cutting an air-gapped cluster off from its upstream.
 		Expect(cluster.Field("rules").String()).To(ContainSubstring("modulereleases"))
 		Expect(cluster.Field("rules").String()).ToNot(ContainSubstring("modulereleases/status"))
+
+		// And the modules run through a ModulePullOverride, with the source each module records:
+		// without them the collection deleted those modules' images under their pods.
+		var overrides, modules bool
+		for _, rule := range cluster.Field("rules").Array() {
+			for _, resource := range rule.Get("resources").Array() {
+				switch resource.String() {
+				case "modulepulloverrides":
+					overrides = true
+					Expect(rule.Get("verbs").String()).To(Equal(`["get","list","watch"]`))
+				case "modules":
+					modules = true
+					Expect(rule.Get("verbs").String()).To(Equal(`["get","list","watch"]`))
+				}
+			}
+		}
+		Expect(overrides).To(BeTrue())
+		Expect(modules).To(BeTrue())
 	})
 
 	// A pod does not leave a node that dies, so the syncer reads the node a report came from to tell a

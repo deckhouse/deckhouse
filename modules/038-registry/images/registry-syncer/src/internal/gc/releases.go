@@ -249,6 +249,8 @@ const moduleSourceLabel = "source"
 //
 // An absent CRD is not an error but an empty answer: a cluster can legitimately have no modules beyond
 // the platform's own, and on such a cluster nothing about the previous behaviour changes.
+//
+// And the modules run through a ModulePullOverride, at its tag — see overriddenModules.
 func ModulesFromCluster(ctx context.Context, c client.Client) ([]fill.ModuleRef, error) {
 	list := &unstructured.UnstructuredList{}
 	list.SetGroupVersionKind(moduleReleaseGVK)
@@ -301,6 +303,83 @@ func ModulesFromCluster(ctx context.Context, c client.Client) ([]fill.ModuleRef,
 		modules = append(modules, module)
 	}
 
+	overridden, err := overriddenModules(ctx, c, sources)
+	if err != nil {
+		return nil, err
+	}
+	return append(modules, overridden...), nil
+}
+
+// modulePullOverrideGVK is how a module is run at a tag of the operator's choosing instead of at a
+// release: the module named like the object runs the package `spec.imageTag` of its source.
+var modulePullOverrideGVK = schema.GroupVersionKind{
+	Group:   "deckhouse.io",
+	Version: "v1alpha2",
+	Kind:    "ModulePullOverrideList",
+}
+
+// moduleGVK is where a module records the ModuleSource it is installed from, `properties.source`.
+var moduleGVK = schema.GroupVersionKind{
+	Group:   "deckhouse.io",
+	Version: "v1alpha1",
+	Kind:    "ModuleList",
+}
+
+// overriddenModules is the modules the cluster runs through a ModulePullOverride.
+//
+// Such a module has no release at the tag it runs, so the releases alone leave it out: its images are
+// then neither filled nor kept, and a collection deletes them under the pods running them. In an
+// air-gapped cluster the next restart of such a pod is a module that cannot start.
+//
+// Only an override that has deployed something, `status.imageDigest`: the controller clears it when the
+// module is disabled, and leaves it empty for an embedded module or one it could not find. The tag is
+// kept as written — it is the operator's (`main`, `mr123`, `v1.0.2`), not a release version. The source
+// is the module's own, as the override controller reads it; v1alpha2 overrides do not name one.
+func overriddenModules(
+	ctx context.Context, c client.Client, sources map[string]fill.ModuleSource,
+) ([]fill.ModuleRef, error) {
+	overrides := &unstructured.UnstructuredList{}
+	overrides.SetGroupVersionKind(modulePullOverrideGVK)
+	if err := c.List(ctx, overrides); err != nil {
+		if meta.IsNoMatchError(err) || apierrors.IsNotFound(err) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("listing the module pull overrides: %w", err)
+	}
+	if len(overrides.Items) == 0 {
+		return nil, nil
+	}
+
+	// Read like the sources: a module whose source could not be read is looked for under the platform's
+	// path, and its images, not found there, would be taken for garbage.
+	installed := &unstructured.UnstructuredList{}
+	installed.SetGroupVersionKind(moduleGVK)
+	if err := c.List(ctx, installed); err != nil {
+		return nil, fmt.Errorf("listing the modules for the sources of their overrides: %w", err)
+	}
+	sourceOf := make(map[string]string, len(installed.Items))
+	for i := range installed.Items {
+		source, _, _ := unstructured.NestedString(installed.Items[i].Object, "properties", "source")
+		sourceOf[installed.Items[i].GetName()] = source
+	}
+
+	var modules []fill.ModuleRef
+	for i := range overrides.Items {
+		item := &overrides.Items[i]
+		tag, _, _ := unstructured.NestedString(item.Object, "spec", "imageTag")
+		digest, _, _ := unstructured.NestedString(item.Object, "status", "imageDigest")
+		if tag == "" || digest == "" {
+			continue
+		}
+
+		label := sourceOf[item.GetName()]
+		source, known := sources[label]
+		module := fill.ModuleRef{Name: item.GetName(), Version: tag, Source: source}
+		if label != "" && !known {
+			module.MissingSource = label
+		}
+		modules = append(modules, module)
+	}
 	return modules, nil
 }
 

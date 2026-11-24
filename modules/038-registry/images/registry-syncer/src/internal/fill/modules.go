@@ -86,6 +86,14 @@ type ModuleRef struct {
 	// name a package its source does not hold yet, and that must not keep every replica copying.
 	// See Release.Optional.
 	Pending bool
+
+	// AlsoUnderPlatform marks a module of a ModuleSource on the platform's own `modules` path — the
+	// upstream's, or the store's — see MarkPlatformPath. Its pods name their images on that path, and
+	// the node agent serves it from the store's `modules/<name>`, not from the source's own path. The
+	// leader's fill writes both, see Copier.targets; a follower, which reads from its leader and resolves
+	// no origins, copies the images to both by this mark. Without them a follower that takes over while
+	// the upstream is unreachable has none of the module's images where the nodes ask for them.
+	AlsoUnderPlatform bool
 }
 
 // FromPlatform tells a module of the platform's own source, which the store keeps under the
@@ -222,6 +230,14 @@ func moduleReferences(
 			return nil, fmt.Errorf("reading the image set of module %s: %w", module.Name, err)
 		}
 
+		// The images only, and not the package: the nodes pull a module's images, by digest, and its
+		// package is read from the source's own path. Only for a module read from the store: one read from
+		// its origin lands on both paths through the leader's routes.
+		alsoUnder, platformPath := name.Repository{}, module.Origin == nil && module.AlsoUnderPlatform
+		if platformPath {
+			alsoUnder = registry.Repo(source.Repository, modulesRepository+"/"+module.Name)
+		}
+
 		for _, image := range images {
 			parsed, err := v1.NewHash(image.digest)
 			if err != nil {
@@ -231,6 +247,11 @@ func moduleReferences(
 			reference := repository.Digest(parsed.String())
 			add(reference)
 			attribute.call(reference, moduleOwner(module, image.name))
+			if platformPath {
+				reference := alsoUnder.Digest(parsed.String())
+				add(reference)
+				attribute.call(reference, moduleOwner(module, image.name))
+			}
 		}
 	}
 

@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/google/go-containerregistry/pkg/v1/random"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -254,6 +255,77 @@ func TestAReplicaReadsASourcesModuleFromItsPath(t *testing.T) {
 		store.Address + "/system/deckhouse/module-sources/vendor/dashboard@" + image.String(),
 		store.Address + "/system/deckhouse/module-sources/vendor:dashboard",
 	}, listed)
+}
+
+// TestMarkPlatformPath: a source on the platform's own `modules` path — the upstream's, or the store's —
+// is the one whose pods name their images where the platform's are, and only with an upstream to fill
+// that path from.
+func TestMarkPlatformPath(t *testing.T) {
+	upstream := Registry{Address: "registry.deckhouse.io", Repository: "deckhouse/ee"}
+	modules := []ModuleRef{
+		{Name: "on-upstream", Source: ModuleSource{Name: "dev", Repository: "Registry.Deckhouse.io/deckhouse/ee/modules/"}},
+		{Name: "on-store", Source: ModuleSource{Name: "alias",
+			Repository: "registry.d8-system.svc:5001/system/deckhouse/modules"}},
+		{Name: "console", Source: ModuleSource{Name: "deckhouse",
+			Repository: "registry.d8-system.svc:5001/system/deckhouse/modules"}},
+		{Name: "vendor-module", Source: ModuleSource{Name: "vendor", Repository: "vendor.example.com/catalog/modules"}},
+		{Name: "moved", Source: ModuleSource{Name: "moved",
+			Repository: "registry.d8-system.svc:5001/system/deckhouse/module-sources/moved"}},
+		{Name: "other-edition", Source: ModuleSource{Name: "ce", Repository: "registry.deckhouse.io/deckhouse/ce/modules"}},
+	}
+
+	marked := map[string]bool{}
+	for _, module := range MarkPlatformPath(modules, upstream) {
+		marked[module.Name] = module.AlsoUnderPlatform
+	}
+	assert.Equal(t, map[string]bool{
+		"on-upstream": true, "on-store": true,
+		"console": false, "vendor-module": false, "moved": false, "other-edition": false,
+	}, marked)
+
+	for _, module := range MarkPlatformPath(modules, Registry{}) {
+		assert.False(t, module.AlsoUnderPlatform, "without an upstream nothing fills the platform's path: %s", module.Name)
+	}
+}
+
+// TestAReplicaCopiesASourceOnThePlatformPathToBoth: the nodes ask for the images of a source on the
+// upstream's own `modules` path under the platform's path, and the leader holds them under both. A
+// follower that copied the source's path alone could not serve them once it took over.
+func TestAReplicaCopiesASourceOnThePlatformPathToBoth(t *testing.T) {
+	leader := startRegistry(t)
+	leader.Repository = "system/deckhouse"
+	follower := startRegistry(t)
+	follower.Repository = "system/deckhouse"
+
+	image, err := random.Image(256, 1)
+	require.NoError(t, err)
+	digest, err := image.Digest()
+	require.NoError(t, err)
+	for _, repository := range []string{"module-sources/dev/console", "modules/console"} {
+		reference, err := name.NewDigest(leader.Address+"/system/deckhouse/"+repository+"@"+digest.String(), name.Insecure)
+		require.NoError(t, err)
+		require.NoError(t, remote.Write(reference, image))
+	}
+	pushInstaller(t, leader, "system/deckhouse/module-sources/dev/console:main", map[string]any{
+		"images_digests.json": map[string]string{"web": digest.String()},
+	})
+	pushInstaller(t, leader, "system/deckhouse/module-sources/dev:console", map[string]any{"module.yaml": map[string]string{}})
+
+	upstream := Registry{Address: "dev-registry.deckhouse.io", Repository: "sys/deckhouse-oss"}
+	modules := MarkPlatformPath([]ModuleRef{{Name: "console", Version: "main",
+		Source: ModuleSource{Name: "dev", Repository: "dev-registry.deckhouse.io/sys/deckhouse-oss/modules"}}}, upstream)
+
+	copier := &Copier{Source: leader, Destination: follower, Discover: modulesAndCatalogues(modules)}
+	report, err := copier.Run(context.Background())
+	require.NoError(t, err)
+	assert.Empty(t, report.Failed)
+
+	for _, repository := range []string{"module-sources/dev/console", "modules/console"} {
+		reference, err := name.NewDigest(follower.Address+"/system/deckhouse/"+repository+"@"+digest.String(), name.Insecure)
+		require.NoError(t, err)
+		_, err = remote.Head(reference)
+		assert.NoError(t, err, "the follower holds the image under %s", repository)
+	}
 }
 
 // TestTheFlantSourceIsReadFromTheUpstream: on FE the platform renders the Flant ModuleSource from the

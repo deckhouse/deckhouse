@@ -51,7 +51,6 @@ func ResolveOrigins(modules []ModuleRef, upstream, local Registry) ([]ModuleRef,
 // is copied ahead of the set — see Copier.AheadRoutes. The upstream is read as passed, so the caller
 // passes it paced as well.
 func ResolvePacedOrigins(modules []ModuleRef, upstream, local Registry, pacer *Pacer) ([]ModuleRef, error) {
-	upstreamModules := normalizedRepository(upstream.Address + "/" + upstream.Repository + "/" + modulesRepository)
 	storeRoot := normalizedRepository(constant.Host + constant.Path)
 
 	fromUpstream := upstream
@@ -79,12 +78,12 @@ func ResolvePacedOrigins(modules []ModuleRef, upstream, local Registry, pacer *P
 			resolved = append(resolved, module)
 			continue
 		}
-		switch repo {
-		case "", upstreamModules, storeRoot + "/" + modulesRepository:
+		switch {
+		case repo == "" || onPlatformPath(repo, upstream):
 			// On the upstream's registry, or pointed at the platform's own path in the store, which
 			// is the upstream's through the cache: read where the upstream keeps it.
 			module.Origin = &fromUpstream
-		case storeRoot + "/" + SourceStorePath(module.Source.Name):
+		case repo == storeRoot+"/"+SourceStorePath(module.Source.Name):
 			store := local
 			store.Repository = strings.Trim(local.Repository, "/") + "/" + SourceStorePath(module.Source.Name)
 			module.Origin = &store
@@ -103,6 +102,28 @@ func ResolvePacedOrigins(modules []ModuleRef, upstream, local Registry, pacer *P
 		resolved = append(resolved, module)
 	}
 	return resolved, nil
+}
+
+// MarkPlatformPath marks the modules whose ModuleSource is on the platform's own `modules` path — see
+// ModuleRef.AlsoUnderPlatform. For a follower, which resolves no origins. Nothing is marked without an
+// upstream: the leader writes the platform's path only while it fills from one, and a follower that
+// asked it for what it never wrote would not be complete again.
+func MarkPlatformPath(modules []ModuleRef, upstream Registry) []ModuleRef {
+	marked := make([]ModuleRef, 0, len(modules))
+	for _, module := range modules {
+		module.AlsoUnderPlatform = upstream.Address != "" && !module.FromPlatform() &&
+			onPlatformPath(normalizedRepository(module.Source.Repository), upstream)
+		marked = append(marked, module)
+	}
+	return marked
+}
+
+// onPlatformPath reports whether repo, as normalizedRepository spells it, is the platform's own
+// `modules` path: the upstream's, or the store's, which is the upstream's through the cache.
+func onPlatformPath(repo string, upstream Registry) bool {
+	upstreamModules := normalizedRepository(upstream.Address + "/" + upstream.Repository + "/" + modulesRepository)
+	storeRoot := normalizedRepository(constant.Host + constant.Path)
+	return repo == upstreamModules || repo == storeRoot+"/"+modulesRepository
 }
 
 // inClusterHost is the in-cluster registry's host as normalizedRepository spells it.
