@@ -145,7 +145,7 @@ type NodesParameters struct {
 	// - `ru-central1-e` uses the third part.
 	// - `ru-central1-d` uses the fourth part.
 	//
-	// Instructions for using the `ru-central1-f` zone are provided in ["Using the ru-central1-f zone"](examples.html#using-the-ru-central1-f-zone).
+	// Instructions for managing zones are provided in ["Managing zones"](examples.html#managing-zones).
 	// +deckhouse:ru:description:value="Диапазон IP-адресов для подсетей узлов."
 	// +deckhouse:ru:description:value=
 	// +deckhouse:ru:description:value="Deckhouse Platform делит диапазон на четыре равные части:"
@@ -155,7 +155,7 @@ type NodesParameters struct {
 	// +deckhouse:ru:description:value="- `ru-central1-e` использует третью часть."
 	// +deckhouse:ru:description:value="- `ru-central1-d` использует четвёртую часть."
 	// +deckhouse:ru:description:value=
-	// +deckhouse:ru:description:value="Как использовать зону `ru-central1-f`, описано [в разделе «Использование зоны ru-central1-f»](examples.html#использование-зоны-ru-central1-f)."
+	// +deckhouse:ru:description:value="Управление зонами описано [в разделе «Управление зонами»](examples.html#управление-зонами)."
 	NodeNetworkCIDR string `json:"nodeNetworkCIDR"`
 	// Settings for the [`WithNATInstance`](https://deckhouse.io/modules/cloud-provider-yandex/layouts.html#withnatinstance) layout.
 	// +deckhouse:ru:description:value="Настройки для схемы размещения [`WithNATInstance`](https://deckhouse.ru/modules/cloud-provider-yandex/layouts.html#withnatinstance)."
@@ -193,7 +193,7 @@ type NodesParameters struct {
 	DHCPOptions DHCPOptions `json:"dhcpOptions,omitempty"`
 	// External IP addresses per node group name.
 	//
-	// The key is the node group name (e.g., `system`, `master`, `worker`), and the value is the list of external IP addresses for nodes in that group, listed in the order of the zones where nodes will be created.
+	// The key is the CloudPermanent node group name (e.g., `system`, `master`, `worker`), and the value is the list of external IP addresses ordered by node index. Each address must match its node's zone.
 	//
 	// The following values can be specified in the list:
 	// - IP address from an additional external network for the corresponding zone, listed in the [`externalSubnetIDs`](#parameters-nodes-parameters-externalsubnetids) parameter;
@@ -202,7 +202,7 @@ type NodesParameters struct {
 	//
 	// +deckhouse:ru:description:value="Внешние IP-адреса для каждой группы узлов."
 	// +deckhouse:ru:description:value=
-	// +deckhouse:ru:description:value="Ключ — имя группы узлов (например, `system`, `master`, `worker`), значение — список внешних IP-адресов для узлов этой группы, перечисленных в порядке зон, в которых будут создаваться узлы."
+	// +deckhouse:ru:description:value="Ключ содержит имя группы CloudPermanent (например, `system`, `master`, `worker`), а значение содержит список внешних IP-адресов в порядке индексов узлов. Каждый адрес должен соответствовать зоне своего узла."
 	// +deckhouse:ru:description:value=
 	// +deckhouse:ru:description:value="В списке можно указывать следующие значения:"
 	// +deckhouse:ru:description:value="- IP-адрес из дополнительной внешней сети для соответствующей зоны, перечисленной в параметре [`externalSubnetIDs`](#parameters-nodes-parameters-externalsubnetids);"
@@ -213,10 +213,10 @@ type NodesParameters struct {
 	ExternalIPAddresses map[string][]string `json:"externalIPAddresses,omitempty"`
 	// IDs of additional external networks per node group name.
 	//
-	// The key is the node group name (e.g., `system`, `master`, `worker`), and the value is the list of external subnet IDs for nodes in that group, listed in the order of the zones where nodes will be created.
+	// The key is the CloudPermanent node group name (e.g., `system`, `master`, `worker`), and the value is the list of external subnet IDs ordered by node index. A shorter list repeats for subsequent nodes. Each subnet must be in its node's zone.
 	// +deckhouse:ru:description:value="ID дополнительных внешних сетей для каждой группы узлов."
 	// +deckhouse:ru:description:value=
-	// +deckhouse:ru:description:value="Ключ — имя группы узлов (например, `system`, `master`, `worker`), значение — список ID внешних подсетей для узлов этой группы, перечисленных в порядке зон, в которых будут создаваться узлы."
+	// +deckhouse:ru:description:value="Ключ содержит имя группы CloudPermanent (например, `system`, `master`, `worker`), а значение содержит список ID внешних подсетей в порядке индексов узлов. Если элементов меньше, чем узлов, список повторяется. Каждая подсеть должна находиться в зоне своего узла."
 	// +optional
 	ExternalSubnetIDs map[string][]string `json:"externalSubnetIDs,omitempty"`
 	// Labels to attach to resources created in the Yandex Cloud.
@@ -229,14 +229,14 @@ type NodesParameters struct {
 	Labels map[string]string `json:"labels,omitempty"`
 	// Limits the zones where the cloud provider places cluster nodes.
 	//
-	// You can list up to four zones. If the parameter is not set, Deckhouse Platform uses `ru-central1-a`, `ru-central1-b`, `ru-central1-d`, and `ru-central1-e`.
+	// You can list up to four zones. If the parameter is unset or empty, Deckhouse Platform uses the zones from `existingZoneToSubnetIDMap`. If that parameter has no entries, `ru-central1-a`, `ru-central1-b`, `ru-central1-d`, and `ru-central1-e` are used.
 	//
-	// Instructions for using the `ru-central1-f` zone are provided in ["Using the ru-central1-f zone"](examples.html#using-the-ru-central1-f-zone).
+	// Instructions for managing zones are provided in ["Managing zones"](examples.html#managing-zones).
 	// +deckhouse:ru:description:value="Ограничивает набор зон, в которых облачный провайдер размещает узлы кластера."
 	// +deckhouse:ru:description:value=
-	// +deckhouse:ru:description:value="Можно указать не более четырёх зон. Если параметр не задан, Deckhouse Platform использует `ru-central1-a`, `ru-central1-b`, `ru-central1-d` и `ru-central1-e`."
+	// +deckhouse:ru:description:value="Можно указать не более четырёх зон. Если параметр не задан или пуст, Deckhouse Platform использует зоны из `existingZoneToSubnetIDMap`. Если этот параметр не содержит записей, используются `ru-central1-a`, `ru-central1-b`, `ru-central1-d` и `ru-central1-e`."
 	// +deckhouse:ru:description:value=
-	// +deckhouse:ru:description:value="Как использовать зону `ru-central1-f`, описано [в разделе «Использование зоны ru-central1-f»](examples.html#использование-зоны-ru-central1-f)."
+	// +deckhouse:ru:description:value="Управление зонами описано [в разделе «Управление зонами»](examples.html#управление-зонами)."
 	// +kubebuilder:validation:MaxItems=4
 	// +kubebuilder:validation:UniqueItems=true
 	// +kubebuilder:validation:items:Enum=ru-central1-a;ru-central1-b;ru-central1-d;ru-central1-e;ru-central1-f
