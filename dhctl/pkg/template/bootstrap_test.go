@@ -50,6 +50,8 @@ func TestPrepareBootstrapUsesDefaultClusterMasterEndpoints(t *testing.T) {
 	require.NotContains(t, content, `export MINGET_B64=`)
 	require.Contains(t, content, `PACKAGES_PROXY_BOOTSTRAP_CLUSTER_UUID=""`)
 	require.Contains(t, content, fmt.Sprintf(`export PACKAGES_PROXY_BOOTSTRAP_ADDRESSES="127.0.0.1:%d"`, testRPPBootstrapServerPort))
-	require.NotContains(t, content, "PACKAGES_PROXY_KUBE_APISERVER_ENDPOINTS")
+	// Not exported for the first master: no API server answers yet. lib.sh still names the variable,
+	// where a joining node asks the cluster for the proxy.
+	require.NotContains(t, content, "export PACKAGES_PROXY_KUBE_APISERVER_ENDPOINTS")
 	require.Contains(t, content, `export PACKAGES_PROXY_ADDRESSES="http://127.0.0.1:5444"`)
 }
