@@ -278,7 +278,12 @@ func createSecret(k8 k8s.Client, secret Secret) error {
 }
 
 func deleteSecret(k8 k8s.Client, secret Secret) error {
-	if err := k8.CoreV1().Secrets(secret.Namespace).Delete(context.TODO(), secret.Name, metav1.DeleteOptions{}); err != nil {
+	err := k8.CoreV1().Secrets(secret.Namespace).Delete(context.TODO(), secret.Name, metav1.DeleteOptions{})
+	if errors.IsNotFound(err) {
+		// The copy is already gone, e.g. together with its namespace.
+		return nil
+	}
+	if err != nil {
 		return formatSecretOperationError(secret, err, "delete")
 	}
 

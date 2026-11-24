@@ -23,6 +23,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/yaml"
 
@@ -271,6 +272,29 @@ data:
 	Context("Empty cluster", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(``))
+			f.RunHook()
+		})
+
+		It("Hook must not fail", func() {
+			Expect(f).To(ExecuteSuccessfully())
+		})
+	})
+
+	Context("A copy is in the snapshot but already gone from the cluster", func() {
+		BeforeEach(func() {
+			nsDefaultYAML, _ := yaml.Marshal(&ns1)
+			nsYAML, _ := yaml.Marshal(&ns2)
+			secretExtraYAML, _ := yaml.Marshal(&secretExtra1)
+			f.BindingContexts.Set(f.KubeStateSet(strings.Join([]string{
+				string(nsDefaultYAML),
+				string(nsYAML),
+				string(secretExtraYAML),
+			}, "---\n")))
+
+			// The copy is not created in the API: it disappeared after the snapshot, e.g. with its namespace.
+			_, err := f.KubeClient().CoreV1().Secrets(secretExtra1.Namespace).Get(context.TODO(), secretExtra1.Name, metav1.GetOptions{})
+			Expect(apierrors.IsNotFound(err)).To(BeTrue())
+
 			f.RunHook()
 		})
 
