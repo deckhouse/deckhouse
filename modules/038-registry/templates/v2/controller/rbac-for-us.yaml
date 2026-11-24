@@ -336,6 +336,11 @@ rules:
   - apiGroups: ["deckhouse.io"]
     resources: ["modulereleases"]
     verbs: ["get", "list", "watch"]
+  # And the modules run through a ModulePullOverride, which have no release at the tag they run, with
+  # the source each module records. Left out, their images were deleted under their pods. Read-only.
+  - apiGroups: ["deckhouse.io"]
+    resources: ["modulepulloverrides", "modules"]
+    verbs: ["get", "list", "watch"]
   # And where each of those modules comes from. A module of another ModuleSource is still one the
   # cluster needs — after the move to air-gap more than ever — and when its source is not on the
   # upstream's registry the fill reads it from that source's own, with the credentials and authority

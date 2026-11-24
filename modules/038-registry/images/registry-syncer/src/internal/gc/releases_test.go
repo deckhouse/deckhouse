@@ -259,6 +259,14 @@ func moduleClient(t *testing.T, withSources bool, objects ...client.Object) clie
 		schema.GroupVersionKind{Group: "deckhouse.io", Version: "v1alpha1", Kind: "ModuleRelease"},
 		&unstructured.Unstructured{})
 	scheme.AddKnownTypeWithName(moduleReleaseGVK, &unstructured.UnstructuredList{})
+	scheme.AddKnownTypeWithName(
+		schema.GroupVersionKind{Group: "deckhouse.io", Version: "v1alpha2", Kind: "ModulePullOverride"},
+		&unstructured.Unstructured{})
+	scheme.AddKnownTypeWithName(modulePullOverrideGVK, &unstructured.UnstructuredList{})
+	scheme.AddKnownTypeWithName(
+		schema.GroupVersionKind{Group: "deckhouse.io", Version: "v1alpha1", Kind: "Module"},
+		&unstructured.Unstructured{})
+	scheme.AddKnownTypeWithName(moduleGVK, &unstructured.UnstructuredList{})
 	if withSources {
 		scheme.AddKnownTypeWithName(
 			schema.GroupVersionKind{Group: "deckhouse.io", Version: "v1alpha1", Kind: "ModuleSource"},
@@ -400,6 +408,103 @@ func TestAPendingModuleUpdateIsPartOfTheSet(t *testing.T) {
 	modules, err := ModulesFromCluster(context.Background(), c)
 	require.NoError(t, err)
 	assert.Equal(t, []string{"console@v1.2.0<", "console@v1.3.0<"}, names(modules))
+}
+
+func pullOverride(name, tag, digest string) *unstructured.Unstructured {
+	object := &unstructured.Unstructured{Object: map[string]any{
+		"apiVersion": "deckhouse.io/v1alpha2",
+		"kind":       "ModulePullOverride",
+		"metadata":   map[string]any{"name": name},
+		"spec":       map[string]any{"imageTag": tag},
+	}}
+	if digest != "" {
+		object.Object["status"] = map[string]any{"imageDigest": digest}
+	}
+	return object
+}
+
+func installedModule(name, source string) *unstructured.Unstructured {
+	return &unstructured.Unstructured{Object: map[string]any{
+		"apiVersion": "deckhouse.io/v1alpha1",
+		"kind":       "Module",
+		"metadata":   map[string]any{"name": name},
+		"properties": map[string]any{"source": source},
+	}}
+}
+
+// TestAnOverriddenModuleIsPartOfTheSet: a module run through a ModulePullOverride has no release at
+// the tag it runs. Left out, its images are deleted under its pods.
+// It is kept at the override's tag as written, from the module's own source; an override that has
+// deployed nothing — disabled, embedded, not found — claims nothing.
+func TestAnOverriddenModuleIsPartOfTheSet(t *testing.T) {
+	c := moduleClient(t, true,
+		moduleSource("deckhouse", "registry.d8-system.svc:5001/system/deckhouse/modules"),
+		moduleSource("partner", "registry.partner.example/modules"),
+
+		moduleRelease("console-v1.2.0", "console", "1.2.0", "Deployed", "deckhouse"),
+
+		installedModule("cloud-provider-dvp", "deckhouse"),
+		pullOverride("cloud-provider-dvp", "v1.0.2", "sha256:60f7"),
+		installedModule("virtualization", "partner"),
+		pullOverride("virtualization", "main", "sha256:aaaa"),
+		installedModule("stronghold", "gone"),
+		pullOverride("stronghold", "mr12", "sha256:bbbb"),
+		installedModule("commander", "deckhouse"),
+		pullOverride("commander", "main", ""),
+	)
+
+	modules, err := ModulesFromCluster(context.Background(), c)
+	require.NoError(t, err)
+
+	assert.Equal(t, []string{
+		"cloud-provider-dvp@v1.0.2<deckhouse",
+		"console@v1.2.0<deckhouse",
+		"stronghold@mr12<",
+		"virtualization@main<partner",
+	}, names(modules))
+	for _, module := range modules {
+		switch module.Name {
+		case "virtualization":
+			assert.Equal(t, "registry.partner.example/modules", module.Source.Repository)
+		case "stronghold":
+			assert.Equal(t, "gone", module.MissingSource)
+		}
+		assert.False(t, module.Pending, module.Name)
+	}
+}
+
+// TestModulesFailWhenTheOverriddenModulesCannotBeRead: an override whose module could not be read
+// would be looked for under the platform's path, so a failed read fails the whole, like the sources.
+func TestModulesFailWhenTheOverriddenModulesCannotBeRead(t *testing.T) {
+	scheme := runtime.NewScheme()
+	for kind, list := range map[schema.GroupVersionKind]schema.GroupVersionKind{
+		{Group: "deckhouse.io", Version: "v1alpha1", Kind: "ModuleRelease"}:      moduleReleaseGVK,
+		{Group: "deckhouse.io", Version: "v1alpha1", Kind: "ModuleSource"}:       moduleSourceGVK,
+		{Group: "deckhouse.io", Version: "v1alpha2", Kind: "ModulePullOverride"}: modulePullOverrideGVK,
+		{Group: "deckhouse.io", Version: "v1alpha1", Kind: "Module"}:             moduleGVK,
+	} {
+		scheme.AddKnownTypeWithName(kind, &unstructured.Unstructured{})
+		scheme.AddKnownTypeWithName(list, &unstructured.UnstructuredList{})
+	}
+
+	c := fake.NewClientBuilder().WithScheme(scheme).
+		WithObjects(
+			installedModule("cloud-provider-dvp", "deckhouse"),
+			pullOverride("cloud-provider-dvp", "v1.0.2", "sha256:60f7"),
+		).
+		WithInterceptorFuncs(interceptor.Funcs{
+			List: func(ctx context.Context, c client.WithWatch, list client.ObjectList, opts ...client.ListOption) error {
+				if list.GetObjectKind().GroupVersionKind() == moduleGVK {
+					return apierrors.NewTooManyRequests("the apiserver is busy", 1)
+				}
+				return c.List(ctx, list, opts...)
+			},
+		}).
+		Build()
+
+	modules, err := ModulesFromCluster(context.Background(), c)
+	require.Error(t, err)
+	assert.Nil(t, modules)
 }
 
 // TestTheCatalogueIsWhatTheSourcesOffer: read from the sources' status, so that every replica gets

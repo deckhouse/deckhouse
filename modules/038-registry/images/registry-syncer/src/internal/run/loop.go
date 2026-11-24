@@ -1946,6 +1946,12 @@ func (l *Loop) applyReplicate(
 		state.Error = err.Error()
 		return nil
 	}
+	// The one exception to "the same path": a source on the platform's own path is also under the
+	// platform's, where the nodes ask for it — see fill.MarkPlatformPath.
+	if spec := l.Desired(); spec != nil && spec.Upstream != nil {
+		modules = fill.MarkPlatformPath(modules,
+			fill.Registry{Address: spec.Upstream.Host, Repository: trimSlashes(spec.Upstream.Path)})
+	}
 
 	l.Log.Info("replicating from the leader",
 		"leader", leader.Node, "address", leader.Address,
