@@ -24,10 +24,12 @@ import (
 	"time"
 
 	v1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
@@ -172,36 +174,40 @@ func repositoryKeys(config *registry.ClientConfig) []string {
 	}
 }
 
+// rewatchPeriod is how soon a watch that has stopped is started again.
+//
+// A RetryWatcher re-establishes a dropped connection by itself, but not a refused one: on 401 or 403
+// it passes the API server's Status on as an error event and stops for good. An API server answers
+// 403 to every client for a few seconds after it restarts, until its authorizer has read RBAC (job
+// 9013941: kubernetes-admin was refused at the same second as this proxy). Left stopped, a watch would
+// not see a change of its object until the pod restarted.
+var rewatchPeriod = 5 * time.Second
+
 func (w *Watcher) Watch(ctx context.Context) {
 	var wg sync.WaitGroup
 
-	wg.Add(4)
-
-	go func() {
-		defer wg.Done()
-
-		w.watchSecret(ctx)
-	}()
-
-	go func() {
-		defer wg.Done()
-
-		w.watchImageAddress(ctx)
-	}()
-
-	go func() {
-		defer wg.Done()
-
-		w.watchStore(ctx)
-	}()
-
-	go func() {
-		defer wg.Done()
-
-		w.watchModuleSources(ctx)
-	}()
+	for _, follow := range []func(context.Context){
+		w.watchSecret,
+		w.watchImageAddress,
+		w.watchStore,
+		w.watchModuleSources,
+	} {
+		wg.Go(func() {
+			wait.UntilWithContext(ctx, follow, rewatchPeriod)
+		})
+	}
 
 	wg.Wait()
+}
+
+// eventError is the error a watch event carries instead of an object: on 401 or 403 the RetryWatcher
+// passes the API server's Status on as an event of type Error.
+func eventError(event watch.Event) error {
+	if event.Type != watch.Error {
+		return nil
+	}
+
+	return fmt.Errorf("watch: %w", apierrors.FromObject(event.Object))
 }
 
 // watchStore follows how to read the cluster's own store, for the window in which this node has no
@@ -309,7 +315,14 @@ func (w *Watcher) watchSecret(ctx context.Context) {
 }
 
 func (w *Watcher) processSecretEvent(secretEvent watch.Event) error {
-	secret := secretEvent.Object.(*v1.Secret)
+	if err := eventError(secretEvent); err != nil {
+		return err
+	}
+
+	secret, ok := secretEvent.Object.(*v1.Secret)
+	if !ok {
+		return fmt.Errorf("unexpected object %T in a %s event", secretEvent.Object, secretEvent.Type)
+	}
 
 	var input registrySecretData
 	input.FromSecretData(secret.Data)
@@ -483,9 +496,18 @@ func (w *Watcher) watchModuleSources(ctx context.Context) {
 }
 
 func (w *Watcher) processModuleSourceEvent(moduleSourceEvent watch.Event) error {
+	if err := eventError(moduleSourceEvent); err != nil {
+		return err
+	}
+
+	object, ok := moduleSourceEvent.Object.(*unstructured.Unstructured)
+	if !ok {
+		return fmt.Errorf("unexpected object %T in a %s event", moduleSourceEvent.Object, moduleSourceEvent.Type)
+	}
+
 	var moduleSource ModuleSource
 
-	err := runtime.DefaultUnstructuredConverter.FromUnstructured(moduleSourceEvent.Object.(*unstructured.Unstructured).Object, &moduleSource)
+	err := runtime.DefaultUnstructuredConverter.FromUnstructured(object.Object, &moduleSource)
 	if err != nil {
 		return fmt.Errorf("unmarshal module source event: %v", err)
 	}
