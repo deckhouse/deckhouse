@@ -83,6 +83,10 @@ type Client struct {
 	// canRediscover says whether Rediscover is set, for shouldRetryFetch to read without waiting
 	// behind a rediscovery in flight.
 	canRediscover atomic.Bool
+
+	now           func() time.Time
+	outageMu      sync.Mutex
+	outageStarted time.Time
 }
 
 func NewClient(cfg Config, logger *log.Logger, recorder *ResultRecorder) *Client {
@@ -91,6 +95,7 @@ func NewClient(cfg Config, logger *log.Logger, recorder *ResultRecorder) *Client
 		httpClient:     newHTTPClient(cfg),
 		logger:         logger,
 		resultRecorder: recorder,
+		now:            time.Now,
 	}
 	c.canRediscover.Store(cfg.Rediscover != nil)
 	return c
@@ -291,7 +296,7 @@ func (c *Client) newPackageRef(packageWithDigest string) (packageRef, error) {
 }
 
 func (c *Client) installPackage(ctx context.Context, ref packageRef) error {
-	return c.retry(ctx, ref, packageInstallAttempts, shouldRetryInstall, func() error {
+	return c.retry(ctx, ref, packageInstallAttempts, c.shouldRetryInstall, func() error {
 		err := c.installPackageOnce(ctx, ref)
 		if err == nil {
 			return nil
@@ -394,7 +399,21 @@ func (c *Client) fetchArchive(ctx context.Context, ref packageRef) error {
 	}
 
 	failed, unchanged := false, false
-	shouldRetry := func(err error) bool { return c.shouldRetryFetch(err, unchanged) }
+
+	refusals := 0
+	shouldRetry := func(err error) bool {
+		if c.outageBudgetSpent() {
+			return false
+		}
+
+		if c.shouldRetryFetch(err, unchanged) {
+			return true
+		}
+
+		refusals++
+
+		return everyEndpointRefused(err) && refusals < refusalAttempts
+	}
 	if err := c.retry(ctx, ref, c.cfg.Retries, shouldRetry, func() error {
 		if failed {
 			unchanged = c.rediscover(ctx, ref)
@@ -403,16 +422,65 @@ func (c *Client) fetchArchive(ctx context.Context, ref packageRef) error {
 		failed = err != nil
 		return err
 	}); err != nil {
-		return ref.errorf("fetch %s: %w", ref.digest, err)
+		if c.outageBudgetSpent() {
+			c.logf(ref, "nothing has been downloaded for %s, giving up", outageBudget)
+		}
+
+		return &downloadError{err: ref.errorf("fetch %s: %w", ref.digest, err)}
 	}
 
 	return nil
 }
 
+// OutageBegan carries over how long the run has already failed to reach the cluster, so that
+// downloads continue that wait instead of starting a new one.
+func (c *Client) OutageBegan(at time.Time) {
+	c.outageMu.Lock()
+	defer c.outageMu.Unlock()
+
+	c.outageStarted = at
+}
+
+func (c *Client) roundFailed(started time.Time) {
+	c.outageMu.Lock()
+	defer c.outageMu.Unlock()
+
+	if c.outageStarted.IsZero() {
+		c.outageStarted = started
+	}
+}
+
+func (c *Client) outageBudgetSpent() bool {
+	c.outageMu.Lock()
+	defer c.outageMu.Unlock()
+
+	return !c.outageStarted.IsZero() && c.now().Sub(c.outageStarted) >= outageBudget
+}
+
+type downloadError struct {
+	err error
+}
+
+func (e *downloadError) Error() string { return e.err.Error() }
+func (e *downloadError) Unwrap() error { return e.err }
+
+func (c *Client) shouldRetryInstall(err error) bool {
+	var download *downloadError
+	if errors.As(err, &download) && c.outageBudgetSpent() {
+		return false
+	}
+
+	return shouldRetryInstall(err)
+}
+
 func (c *Client) downloadOnce(ctx context.Context, ref packageRef) error {
 	start := time.Now()
-	response, err := c.http().Get(ctx, ref.digest)
+	began := c.now()
+
+	response, err := c.http().Get(ctx, ref.digest, c.outageBudgetSpent)
 	if err != nil {
+		c.roundFailed(began)
+
 		return err
 	}
 	defer response.Body.Close()
@@ -430,6 +498,8 @@ func (c *Client) downloadOnce(ctx context.Context, ref packageRef) error {
 		mbps := float64(n) / 1024.0 / 1024.0 / bodyDur.Seconds()
 		throughput = fmt.Sprintf(", %.2f MB/s", mbps)
 	}
+
+	c.OutageBegan(time.Time{})
 	c.logf(ref, "archive downloaded from %s: %d bytes, http=%s body=%s%s",
 		response.Request.URL.Host, n, httpDur.Truncate(time.Millisecond), bodyDur.Truncate(time.Millisecond), throughput)
 	return nil
@@ -699,13 +769,14 @@ func (c *Client) shouldRetryFetch(err error, rediscoveredUnchanged bool) bool {
 
 	// 401 and not 403: a proxy that cannot review the token answers 401, while 403 is a token it
 	// reviewed and refused, which another attempt — up to the half hour all of them take — will not change.
+	return canAskAgain && slices.ContainsFunc(endpointFailures(err), isUnauthorized)
+}
+
+func isUnauthorized(err error) bool {
 	var statusErr *httpStatusError
-	return canAskAgain && errors.As(err, &statusErr) && statusErr.statusCode == http.StatusUnauthorized
+	return errors.As(err, &statusErr) && statusErr.statusCode == http.StatusUnauthorized
 }
 
 func shouldRetryInstall(err error) bool {
-	if err == nil {
-		return false
-	}
-	return !errors.Is(err, context.Canceled) && !errors.Is(err, context.DeadlineExceeded)
+	return err != nil && !errors.Is(err, context.Canceled)
 }

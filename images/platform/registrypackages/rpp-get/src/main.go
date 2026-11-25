@@ -154,6 +154,8 @@ func resolveInto(ctx context.Context, cfg *cliConfig, client *rpp.Client) error 
 		return err
 	}
 	client.UpdateAuth(cfg.endpoints, cfg.token)
+	client.OutageBegan(cfg.failedSince)
+
 	if rediscover := cfg.rediscover(); rediscover != nil {
 		client.SetRediscover(rediscover)
 	}
