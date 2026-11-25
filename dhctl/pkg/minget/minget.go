@@ -15,8 +15,11 @@
 package minget
 
 import (
+	"bytes"
+	"compress/gzip"
 	"context"
 	"embed"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"os"
@@ -64,4 +67,26 @@ func Bytes(ctx context.Context) ([]byte, error) {
 
 	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Using %s", binaryPath))
 	return file, nil
+}
+
+// GzipBase64 gzips minget and base64-encodes the result, the form bb-minget-install in
+// candi/bashible/lib.sh.tpl takes as mingetB64. The same script goes into the cloud-init
+// user data of cloud nodes, which EC2 caps at 16384 bytes, and gzip takes a third off minget.
+func GzipBase64(ctx context.Context) (string, error) {
+	binary, err := Bytes(ctx)
+	if err != nil {
+		return "", err
+	}
+	var buf bytes.Buffer
+	zw, err := gzip.NewWriterLevel(&buf, gzip.BestCompression)
+	if err != nil {
+		return "", fmt.Errorf("gzip minget: %w", err)
+	}
+	if _, err := zw.Write(binary); err != nil {
+		return "", fmt.Errorf("gzip minget: %w", err)
+	}
+	if err := zw.Close(); err != nil {
+		return "", fmt.Errorf("gzip minget: %w", err)
+	}
+	return base64.StdEncoding.EncodeToString(buf.Bytes()), nil
 }

@@ -19,7 +19,6 @@ package bootstrapsecrets
 import (
 	"context"
 	"crypto/sha256"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 
@@ -83,6 +82,11 @@ func BuildInput(ctx context.Context, svc *bashiblecontext.Service, resolved deri
 		return bootstrap.Input{}, err
 	}
 
+	minget, err := bootstrap.EncodeMinget(files.Binary("minget"))
+	if err != nil {
+		return bootstrap.Input{}, err
+	}
+
 	return bootstrap.Input{
 		NodeGroup:              resolved.ToMap(),
 		APIServerEndpoints:     endpoints.APIServerEndpoints,
@@ -90,14 +94,12 @@ func BuildInput(ctx context.Context, svc *bashiblecontext.Service, resolved deri
 		ClusterUUID:            clusterUUID,
 		Images:                 images,
 		PackagesProxy:          map[string]any{"token": svc.ReadPackagesProxyToken(ctx)},
-		// minget is 4KiB (crane export of the image candi/alt_base_images.yml
-		// pins), so inlining its base64 into the script costs ~5KiB per copy.
-		MingetB64:      base64.StdEncoding.EncodeToString(files.Binary("minget")),
-		Provider:       provider.Type,
-		KubernetesCA:   kubernetesCA,
-		BootstrapToken: token,
-		SSHPublicKey:   provider.SSHPublicKey,
-		Files:          files,
+		MingetB64:              minget,
+		Provider:               provider.Type,
+		KubernetesCA:           kubernetesCA,
+		BootstrapToken:         token,
+		SSHPublicKey:           provider.SSHPublicKey,
+		Files:                  files,
 	}, nil
 }
 

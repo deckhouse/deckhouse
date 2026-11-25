@@ -15,10 +15,14 @@
 package template
 
 import (
+	"bytes"
+	"compress/gzip"
 	"encoding/base64"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
+	"regexp"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -45,13 +49,20 @@ func TestPrepareBootstrapUsesDefaultClusterMasterEndpoints(t *testing.T) {
 	require.NoError(t, err)
 
 	content := string(renderedBootstrap)
-	require.Contains(t, content, `echo -n '`+base64.StdEncoding.EncodeToString([]byte("test-minget"))+`' | base64 -d > "$path"`)
+	// minget goes in gzipped: the same script is the cloud-init user data of cloud nodes, which EC2 caps.
+	encoded := regexp.MustCompile(`echo -n '([^']*)' \| base64 -d \| gzip -dc > "\$path"`).FindStringSubmatch(content)
+	require.Len(t, encoded, 2, "bb-minget-install must unpack minget with base64 -d | gzip -dc")
+	gzipped, err := base64.StdEncoding.DecodeString(encoded[1])
+	require.NoError(t, err)
+	zr, err := gzip.NewReader(bytes.NewReader(gzipped))
+	require.NoError(t, err)
+	unpacked, err := io.ReadAll(zr)
+	require.NoError(t, err)
+	require.Equal(t, "test-minget", string(unpacked))
 	require.NotContains(t, content, `local minget_b64=`)
 	require.NotContains(t, content, `export MINGET_B64=`)
 	require.Contains(t, content, `PACKAGES_PROXY_BOOTSTRAP_CLUSTER_UUID=""`)
 	require.Contains(t, content, fmt.Sprintf(`export PACKAGES_PROXY_BOOTSTRAP_ADDRESSES="127.0.0.1:%d"`, testRPPBootstrapServerPort))
-	// Not exported for the first master: no API server answers yet. lib.sh still names the variable,
-	// where a joining node asks the cluster for the proxy.
-	require.NotContains(t, content, "export PACKAGES_PROXY_KUBE_APISERVER_ENDPOINTS")
+	require.NotContains(t, content, "PACKAGES_PROXY_KUBE_APISERVER_ENDPOINTS")
 	require.Contains(t, content, `export PACKAGES_PROXY_ADDRESSES="http://127.0.0.1:5444"`)
 }

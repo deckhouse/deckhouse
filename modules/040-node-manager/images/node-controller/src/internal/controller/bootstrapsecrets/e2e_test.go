@@ -17,7 +17,6 @@ limitations under the License.
 package bootstrapsecrets
 
 import (
-	"encoding/base64"
 	"net"
 	"strconv"
 	"strings"
@@ -107,7 +106,9 @@ var _ = Describe("Bootstrap secrets controller", func() {
 
 		Expect(in.PackagesProxy).To(HaveKeyWithValue("token", testPackagesProxyToken))
 		Expect(in.Images).To(HaveKey("registrypackages"))
-		Expect(in.MingetB64).To(Equal(base64.StdEncoding.EncodeToString([]byte("minget"))))
+		minget, err := bootstrap.EncodeMinget([]byte("minget"))
+		Expect(err).NotTo(HaveOccurred())
+		Expect(in.MingetB64).To(Equal(minget))
 		Expect(in.ClusterUUID).To(Equal(testClusterUUID))
 	})
 
