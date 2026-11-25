@@ -1,12 +1,3 @@
-{{- /* Copy of node_manager_single_master in modules/040-node-manager/templates/_helpers.yaml. */ -}}
-{{- /* The master count, not the HA flag, says whether a replica has anywhere else to go. */ -}}
-{{- /* 0 is not one master: no Node has the control-plane label (CSE Managed). */ -}}
-{{- define "registry_packages_proxy_single_master" }}
-  {{- if eq (int .Values.global.discovery.clusterMasterCount) 1 }}
-    not empty string
-  {{- end }}
-{{- end }}
-
 {{- /* Copy of node_manager_master_controller_tolerations in modules/040-node-manager/templates/_helpers.yaml. */ -}}
 {{- /* Explicit list, not helm_lib any-node (helm_lib/charts/deckhouse_lib_helm/templates/_node_affinity.tpl): masters-only pods need no arbiter, autoscaler or custom taints. */ -}}
 {{- /* Independent of clusterMasterCount so adding a second master does not change the pod template and roll the proxy mid-bootstrap; single-master voluntary-disruption protection lives in the PDB. */ -}}
@@ -38,19 +29,19 @@ tolerations:
   tolerationSeconds: 60
 {{- end }}
 
-{{- /* Copy of node_manager_master_controller_strategy_and_replicas in modules/040-node-manager/templates/_helpers.yaml. */ -}}
-{{- /* etcd quorum floor(N/2)+1: this many replicas still fit on the masters left when etcd is down to quorum, */ -}}
-{{- /* and an even N keeps the count of N+1, so a master joining or leaving rolls nothing. Without HA or masters discovered, helm_lib decides. */ -}}
+{{- /* One replica per master so every master IP serves hostPort 4219 and 4282 regardless of the HA flag. */ -}}
+{{- /* maxUnavailable ceil(N/2) keeps rolling updates moving with up to floor(N/2) masters down while keeping at least one pod up for N>=2. */ -}}
+{{- /* When no masters are discovered (0, e.g. CSE Managed), helm_lib decides. */ -}}
 {{- define "registry_packages_proxy_strategy_and_replicas" }}
   {{- $masters := int .Values.global.discovery.clusterMasterCount }}
-  {{- if or (eq $masters 0) (not (include "helm_lib_ha_enabled" .)) }}
+  {{- if eq $masters 0 }}
     {{- include "helm_lib_deployment_on_master_strategy_and_replicas_for_ha" . }}
   {{- else }}
-replicas: {{ add (div $masters 2) 1 }}
+replicas: {{ $masters }}
 strategy:
   type: RollingUpdate
   rollingUpdate:
     maxSurge: 0
-    maxUnavailable: 1
+    maxUnavailable: {{ div (add $masters 1) 2 }}
   {{- end }}
 {{- end }}
