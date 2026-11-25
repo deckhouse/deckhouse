@@ -37,8 +37,10 @@ import (
 // these four subsystems any more, so the rules of a ClusterRole that still carries one reach none of
 // them. Only the compatibility aliases of the old roles still collect such a label, for one release.
 // The template test keeps the modules of this repository off these labels, but a module released on
-// its own and a custom capability may still carry one. This hook exports every such ClusterRole,
-// whoever made it, and the alert on the metric names the lineage to label it with instead.
+// its own and a custom capability may still carry one. This hook exports every such ClusterRole that
+// a user made, and the alert on the metric names the lineage to label it with instead. A ClusterRole
+// of a module (see isModuleClusterRole) is one a user cannot relabel: it is left out, and the module
+// is updated to the new scheme by its own release.
 //
 // The previous scheme also labelled its namespace-level use capabilities with
 // rbac.deckhouse.io/kind: use and the kubernetes lineage, and a module with a subsystem of its own
@@ -119,8 +121,25 @@ type useLineage struct {
 	Level   string `json:"level"`
 }
 
+// isModuleClusterRole reports whether a ClusterRole belongs to a module, a module released on its own
+// included. A module labels its resources with heritage: deckhouse through the helm_lib helpers and
+// its ClusterRoles with module: <name>, and names them d8:<kind>:...; a module that does not use
+// helm_lib may lack one of the labels, so any one of the three marks is enough. A custom role or
+// capability of a user is named d8:custom:... or has a name of the user's own, and has neither label.
+func isModuleClusterRole(name string, labels map[string]string) bool {
+	if labels["heritage"] == "deckhouse" || labels["module"] != "" {
+		return true
+	}
+	return strings.HasPrefix(name, "d8:") && !strings.HasPrefix(name, "d8:custom:")
+}
+
 func filterRetiredAggregationLabelClusterRole(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	labels := obj.GetLabels()
+	// A ClusterRole of a module, including a module released on its own, is the module's to relabel:
+	// the user who gets the alert cannot change it.
+	if isModuleClusterRole(obj.GetName(), labels) {
+		return nil, nil
+	}
 	// The old manage roles never took the use capabilities of the old scheme, so their retired labels
 	// are not what the retired label alert is about. The new namespace and project roles do not take
 	// them either, and that is what the use capability alert is about.

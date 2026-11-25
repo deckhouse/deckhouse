@@ -196,6 +196,24 @@ rules: []
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
+  name: "d8:use:capability:module:no-helm-lib:view"
+  labels:
+    rbac.deckhouse.io/kind: use
+    rbac.deckhouse.io/aggregate-to-kubernetes-as: viewer
+rules: []
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: "module-role-without-prefix"
+  labels:
+    module: no-prefix
+    rbac.deckhouse.io/aggregate-to-networking-as: viewer
+rules: []
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
   name: plain
 rules: []
 `
@@ -229,30 +247,22 @@ rules: []
 			f.BindingContexts.Set(f.KubeStateSet(roles))
 			f.RunHook()
 		})
-		It("flags every role that carries a retired label, whoever made it, and nothing else", func() {
+		It("flags every role of a user that carries a retired label and leaves the roles of the modules alone", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(series()).To(Equal(map[string]string{
-				"d8:manage:permission:module:ingress-nginx:view/networking":             "ingress-nginx/network",
-				"d8:system-capability:storage-foundation:edit/infrastructure":           "storage-foundation/cluster",
-				"d8:system-capability:storage-foundation:edit/kubernetes":               "storage-foundation/cluster",
 				"d8:custom:subsystem-capability:deckhouse:superresource:view/deckhouse": "/cluster",
 			}))
 		})
-		It("flags every use capability and use role of the previous scheme, whoever made it, as one of its own", func() {
+		It("flags every use capability of a user of the previous scheme as one of its own and leaves the roles of the modules alone", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			// A use capability under a lineage no role collects, a subsystem or a retired lineage other
-			// than kubernetes, is flagged once per such lineage. The lineage of the subsystem of a
-			// module and the namespace lineage are collected and left alone, and so are the other
-			// lineages of a use capability that the aliases collect by kubernetes.
+			// than kubernetes, is flagged once per such lineage. The namespace lineage is collected and
+			// left alone. The ClusterRoles with heritage: deckhouse belong to modules and are left out.
 			Expect(useSeries()).To(Equal(map[string]string{
-				"d8:use:capability:module:cert-manager:edit/kubernetes": "cert-manager/manager",
-				"d8:use:capability:module:cni-cilium:view/kubernetes":   "cni-cilium/viewer",
-				"custom:use:logs/kubernetes":                            "/user",
-				"d8:use:role:user:virtualization/all":                   "virtualization/user",
-				"d8:use:capability:module:example:view/network":         "example/viewer",
-				"custom:use:audit/iam":                                  "/viewer",
-				"custom:use:audit/security":                             "/user",
-				"custom:use:releases/deckhouse":                         "/manager",
+				"custom:use:logs/kubernetes":    "/user",
+				"custom:use:audit/iam":          "/viewer",
+				"custom:use:audit/security":     "/user",
+				"custom:use:releases/deckhouse": "/manager",
 			}))
 		})
 	})
