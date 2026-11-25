@@ -133,6 +133,29 @@ func TestModuleConfigValidationHandler_ControlPlaneManagerNetwork(t *testing.T) 
 		assert.Contains(t, resp.Result.Message, "10.99.0.0/16")
 	})
 
+	t.Run("first prefix write must match the default when ClusterConfiguration omits it", func(t *testing.T) {
+		for prefix, allowed := range map[string]bool{"24": true, "25": false} {
+			t.Run(prefix, func(t *testing.T) {
+				storage, manager := networkTestHandlerDeps(t)
+				dependencyExtender := moduledependency.NewIExtenderMock(t)
+				moduleCR := newModuleCR(moduleName, []string{"alpha"}, "")
+				handler := newTestHandlerWithValidator(t, storage, manager, dependencyExtender, false, nil, validator,
+					moduleCR, newClusterConfigurationNetworkSecret("10.111.0.0/16", "10.222.0.0/16", ""))
+
+				newCfg := newControlPlaneManagerNetworkConfig(map[string]string{"podSubnetNodeCIDRPrefix": prefix})
+				oldCfg := newControlPlaneManagerNetworkConfig(nil)
+				review := newModuleConfigAdmissionReview("UPDATE", newCfg, oldCfg)
+
+				resp := callHandler(t, handler, review)
+				require.Equal(t, allowed, resp.Allowed)
+				if !allowed {
+					require.NotNil(t, resp.Result)
+					assert.Contains(t, resp.Result.Message, `ClusterConfiguration.podSubnetNodeCIDRPrefix "24"`)
+				}
+			})
+		}
+	})
+
 	t.Run("changing an already-set value is forbidden", func(t *testing.T) {
 		storage, manager := networkTestHandlerDeps(t)
 		dependencyExtender := moduledependency.NewIExtenderMock(t)

@@ -17,6 +17,7 @@ limitations under the License.
 package validation
 
 import (
+	"cmp"
 	"context"
 	"fmt"
 	"log/slog"
@@ -468,7 +469,9 @@ func validateUnsafeConfigChanges(ctx context.Context, cli client.Client, oldConf
 		return allowResult(nil)
 	}
 
-	if oldConfig.PodSubnetNodeCIDRPrefix != newConfig.PodSubnetNodeCIDRPrefix && !moduleConfigOwnsNetworkField(ctx, cli, "podSubnetNodeCIDRPrefix") {
+	oldPrefix := cmp.Or(oldConfig.PodSubnetNodeCIDRPrefix, config.DefaultPodSubnetNodeCIDRPrefix)
+	newPrefix := cmp.Or(newConfig.PodSubnetNodeCIDRPrefix, config.DefaultPodSubnetNodeCIDRPrefix)
+	if oldPrefix != newPrefix && !moduleConfigOwnsNetworkField(ctx, cli, "podSubnetNodeCIDRPrefix") {
 		return rejectResult("it is forbidden to change podSubnetNodeCIDRPrefix in a running cluster")
 	}
 
@@ -481,7 +484,8 @@ func validateUnsafeConfigChanges(ctx context.Context, cli client.Client, oldConf
 	}
 
 	// Only removal: changing the domain here is a supported operation.
-	if oldConfig.ClusterDomain != "" && newConfig.ClusterDomain == "" && !moduleConfigOwnsClusterDomain(ctx, cli) {
+	oldDomain := cmp.Or(oldConfig.ClusterDomain, hooks.DefaultClusterDomain)
+	if newConfig.ClusterDomain == "" && oldDomain != hooks.DefaultClusterDomain && !moduleConfigOwnsClusterDomain(ctx, cli) {
 		return rejectResult(
 			"removing clusterDomain would change the cluster domain to \"cluster.local\", restarting " +
 				"kube-apiserver with a different --service-account-issuer and invalidating every token in " +
