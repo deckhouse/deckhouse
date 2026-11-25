@@ -134,6 +134,49 @@ func TestPushNodeConfigKeepsOffTheProcessWideTransport(t *testing.T) {
 	require.True(t, reached, "the machine was handed nothing")
 }
 
+// The agent of an installed node serves its maintenance port over HTTPS with a
+// self-signed certificate; the init and an agent older than that serve plain HTTP.
+// Which of the two holds the port is decided the same way over either.
+func TestAgentHoldsPortOverEitherTransport(t *testing.T) {
+	cases := []struct {
+		name   string
+		start  func(http.Handler) *httptest.Server
+		answer string
+		agent  bool
+	}{
+		{name: "agent over HTTPS", start: httptest.NewTLSServer, answer: "agent\n", agent: true},
+		{name: "older agent over HTTP", start: httptest.NewServer, answer: "agent\n", agent: true},
+		{name: "init over HTTP", start: httptest.NewServer, answer: "installer\n", agent: false},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			server := c.start(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				require.Equal(t, whoamiPath, r.URL.Path)
+				_, _ = io.WriteString(w, c.answer)
+			}))
+			defer server.Close()
+
+			agent, err := AgentHoldsPort(t.Context(), server.Listener.Addr().String())
+
+			require.NoError(t, err)
+			require.Equal(t, c.agent, agent)
+		})
+	}
+}
+
+// A push that reaches the agent of an installed node over HTTPS is refused the
+// same terminal way as one over plain HTTP: the agent demands its token.
+func TestPushNodeConfigToAnAgentOverHTTPSNamesAnInstalledNode(t *testing.T) {
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusUnauthorized)
+	}))
+	defer server.Close()
+
+	err := PushNodeConfig(t.Context(), server.Listener.Addr().String(), []byte("kind: NodeConfig\n"))
+
+	require.ErrorIs(t, err, ErrMaintenanceTokenRequired)
+}
+
 // refusingTransport stands in for http.DefaultTransport and carries nothing.
 type refusingTransport struct{ requests int }
 

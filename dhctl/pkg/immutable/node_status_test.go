@@ -57,6 +57,22 @@ func TestFetchNodeStatus(t *testing.T) {
 	require.Contains(t, DescribeNodeStatus(status), "10.0.0.0/16")
 }
 
+// The agent serves its status over HTTPS with a self-signed certificate.
+func TestFetchNodeStatusOverHTTPS(t *testing.T) {
+	var gotAuthorization string
+	machine := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotAuthorization = r.Header.Get("Authorization")
+		_, _ = io.WriteString(w, `{"phase": "Ready"}`)
+	}))
+	t.Cleanup(machine.Close)
+
+	status, err := FetchNodeStatus(t.Context(), machine.Listener.Addr().String(), "a-status-token")
+
+	require.NoError(t, err)
+	require.Equal(t, "Bearer a-status-token", gotAuthorization)
+	require.Equal(t, Phase("Ready"), status.Phase)
+}
+
 // A machine that refuses the token is not a machine reporting anything: the
 // caller must not read a refusal as a status.
 func TestFetchNodeStatusRefusal(t *testing.T) {

@@ -17,6 +17,7 @@ package immutable
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"io"
@@ -66,10 +67,28 @@ func do(ctx context.Context, method, url, token string, body []byte) (*http.Resp
 	// A transport of its own, never the process-wide default: that one proxies
 	// through HTTP_PROXY, and a machine waiting for its configuration is on the
 	// provisioning network, not behind a proxy that would be handed the payload.
-	client := &http.Client{Timeout: pushTimeout, Transport: &http.Transport{}}
+	// The agent's certificate is self-signed and nothing here can pin it; the
+	// bearer tokens authenticate, TLS only keeps them off the wire.
+	transport := &http.Transport{TLSClientConfig: &tls.Config{
+		InsecureSkipVerify: true, //nolint:gosec // self-signed agent certificate, see above
+		MinVersion:         tls.VersionTLS12,
+	}}
+	client := &http.Client{Timeout: pushTimeout, Transport: transport}
 	defer client.CloseIdleConnections()
 
 	return client.Do(request)
+}
+
+// doMaintenance asks the server on a machine's maintenance port. The agent of an
+// installed node serves it over HTTPS (nodelet internal/services/maintenance);
+// the Deckhouse Engine init and an older agent over plain HTTP, so a plain answer
+// to the TLS handshake sends the same request again over HTTP.
+func doMaintenance(ctx context.Context, method, address, path, token string, body []byte) (*http.Response, error) {
+	response, err := do(ctx, method, "https://"+address+path, token, body)
+	if errors.Is(err, http.ErrSchemeMismatch) {
+		return do(ctx, method, "http://"+address+path, token, body)
+	}
+	return response, err
 }
 
 // errorQuote is as much of a refusal as is worth repeating back to the
@@ -87,7 +106,7 @@ func errorQuote(response *http.Response) string {
 // from. The endpoint is unauthenticated by design — the machine holds no secret
 // at this point — so the caller answers for the network the address lives on.
 func PushNodeConfig(ctx context.Context, address string, document []byte) error {
-	response, err := do(ctx, http.MethodPut, "http://"+address+nodeConfigPushPath, "", document)
+	response, err := doMaintenance(ctx, http.MethodPut, address, nodeConfigPushPath, "", document)
 	if err != nil {
 		return fmt.Errorf("push the node configuration to %s: %w", address, err)
 	}
@@ -117,7 +136,7 @@ func PushNodeConfig(ctx context.Context, address string, document []byte) error 
 // not answer it at all is not an agent as far as this is concerned — an older
 // image serves no such path, and the caller checks it the long way.
 func AgentHoldsPort(ctx context.Context, address string) (bool, error) {
-	response, err := do(ctx, http.MethodGet, "http://"+address+whoamiPath, "", nil)
+	response, err := doMaintenance(ctx, http.MethodGet, address, whoamiPath, "", nil)
 	if err != nil {
 		return false, fmt.Errorf("ask %s which server holds its maintenance port: %w", address, err)
 	}
