@@ -55,7 +55,7 @@ spec:
   controlPlane:
     address: "172.19.28.184"
     username: "admin"
-    password: "cGFzc3dvcmQ=" # Должен быть закодирован в Base64.
+    password: "cGFzc3dvcmQ=" # Закодированный в Base64 пароль. Кодирование выполняется командой echo -n '<PASSWORD>' | base64 -w0.
     ca: "base64encoded"
     skipCertificateValidation: true
   dataPlane:
@@ -64,6 +64,14 @@ spec:
       volumeExportPort: "p50,p51,p60,p61"
 EOF
 ```
+
+Поле `spec.controlPlane.password` содержит закодированный в Base64 пароль в стандартном алфавите Base64 с дополнением `=`и без перевода строки в конце. Для кодирования используйте команду:
+
+```shell
+echo -n '<пароль>' | base64 -w0
+```
+
+`echo` без `-n` добавляет в конец пароля перевод строки, а `-w0` не даёт GNU `base64` разбить длинное значение на несколько строк. API-сервер отклоняет значение, которое не является Base64. Значение в Base64, которое раскодируется в пароль с пробелом или переводом строки в начале или в конце либо в байты, не являющиеся текстом UTF-8, принимается, а подключение переходит в состояние `Ready` `False` с причиной `InvalidPassword`. Чтобы увидеть причину, воспользуйтесь командой `d8 k get yadrotatlinunifiedstorageconnection -o wide`.
 
 ## Создание StorageClass
 

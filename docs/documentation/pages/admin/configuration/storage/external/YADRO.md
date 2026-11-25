@@ -54,7 +54,7 @@ spec:
   controlPlane:
     address: "172.19.28.184"
     username: "admin"
-    password: "cGFzc3dvcmQ=" # Must be encoded in Base64.
+    password: "cGFzc3dvcmQ=" # A Base64‑encoded password. Encoding is performed by the command: echo -n '<PASSWORD>' | base64 -w0
     ca: "base64encoded"
     skipCertificateValidation: true
   dataPlane:
@@ -63,6 +63,14 @@ spec:
       volumeExportPort: "p50,p51,p60,p61"
 EOF
 ```
+
+The `spec.controlPlane.password` field contains the Base64-encoded password in the standard Base64 alphabet with the `=` appended and no trailing newline. To encode, use the following command:
+
+```shell
+echo -n '<password>' | base64 -w0
+```
+
+`echo` without `-n` appends a newline to the password, and `-w0` prevents GNU `base64` from splitting a long value across multiple lines. The API server rejects a value that is not Base64. A Base64 value that decodes to a password with a space or newline at the beginning or end, or to bytes that are not UTF-8 text, is accepted, and the connection goes to the `Ready` state of `False` with reason `InvalidPassword`. To see the reason, use the command `d8 k get yadrotatlinunifiedstorageconnection -o wide`.
 
 ## Creating a StorageClass
 
