@@ -174,7 +174,7 @@ dhcpOptions:
 
 Если необходимо создать новую подсеть, укажите [параметр `withNATInstance.internalSubnetCIDR`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-withnatinstance-internalsubnetcidr) — в ней будет размещён NAT-инстанс.
 
-> Обязателен один из параметров: `withNATInstance.internalSubnetID` или `withNATInstance.internalSubnetCIDR`.
+> Требуется один из параметров [`withNATInstance.internalSubnetID`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-withnatinstance-internalsubnetid) или [`withNATInstance.internalSubnetCIDR`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-withnatinstance-internalsubnetcidr).
 
 Если также указан [`withNATInstance.externalSubnetID`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-withnatinstance-externalsubnetid), NAT-инстанс будет подключён к этой подсети через вторичный сетевой интерфейс.
 
@@ -237,7 +237,7 @@ NAT-инстанс не используется инсталлятором `dhc
 
 Если master-узел не имеет публичного IP-адреса или недоступен напрямую, запускайте установку с параметрами `--ssh-bastion-host` и `--ssh-bastion-user`.
 
-Если необходимо подключаться к master-узлу напрямую по публичному IP-адресу, укажите для него параметры [`externalIPAddresses`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-masternodegroup-instanceclass-externalipaddresses) и [`externalSubnetIDs`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-masternodegroup-instanceclass-externalsubnetids). Учитывайте, что интерфейс из сети, указанной в `externalSubnetIDs`, будет использоваться как шлюз по умолчанию для узла.
+Если необходимо подключаться к master-узлу напрямую по публичному IP-адресу, укажите для него параметры [`externalIPAddresses`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-masternodegroup-instanceclass-externalipaddresses) и [`externalSubnetIDs`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-masternodegroup-instanceclass-externalsubnetids). Учитывайте, что интерфейс из сети, указанной в [`externalSubnetIDs`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-masternodegroup-instanceclass-externalsubnetids), будет использоваться как шлюз по умолчанию для узла.
 {% endalert %}
 
 ## Назначение YandexClusterConfiguration
@@ -338,7 +338,7 @@ kind: YandexClusterConfiguration
 nodeNetworkCIDR: 192.168.12.0/24
 ```
 
-Deckhouse Platform делит [`nodeNetworkCIDR`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-nodenetworkcidr) на четыре равные части и создаёт внутренние подсети для узлов соответствующих зон доступности. За каждой зоной по умолчанию закреплена своя часть диапазона:
+При автоматическом создании подсетей Deckhouse Platform делит [`nodeNetworkCIDR`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-nodenetworkcidr) на четыре равные части. За каждой зоной по умолчанию закреплена своя часть диапазона:
 
 | Зона | Часть диапазона |
 | --- | --- |
@@ -347,11 +347,19 @@ Deckhouse Platform делит [`nodeNetworkCIDR`](/modules/cloud-provider-yandex
 | `ru-central1-e` | Третья |
 | `ru-central1-d` | Четвёртая |
 
-В [параметре `zones`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-zones) можно указать не более четырёх зон. Если параметр не задан, Deckhouse Platform использует все четыре зоны из таблицы.
+В непустом [параметре `zones`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-zones) можно указать от одной до четырёх поддерживаемых зон. При автоматическом создании подсетей, если параметр не задан или содержит только зоны по умолчанию, Deckhouse Platform создаёт или сохраняет подсети всех четырёх зон из таблицы, даже если в списке указана только одна зона. Пустой список `[]` допускается схемой, но отличается от незаданного параметра при формировании списка зон для групп узлов.
 
-Как использовать зону `ru-central1-f`, описано [в разделе «Использование зоны ru-central1-f»](/modules/cloud-provider-yandex/examples.html#использование-зоны-ru-central1-f).
+Зону `ru-central1-f` можно указать без зон по умолчанию. Правила выбора зон и порядок изменения работающего кластера приведены [в разделе «Управление зонами»](/modules/cloud-provider-yandex/examples.html#управление-зонами).
 
-Узлы подключаются к подсети соответствующей зоны. Деление диапазона выполняется во всех [схемах размещения](../../../../glossary.html#layout). Если задан [параметр `existingZoneToSubnetIDMap`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-existingzonetosubnetidmap), Deckhouse Platform использует указанные в нём подсети и не создаёт новые.
+Узлы подключаются к подсети соответствующей зоны. Деление диапазона выполняется во всех [схемах размещения](../../../../glossary.html#layout). Если [параметр `existingZoneToSubnetIDMap`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-existingzonetosubnetidmap) содержит записи, Deckhouse Platform использует указанные подсети, но не управляет их жизненным циклом. При незаданном [параметре `zones`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-zones) список зон для групп узлов формируется по данным обнаружения подсетей. Чтобы явно ограничить размещение, задайте [параметр `zones`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-zones) и укажите в нём зоны из [`existingZoneToSubnetIDMap`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-existingzonetosubnetidmap). Подробности приведены [в разделе об использовании существующих подсетей](/modules/cloud-provider-yandex/examples.html#использование-существующих-подсетей).
+
+{% alert level="warning" %}
+Если используется схема WithNATInstance и [параметр `existingZoneToSubnetIDMap`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-existingzonetosubnetidmap) не содержит подсеть `ru-central1-a`, явно задайте [параметр `withNATInstance.internalSubnetID`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-withnatinstance-internalsubnetid) или [параметр `withNATInstance.externalSubnetID`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-withnatinstance-externalsubnetid). Иначе NAT-инстанс не сможет определить подсеть в зоне `ru-central1-a`.
+{% endalert %}
+
+{% alert level="warning" %}
+По информации Yandex Cloud, с 16 декабря 2026 года операции создания и изменения виртуальных машин в зоне `ru-central1-b` будут недоступны. Порядок вывода зоны из эксплуатации приведён [в разделе об управлении зонами](/modules/cloud-provider-yandex/examples.html#вывод-из-эксплуатации-зоны-ru-central1-b).
+{% endalert %}
 
 {% alert level="info" %}
 К подсети привязывается только одна таблица маршрутизации, поэтому два кластера с модулем [`cni-simple-bridge`](/modules/cni-simple-bridge/) не могут использовать одни и те же подсети. Чтобы развернуть такие кластеры в общих подсетях, используйте модуль [`cni-cilium`](/modules/cni-cilium/).
@@ -359,11 +367,11 @@ Deckhouse Platform делит [`nodeNetworkCIDR`](/modules/cloud-provider-yandex
 
 ### Назначение внешних IP-адресов и исходящего трафика
 
-Параметр `externalSubnetIDs` указывается в секциях [`masterNodeGroup.instanceClass`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-masternodegroup-instanceclass-externalsubnetids) и [`nodeGroups.instanceClass`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-nodegroups-instanceclass-externalsubnetids) и представляет собой массив идентификаторов подсетей Yandex Cloud, в которые будут подключены внешние сетевые интерфейсы узлов. Этот параметр обязателен, если требуется:
+Параметр [`externalSubnetIDs`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-masternodegroup-instanceclass-externalsubnetids) указывается в секциях [`masterNodeGroup.instanceClass`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-masternodegroup-instanceclass-externalsubnetids) и [`nodeGroups.instanceClass`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-nodegroups-instanceclass-externalsubnetids) и представляет собой массив идентификаторов подсетей Yandex Cloud, в которые будут подключены внешние сетевые интерфейсы узлов. Узлы распределяются по зонам в алфавитном порядке, список зон повторяется для следующих узлов. Подсеть каждого узла должна соответствовать его зоне. Этот параметр обязателен, если требуется:
 
 - Назначение публичного IP-адреса;
 - Определение маршрута по умолчанию для исходящего трафика с узлов;
-- Использование значений `"Auto"` в поле `externalIPAddresses`.
+- Использование значений `"Auto"` в поле [`externalIPAddresses`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-masternodegroup-instanceclass-externalipaddresses).
 
 Пример:
 
@@ -375,7 +383,7 @@ externalSubnetIDs:
 ```
 
 {% alert level="info" %}
-Параметр `externalSubnetIDs` обязателен для корректной работы автоматического назначения публичных IP через `externalIPAddresses: ["Auto", ...]`.
+Параметр [`externalSubnetIDs`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-masternodegroup-instanceclass-externalsubnetids) обязателен для корректной работы автоматического назначения публичных IP, когда в [`externalIPAddresses`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-masternodegroup-instanceclass-externalipaddresses) задают значение `["Auto", ...]`.
 {% endalert %}
 
 ### Настройка DNS и DHCP для внутренних сетей
@@ -422,10 +430,12 @@ netplan apply
 
 ```yaml
 existingZoneToSubnetIDMap:
-  ru-central1-a: e2lu8r1tbbtryhdpa9ro
-  ru-central1-b: e2lu8r1tbbtryhdpa9ro
-  ru-central1-d: e2lu8r1tbbtryhdpa9ro
+  ru-central1-a: <RU_CENTRAL1_A_SUBNET_ID>
+  ru-central1-b: <RU_CENTRAL1_B_SUBNET_ID>
+  ru-central1-d: <RU_CENTRAL1_D_SUBNET_ID>
 ```
+
+Deckhouse Platform использует указанные подсети, но не управляет их созданием и удалением. Чтобы выбрать зоны для размещения узлов, задайте [параметр `zones`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-zones) и укажите зоны, перечисленные в [`existingZoneToSubnetIDMap`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-existingzonetosubnetidmap). Пошаговые примеры приведены [в разделе об использовании существующих подсетей](/modules/cloud-provider-yandex/examples.html#использование-существующих-подсетей).
 
 {% alert level="info" %}
 DP автоматически создаёт таблицу маршрутизации и не привязывает её к подсетям — это необходимо сделать вручную через интерфейс Yandex Cloud.
@@ -437,7 +447,7 @@ DP позволяет явно указать список дополнител�
 
 Эта настройка полезна, если:
 
-- имеются внешние подсети, не указанные в `externalSubnetIDs`, но требующие учёта как внешние;
+- имеются внешние подсети, не указанные в [`externalSubnetIDs`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-masternodegroup-instanceclass-externalsubnetids), но требующие учёта как внешние;
 - требуется точный контроль над интерпретацией IP-адресов при настройке балансировки, маршрутизации и экспорта статуса;
 - используются нестандартные схемы подключения, например через внешние NAT-шлюзы или ручное резервирование IP.
 
@@ -456,7 +466,7 @@ spec:
       - enp6t4sno
 ```
 
-Если параметр не задан, DP будет использовать только те подсети, что явно указаны в YandexClusterConfiguration (например, через `externalSubnetIDs`), чтобы определять публичность IP.
+Если параметр не задан, DP будет использовать только те подсети, что явно указаны в YandexClusterConfiguration, например через [`externalSubnetIDs`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-masternodegroup-instanceclass-externalsubnetids), чтобы определять публичность IP.
 
 ## Настройка групп безопасности в Yandex Cloud
 

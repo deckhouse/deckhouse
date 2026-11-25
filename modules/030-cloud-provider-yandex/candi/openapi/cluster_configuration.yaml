@@ -148,7 +148,7 @@ apiVersions:
               externalIPAddresses: &instanceClassExternalIPAddresses
                 type: array
                 description: |
-                  A list of external IP addresses, listed in the order of the zones where nodes will be created.
+                  A list of external IP addresses for the nodes in a group.
 
                   The following values can be specified in the list:
                   - IP address from an additional external network for the corresponding zone (parameter `externalSubnetIDs`);
@@ -156,7 +156,7 @@ apiVersions:
                   - `Auto`, to order a public IP address in the corresponding zone.
 
                   Please note:
-                  - The array elements must be listed according to the order of zones (parameter `zones`) in which the nodes will be created.
+                  - List elements correspond to node indexes. Nodes are assigned to zones in alphabetical order, repeating the zone list when necessary. Each address must match the zone of its node.
 
                     For example:
 
@@ -166,7 +166,7 @@ apiVersions:
                     - <RU-CENTRAL1-D-IP-ADDRESS>
                     ```
 
-                  - The number of elements in the `externalIPAddresses` array must equal the number of nodes in the group (the `replicas` parameter). To automatically order public IP addresses in the zone, use the value `Auto` in the list of the `externalIPAddresses` parameter at the corresponding position (matching the order of zones).
+                  - If the `externalIPAddresses` list is not empty, it must contain at least as many elements as the number of nodes in the group (`replicas`). To automatically order a public IP address, specify `Auto` at the position of the corresponding node.
                   - If `externalIPAddresses` is not specified, the nodes in the group will be ordered without external IP addresses.
                 items:
                   type: string
@@ -185,7 +185,7 @@ apiVersions:
 
                   Also, a route for the node's internal network interface will be added for the entire subnet specified in [nodeNetworkCIDR](#yandexclusterconfiguration-nodenetworkcidr).
 
-                  The array elements **must** be listed in the same order as the zones (parameter `zones`) in which the nodes will be created. For example:
+                  List elements are selected by node index, repeating the list when necessary. Each subnet must be located in the zone of its node. For example:
 
                   ```yaml
                   - <RU-CENTRAL1-A-SUBNET-ID>
@@ -337,20 +337,22 @@ apiVersions:
           - `ru-central1-e` uses the third part.
           - `ru-central1-d` uses the fourth part.
 
-          Instructions for using the `ru-central1-f` zone are provided in ["Using the ru-central1-f zone"](examples.html#using-the-ru-central1-f-zone).
+          When subnets are created automatically, a zone outside the default set uses the CIDR slot of an omitted default zone. Instructions for selecting zones and changing them in a running cluster are provided in ["Managing zones"](examples.html#managing-zones).
         x-unsafe: true
       existingZoneToSubnetIDMap:
         type: object
         description: |
           One or more pre-existing subnets mapped to respective zone.
 
+          Deckhouse Platform uses the mapped subnets but does not create or delete them. The `existingZoneToSubnetIDMap` parameter can contain more than four zones. The four-zone limit applies to the `zones` parameter. Set `zones` explicitly to select zones for node placement.
+
           **Warning.** When using `cni-simple-bridge`, DP creates a route table that must be manually associated with the specified subnets. Only one route table can be associated with a subnet, so multiple clusters using `cni-simple-bridge` cannot be deployed in the same subnets. Starting with DP 1.76, new clusters in Yandex Cloud use `cni-cilium` in `VXLAN` mode by default. In this mode, pod traffic routing does not depend on Yandex Cloud route tables.
         x-examples:
-          - ru-central1-a: e2lu8r1tbbtryhdpa9ro
-            ru-central1-b: e2lu8r1tbbtryhdpa9ro
-            ru-central1-d: e2lu8r1tbbtryhdpa9ro
-            ru-central1-e: e2lu8r1tbbtryhdpa9ro
-            ru-central1-f: e2lu8r1tbbtryhdpa9ro
+          - ru-central1-a: <RU_CENTRAL1_A_SUBNET_ID>
+            ru-central1-b: <RU_CENTRAL1_B_SUBNET_ID>
+            ru-central1-d: <RU_CENTRAL1_D_SUBNET_ID>
+            ru-central1-e: <RU_CENTRAL1_E_SUBNET_ID>
+            ru-central1-f: <RU_CENTRAL1_F_SUBNET_ID>
         additionalProperties:
           type: string
         pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}/[0-9]{1,2}$'
@@ -493,9 +495,9 @@ apiVersions:
         description: |
           Limits the zones that the cloud provider works with.
 
-          You can list up to four zones. If the parameter is not set, Deckhouse Platform uses `ru-central1-a`, `ru-central1-b`, `ru-central1-d`, and `ru-central1-e`.
+          A non-empty list can contain one to four supported zones. When subnets are created automatically and the parameter is not set, Deckhouse Platform uses `ru-central1-a`, `ru-central1-b`, `ru-central1-d`, and `ru-central1-e`. When subnets are created automatically and the list contains only default zones, all four default subnets are created or retained. An empty list is allowed by the schema but differs from an unset parameter when the zone list for node groups is formed. You can list only `ru-central1-f` to use this zone without a default zone.
 
-          Instructions for using the `ru-central1-f` zone are provided in ["Using the ru-central1-f zone"](examples.html#using-the-ru-central1-f-zone).
+          Instructions for selecting zones and changing them in a running cluster are provided in ["Managing zones"](examples.html#managing-zones).
         items:
           enum:
             - ru-central1-a

@@ -182,7 +182,7 @@ The instance will be created in the zone corresponding to this subnet.
 If you need to create a new subnet, specify the [`withNATInstance.internalSubnetCIDR`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-withnatinstance-internalsubnetcidr) parameter.
 The NAT instance will be placed in this subnet.
 
-> One of the following parameters is required: `withNATInstance.internalSubnetID` or `withNATInstance.internalSubnetCIDR`.
+> Set either [`withNATInstance.internalSubnetID`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-withnatinstance-internalsubnetid) or [`withNATInstance.internalSubnetCIDR`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-withnatinstance-internalsubnetcidr).
 
 If [`withNATInstance.externalSubnetID`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-withnatinstance-externalsubnetid) is also specified,
 the NAT instance will be connected to that subnet via a secondary network interface.
@@ -246,7 +246,7 @@ The NAT instance is not automatically used by the `dhctl` [installer](../../../.
 
 If the master node does not have a public IP address or is not directly accessible, run the installation with the `--ssh-bastion-host` and `--ssh-bastion-user` parameters.
 
-If you need to connect to the master node directly using a public IP address, specify the [`externalIPAddresses`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-masternodegroup-instanceclass-externalipaddresses) and [`externalSubnetIDs`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-masternodegroup-instanceclass-externalsubnetids) parameters for it. Keep in mind that the interface from the network specified in `externalSubnetIDs` will be used as the node's default gateway.
+If you need to connect to the master node directly using a public IP address, specify the [`externalIPAddresses`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-masternodegroup-instanceclass-externalipaddresses) and [`externalSubnetIDs`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-masternodegroup-instanceclass-externalsubnetids) parameters for it. Keep in mind that the interface from the network specified in [`externalSubnetIDs`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-masternodegroup-instanceclass-externalsubnetids) will be used as the node's default gateway.
 {% endalert %}
 
 ## Defining the YandexClusterConfiguration
@@ -355,7 +355,7 @@ kind: YandexClusterConfiguration
 nodeNetworkCIDR: 192.168.12.0/24
 ```
 
-Deckhouse Platform divides [`nodeNetworkCIDR`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-nodenetworkcidr) into four equal parts and creates internal subnets for nodes in the corresponding availability zones. Each default zone has a fixed part of the range:
+When it creates subnets automatically, Deckhouse Platform divides [`nodeNetworkCIDR`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-nodenetworkcidr) into four equal parts. Each default zone has a fixed part of the range:
 
 | Zone | Part of the range |
 | --- | --- |
@@ -364,11 +364,19 @@ Deckhouse Platform divides [`nodeNetworkCIDR`](/modules/cloud-provider-yandex/cl
 | `ru-central1-e` | Third |
 | `ru-central1-d` | Fourth |
 
-You can list up to four zones in [`zones`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-zones). If the parameter is not set, Deckhouse Platform uses all four zones in the table.
+You can list one to four supported zones in a non-empty [`zones`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-zones) parameter. When subnets are created automatically, if the parameter is unset or contains only default zones, Deckhouse Platform creates or retains subnets in all four zones from the table, even when the list contains only one zone. An empty list `[]` is allowed by the schema but differs from an unset parameter when the zone list for node groups is formed.
 
-Instructions for using the `ru-central1-f` zone are provided in ["Using the ru-central1-f zone"](/modules/cloud-provider-yandex/examples.html#using-the-ru-central1-f-zone).
+You can list `ru-central1-f` without any default zones. Rules for selecting zones and changing a running cluster are provided in [Managing zones](/modules/cloud-provider-yandex/examples.html#managing-zones).
 
-Nodes connect to the subnet in their zone. The range is divided this way in every [layout](../../../../glossary.html#layout). If [`existingZoneToSubnetIDMap`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-existingzonetosubnetidmap) is set, Deckhouse Platform uses the mapped subnets without creating new ones.
+Nodes connect to the subnet in their zone. The range is divided this way in every [layout](../../../../glossary.html#layout). If [`existingZoneToSubnetIDMap`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-existingzonetosubnetidmap) contains entries, Deckhouse Platform uses the mapped subnets but does not manage their lifecycle. If [`zones`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-zones) is unset, the zone list for node groups is formed from subnet discovery data. To limit placement explicitly, set [`zones`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-zones) and include zones from [`existingZoneToSubnetIDMap`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-existingzonetosubnetidmap). For details, see [Using existing subnets](/modules/cloud-provider-yandex/examples.html#using-existing-subnets).
+
+{% alert level="warning" %}
+If the WithNATInstance layout uses [`existingZoneToSubnetIDMap`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-existingzonetosubnetidmap) without a `ru-central1-a` subnet, explicitly set [`withNATInstance.internalSubnetID`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-withnatinstance-internalsubnetid) or [`withNATInstance.externalSubnetID`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-withnatinstance-externalsubnetid). Otherwise, the NAT instance cannot determine a subnet in `ru-central1-a`.
+{% endalert %}
+
+{% alert level="warning" %}
+According to Yandex Cloud information, creating and changing virtual machines in `ru-central1-b` will be unavailable from December 16, 2026. The [Managing zones](/modules/cloud-provider-yandex/examples.html#decommissioning-the-ru-central1-b-zone) section describes how to decommission the zone.
+{% endalert %}
 
 {% alert level="info" %}
 A subnet accepts only one route table, so two clusters with the [`cni-simple-bridge`](/modules/cni-simple-bridge/) module cannot use the same subnets.
@@ -377,13 +385,13 @@ To deploy such clusters in shared subnets, use the [`cni-cilium`](/modules/cni-c
 
 ### Assigning external IP addresses and outgoing traffic
 
-The `externalSubnetIDs` parameter is specified in the [`masterNodeGroup.instanceClass`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-masternodegroup-instanceclass-externalsubnetids) and [`nodeGroups.instanceClass`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-nodegroups-instanceclass-externalsubnetids) sections.
-It is an array of Yandex Cloud subnet IDs used to attach external network interfaces to nodes.
+The [`externalSubnetIDs`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-masternodegroup-instanceclass-externalsubnetids) parameter is specified in the [`masterNodeGroup.instanceClass`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-masternodegroup-instanceclass-externalsubnetids) and [`nodeGroups.instanceClass`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-nodegroups-instanceclass-externalsubnetids) sections.
+It is an array of Yandex Cloud subnet IDs used to attach external network interfaces to nodes. Nodes are assigned to zones in alphabetical order, repeating the zone list for subsequent nodes. Each node's subnet must match its zone.
 This parameter is required when:
 
 - Assigning a public IP address.
 - Defining a default route for outgoing traffic from nodes.
-- Using `Auto` values in the `externalIPAddresses` field.
+- Using `Auto` values in the [`externalIPAddresses`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-masternodegroup-instanceclass-externalipaddresses) field.
 
 Example:
 
@@ -395,8 +403,8 @@ externalSubnetIDs:
 ```
 
 {% alert level="info" %}
-The `externalSubnetIDs` parameter is required for the automatic assignment of public IPs
-using `externalIPAddresses: ["Auto", ...]`.
+The [`externalSubnetIDs`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-masternodegroup-instanceclass-externalsubnetids) parameter is required for the automatic assignment of public IPs
+when [`externalIPAddresses`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-masternodegroup-instanceclass-externalipaddresses) is set to `["Auto", ...]`.
 {% endalert %}
 
 ### DNS and DHCP settings for internal networks
@@ -447,10 +455,12 @@ Example:
 
 ```yaml
 existingZoneToSubnetIDMap:
-  ru-central1-a: e2lu8r1tbbtryhdpa9ro
-  ru-central1-b: e2lu8r1tbbtryhdpa9ro
-  ru-central1-d: e2lu8r1tbbtryhdpa9ro
+  ru-central1-a: <RU_CENTRAL1_A_SUBNET_ID>
+  ru-central1-b: <RU_CENTRAL1_B_SUBNET_ID>
+  ru-central1-d: <RU_CENTRAL1_D_SUBNET_ID>
 ```
+
+Deckhouse Platform uses the mapped subnets but does not manage their creation or deletion. To select zones for node placement, set [`zones`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-zones) and include zones listed in [`existingZoneToSubnetIDMap`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-existingzonetosubnetidmap). Step-by-step examples are provided in [Using existing subnets](/modules/cloud-provider-yandex/examples.html#using-existing-subnets).
 
 {% alert level="info" %}
 DP creates a routing table automatically but does not associate it with subnets.
@@ -465,7 +475,7 @@ This is configured via the [`settings.additionalExternalNetworkIDs`](/modules/cl
 
 This is useful when:
 
-- There are external subnets not listed in `externalSubnetIDs` but that should be treated as external.
+- There are external subnets not listed in [`externalSubnetIDs`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-masternodegroup-instanceclass-externalsubnetids) but that should be treated as external.
 - You need precise control over how IP addresses are interpreted for load balancing, routing, and status export.
 - You use custom network configurations (for example, external NAT gateways or manually reserved IPs).
 
@@ -485,7 +495,7 @@ spec:
 ```
 
 If this parameter is not set, DP will only use the subnets explicitly specified in the YandexClusterConfiguration
-(for example, via `externalSubnetIDs`) to determine whether an IP is public.
+(for example, via [`externalSubnetIDs`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-masternodegroup-instanceclass-externalsubnetids)) to determine whether an IP is public.
 
 ## Configuring security groups in Yandex Cloud
 
