@@ -82,12 +82,6 @@ var _ = Describe("Module :: node-manager :: helm template :: master controllers"
 				Expect(tolerations).NotTo(HaveKey(key), name)
 			}
 
-			if singleMaster {
-				Expect(tolerations["node.kubernetes.io/unreachable"]).To(ConsistOf(MatchJSON(`{"key":"node.kubernetes.io/unreachable"}`)), name)
-				Expect(tolerations["node.kubernetes.io/unschedulable"]).To(ConsistOf(MatchJSON(`{"key":"node.kubernetes.io/unschedulable","operator":"Exists","effect":"NoSchedule"}`)), name)
-				continue
-			}
-
 			Expect(tolerations["node.kubernetes.io/unreachable"]).To(ConsistOf(MatchJSON(`{"key":"node.kubernetes.io/unreachable","operator":"Exists","effect":"NoExecute","tolerationSeconds":60}`)), name)
 			Expect(tolerations).NotTo(HaveKey("node.kubernetes.io/unschedulable"), name)
 		}
@@ -119,7 +113,7 @@ var _ = Describe("Module :: node-manager :: helm template :: master controllers"
 			f.HelmRender()
 		})
 
-		It("never evicts the controllers and lets them back onto the cordoned master", func() {
+		It("keeps the single-master PDB while leaving pod tolerations invariant", func() {
 			assertMasterControllers(true)
 			assertReplicas(1)
 		})
@@ -135,6 +129,90 @@ var _ = Describe("Module :: node-manager :: helm template :: master controllers"
 		It("goes by the master count, not the HA flag", func() {
 			assertMasterControllers(true)
 			assertReplicas(1)
+		})
+	})
+
+	Context("When additional masters join during bootstrap", func() {
+		renderTemplates := func(masters int, disableHA, bootstrapped bool, expectedReplicas int64) map[string]string {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.clusterIsBootstrapped", bootstrapped)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSet("global.discovery.clusterMasterCount", masters)
+			f.ValuesSet("global.discovery.clusterControlPlaneIsHighlyAvailable", masters > 1)
+			f.ValuesSet("global.discovery.d8SpecificNodeCountByRole.master", masters)
+
+			if disableHA {
+				f.ValuesSet("global.highAvailability", false)
+			}
+
+			f.ValuesSetFromYaml("nodeManager", nodeManagerConfigValues+nodeManagerAWS)
+			f.ValuesSet("nodeManager.internal.capiControllerManagerEnabled", true)
+			setBashibleAPIServerTLSValues(f)
+			f.HelmRender()
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			for _, name := range quorumReplicaControllers {
+				deployment := f.KubernetesResource("Deployment", nodeManagerNamespace, name)
+				Expect(deployment.Exists()).To(BeTrue(), name)
+				term := deployment.Field("spec.template.spec.affinity.podAntiAffinity.requiredDuringSchedulingIgnoredDuringExecution.0")
+				Expect(term.Get("topologyKey").String()).To(Equal("kubernetes.io/hostname"), name)
+				Expect(term.Get("labelSelector.matchLabels.app").String()).To(Equal(name), name)
+				Expect(deployment.Field("spec.replicas").Int()).To(Equal(expectedReplicas), name)
+				Expect(deployment.Field("spec.strategy.type").String()).To(Equal("RollingUpdate"), name)
+				Expect(deployment.Field("spec.strategy.rollingUpdate.maxSurge").Raw).To(Equal("0"), name)
+			}
+
+			checked := append([]string(nil), masterControllers...)
+
+			if bootstrapped {
+				exporter := f.KubernetesResource("Deployment", nodeManagerNamespace, "node-group-exporter")
+				Expect(exporter.Exists()).To(BeTrue())
+				Expect(exporter.Field("spec.template.spec.affinity.podAntiAffinity").Exists()).To(BeFalse())
+				Expect(exporter.Field("spec.strategy.rollingUpdate.maxSurge").Raw).To(Equal("0"))
+				Expect(exporter.Field("spec.strategy.rollingUpdate.maxUnavailable").Int()).To(Equal(int64(1)))
+
+				checked = append(checked, "node-group-exporter")
+			}
+
+			templates := make(map[string]string, len(checked))
+			for _, name := range checked {
+				deployment := f.KubernetesResource("Deployment", nodeManagerNamespace, name)
+				Expect(deployment.Exists()).To(BeTrue(), name)
+				templates[name] = deployment.Field("spec.template").Raw
+			}
+
+			return templates
+		}
+
+		for _, tc := range []struct {
+			name         string
+			disableHA    bool
+			bootstrapped bool
+		}{
+			{"pre-bootstrap when HA is disabled", true, false},
+			{"pre-bootstrap when HA is unset", false, false},
+			{"post-bootstrap when HA is disabled", true, true},
+			{"post-bootstrap when HA is unset", false, true},
+		} {
+			It("keeps spec.template identical across 1, 2, and 3 masters "+tc.name, func() {
+				one := renderTemplates(1, tc.disableHA, tc.bootstrapped, 1)
+
+				for _, masters := range []int{2, 3} {
+					expectedReplicas := int64(1)
+					if !tc.disableHA {
+						expectedReplicas = 2
+					}
+
+					got := renderTemplates(masters, tc.disableHA, tc.bootstrapped, expectedReplicas)
+					for name, want := range one {
+						Expect(got[name]).To(MatchJSON(want), name)
+					}
+				}
+			})
+		}
+
+		It("runs one replica before the master count is discovered when HA is disabled", func() {
+			renderTemplates(0, true, false, 1)
 		})
 	})
 
@@ -187,7 +265,7 @@ var _ = Describe("Module :: node-manager :: helm template :: master controllers"
 
 			for _, name := range quorumReplicaControllers {
 				deployment := f.KubernetesResource("Deployment", nodeManagerNamespace, name)
-				Expect(deployment.Field("spec.strategy.rollingUpdate.maxSurge").Int()).To(BeZero(), name)
+				Expect(deployment.Field("spec.strategy.rollingUpdate.maxSurge").Raw).To(Equal("0"), name)
 				Expect(deployment.Field("spec.strategy.rollingUpdate.maxUnavailable").Int()).To(Equal(int64(1)), name)
 			}
 		})
@@ -233,7 +311,7 @@ var _ = Describe("Module :: node-manager :: helm template :: master controllers"
 
 			nodeController := f.KubernetesResource("Deployment", nodeManagerNamespace, "node-controller")
 			Expect(nodeController.Field("spec.replicas").Int()).To(Equal(int64(1)))
-			Expect(nodeController.Field("spec.template.spec.containers.0.args").String()).To(ContainSubstring(`"--leader-elect=false"`))
+			Expect(nodeController.Field("spec.template.spec.containers.0.args").String()).To(ContainSubstring(`"--leader-elect=true"`))
 		})
 	})
 

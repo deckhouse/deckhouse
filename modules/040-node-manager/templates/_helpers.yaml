@@ -183,8 +183,7 @@ nodeSelector:
 {{- end }}
 
 {{- /* Explicit list, not helm_lib any-node (helm_lib/charts/deckhouse_lib_helm/templates/_node_affinity.tpl): masters-only replicas need no arbiter, autoscaler or custom taints. */ -}}
-{{- /* Several masters: unreachable is NoExecute for 60s, so a replica leaves a powered-off master. */ -}}
-{{- /* A single master is the only place to run: unreachable is tolerated forever, unschedulable too. */ -}}
+{{- /* Independent of clusterMasterCount so adding a second master does not change the pod template and roll controllers mid-bootstrap; single-master voluntary-disruption protection lives in the PDB. */ -}}
 {{- define "node_manager_master_controller_tolerations" }}
 tolerations:
 - key: node-role.kubernetes.io/master
@@ -207,17 +206,21 @@ tolerations:
 - key: node.kubernetes.io/disk-pressure
 - key: node.kubernetes.io/pid-pressure
 - key: node.kubernetes.io/network-unavailable
-  {{- if include "node_manager_single_master" . }}
-- key: node.kubernetes.io/unreachable
-- key: node.kubernetes.io/unschedulable
-  operator: Exists
-  effect: NoSchedule
-  {{- else }}
 - key: node.kubernetes.io/unreachable
   operator: Exists
   effect: NoExecute
   tolerationSeconds: 60
-  {{- end }}
+{{- end }}
+
+{{- /* Always rendered for maxSurge: 0 master controllers so enabling HA at master 1 -> 2 does not roll the sole replica mid-bootstrap. */ -}}
+{{- define "node_manager_master_controller_anti_affinity" }}
+affinity:
+  podAntiAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+    - labelSelector:
+        matchLabels:
+          app: {{ . | quote }}
+      topologyKey: kubernetes.io/hostname
 {{- end }}
 
 {{- /* etcd quorum size, floor(N/2)+1: anti-affinity or hostNetwork allows one replica per master, and this many */ -}}

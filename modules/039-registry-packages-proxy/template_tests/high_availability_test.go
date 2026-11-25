@@ -39,13 +39,14 @@ var _ = Describe("Module :: registry-packages-proxy :: helm template :: high ava
 		f.ValuesSetFromYaml("registryPackagesProxy", customCertificatePresent)
 	})
 
-	assertRenderedState := func(replicas int64, haEnabled bool) {
+	assertRenderedState := func(replicas int64) {
 		Expect(f.RenderError).ShouldNot(HaveOccurred())
 
 		deployment := f.KubernetesResource("Deployment", proxyNamespace, "registry-packages-proxy")
 		Expect(deployment.Exists()).To(BeTrue())
 		Expect(deployment.Field("spec.replicas").Int()).To(BeEquivalentTo(replicas))
-		Expect(deployment.Field("spec.template.spec.affinity.podAntiAffinity").Exists()).To(Equal(haEnabled))
+		Expect(deployment.Field("spec.template.spec.affinity.podAntiAffinity.requiredDuringSchedulingIgnoredDuringExecution.0.topologyKey").String()).To(Equal("kubernetes.io/hostname"))
+		Expect(deployment.Field("spec.template.spec.affinity.podAntiAffinity.requiredDuringSchedulingIgnoredDuringExecution.0.labelSelector.matchLabels.app").String()).To(Equal("registry-packages-proxy"))
 
 		pdb := f.KubernetesResource("PodDisruptionBudget", proxyNamespace, "registry-packages-proxy")
 		Expect(pdb.Exists()).To(BeTrue())
@@ -60,14 +61,14 @@ var _ = Describe("Module :: registry-packages-proxy :: helm template :: high ava
 		It("Should render one replica and allow its eviction by default", func() {
 			f.HelmRender()
 
-			assertRenderedState(1, false)
+			assertRenderedState(1)
 		})
 
 		It("Should enable high availability for this module", func() {
 			f.ValuesSet("registryPackagesProxy.highAvailability", true)
 			f.HelmRender()
 
-			assertRenderedState(2, true)
+			assertRenderedState(2)
 		})
 	})
 
@@ -79,14 +80,14 @@ var _ = Describe("Module :: registry-packages-proxy :: helm template :: high ava
 		It("Should inherit high availability by default", func() {
 			f.HelmRender()
 
-			assertRenderedState(2, true)
+			assertRenderedState(2)
 		})
 
 		It("Should disable high availability for this module", func() {
 			f.ValuesSet("registryPackagesProxy.highAvailability", false)
 			f.HelmRender()
 
-			assertRenderedState(1, false)
+			assertRenderedState(1)
 		})
 	})
 })
@@ -100,8 +101,9 @@ func tolerationsByKey(deployment object_store.KubeObject) map[string][]string {
 	return byKey
 }
 
-// What decides is the number of masters, not the high-availability flag: on a single master
-// there is nowhere else to run, so a cordon must not drain the proxy off it.
+// What decides PDB eviction is the number of masters, not the high-availability flag: on a single master
+// there is nowhere else to run, so a drain cannot evict the proxy. Pod tolerations and anti-affinity stay
+// fixed across master counts so joining masters do not roll the proxy mid-bootstrap.
 var _ = Describe("Module :: registry-packages-proxy :: helm template :: placement on masters", func() {
 	f := SetupHelmConfig(``)
 
@@ -142,12 +144,6 @@ var _ = Describe("Module :: registry-packages-proxy :: helm template :: placemen
 			Expect(tolerations).NotTo(HaveKey(key))
 		}
 
-		if singleMaster {
-			Expect(tolerations["node.kubernetes.io/unreachable"]).To(ConsistOf(MatchJSON(`{"key":"node.kubernetes.io/unreachable"}`)))
-			Expect(tolerations["node.kubernetes.io/unschedulable"]).To(ConsistOf(MatchJSON(`{"key":"node.kubernetes.io/unschedulable","operator":"Exists","effect":"NoSchedule"}`)))
-			return
-		}
-
 		Expect(tolerations["node.kubernetes.io/unreachable"]).To(ConsistOf(MatchJSON(`{"key":"node.kubernetes.io/unreachable","operator":"Exists","effect":"NoExecute","tolerationSeconds":60}`)))
 		Expect(tolerations).NotTo(HaveKey("node.kubernetes.io/unschedulable"))
 	}
@@ -174,7 +170,7 @@ var _ = Describe("Module :: registry-packages-proxy :: helm template :: placemen
 			f.HelmRender()
 		})
 
-		It("never evicts the proxy and lets it back onto the cordoned master", func() {
+		It("keeps the single-master PDB while leaving pod tolerations invariant", func() {
 			assertPlacement(true)
 			assertReplicas(1)
 		})
@@ -190,6 +186,50 @@ var _ = Describe("Module :: registry-packages-proxy :: helm template :: placemen
 		It("goes by the master count, not the HA flag", func() {
 			assertPlacement(true)
 			assertReplicas(1)
+		})
+	})
+
+	Context("When additional masters join during bootstrap", func() {
+		renderTemplate := func(masters int, disableHA bool, expectedReplicas int64) string {
+			f.ValuesSetFromYaml("global", globalValuesNotBootstrapped)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSet("global.discovery.clusterMasterCount", masters)
+			f.ValuesSet("global.discovery.clusterControlPlaneIsHighlyAvailable", masters > 1)
+			f.ValuesSet("global.discovery.d8SpecificNodeCountByRole.master", masters)
+
+			if disableHA {
+				f.ValuesSet("global.highAvailability", false)
+			}
+
+			f.ValuesSetFromYaml("registryPackagesProxy", customCertificatePresent)
+			f.HelmRender()
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			proxy := deployment()
+			Expect(proxy.Field("spec.replicas").Int()).To(Equal(expectedReplicas))
+			Expect(proxy.Field("spec.strategy.type").String()).To(Equal("RollingUpdate"))
+			Expect(proxy.Field("spec.strategy.rollingUpdate.maxSurge").Raw).To(Equal("0"))
+			Expect(proxy.Field("spec.strategy.rollingUpdate.maxUnavailable").Int()).To(Equal(int64(1)))
+			Expect(proxy.Field("spec.template.spec.affinity.podAntiAffinity.requiredDuringSchedulingIgnoredDuringExecution.0.labelSelector").Raw).To(MatchJSON(`{ "matchLabels": { "app": "registry-packages-proxy" } }`))
+			Expect(proxy.Field("spec.template.spec.affinity.podAntiAffinity.requiredDuringSchedulingIgnoredDuringExecution.0.topologyKey").String()).To(Equal("kubernetes.io/hostname"))
+
+			return proxy.Field("spec.template").Raw
+		}
+
+		It("keeps spec.template identical across 1, 2, and 3 masters when HA is disabled", func() {
+			one := renderTemplate(1, true, 1)
+			Expect(renderTemplate(2, true, 1)).To(MatchJSON(one))
+			Expect(renderTemplate(3, true, 1)).To(MatchJSON(one))
+		})
+
+		It("keeps spec.template identical across 1, 2, and 3 masters when HA is unset", func() {
+			one := renderTemplate(1, false, 1)
+			Expect(renderTemplate(2, false, 2)).To(MatchJSON(one))
+			Expect(renderTemplate(3, false, 2)).To(MatchJSON(one))
+		})
+
+		It("runs one replica before the master count is discovered when HA is disabled", func() {
+			renderTemplate(0, true, 1)
 		})
 	})
 
@@ -216,7 +256,7 @@ var _ = Describe("Module :: registry-packages-proxy :: helm template :: placemen
 		It("runs a quorum of replicas and replaces them one at a time", func() {
 			assertPlacement(false)
 			assertReplicas(2)
-			Expect(deployment().Field("spec.strategy.rollingUpdate.maxSurge").Int()).To(BeZero())
+			Expect(deployment().Field("spec.strategy.rollingUpdate.maxSurge").Raw).To(Equal("0"))
 			Expect(deployment().Field("spec.strategy.rollingUpdate.maxUnavailable").Int()).To(Equal(int64(1)))
 		})
 	})

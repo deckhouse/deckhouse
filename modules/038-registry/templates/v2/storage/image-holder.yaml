@@ -87,11 +87,12 @@ spec:
       labels:
         app: registry-storage-image-holder
     spec:
-      # Wherever the storage can run, with the same selector and tolerations: the images are
-      # needed on the node the replica is on, and on a node it may come to.
+      # The template selector and tolerations match the storage StatefulSet, so the images are on
+      # the node its replica is on and on any node it may move to. The Kubernetes DaemonSet controller
+      # additionally injects the node.kubernetes.io/unschedulable toleration into holder Pods.
       {{- include "helm_lib_priority_class" (tuple $ "system-cluster-critical") | nindent 6 }}
       {{- include "helm_lib_node_selector" (tuple $ "master") | nindent 6 }}
-      {{- include "registry_master_tolerations" (dict "context" $ "leaveUnreachableNode" false) | nindent 6 }}
+      {{- include "registry_master_tolerations" (dict "leaveUnreachableNode" false) | nindent 6 }}
       # Unlike the storage, nothing here needs root or the host network: `/pause` reads no file
       # and opens no socket. So the restricted standard holds as it is, and there is no exception
       # to grant.

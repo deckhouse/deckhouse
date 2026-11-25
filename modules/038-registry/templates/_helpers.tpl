@@ -8,10 +8,9 @@
 {{- end }}
 
 {{- /* Copy of node_manager_master_controller_tolerations in modules/040-node-manager/templates/_helpers.yaml, plus leaveUnreachableNode: */ -}}
-{{- /* false keeps the pod on an unreachable master, true leaves it after 60s. A single master keeps it and tolerates unschedulable. */ -}}
+{{- /* false keeps the pod on an unreachable master, true leaves it after 60s. Independent of clusterMasterCount so adding a second master does not roll workloads mid-bootstrap; single-master voluntary-disruption protection lives in the PDB for workloads that have one. */ -}}
 {{- /* Explicit list, not helm_lib any-node (helm_lib/charts/deckhouse_lib_helm/templates/_node_affinity.tpl): masters-only pods need no arbiter, autoscaler or custom taints. */ -}}
 {{- define "registry_master_tolerations" }}
-{{- $context := .context }}
 tolerations:
 - key: node-role.kubernetes.io/master
 - key: node-role.kubernetes.io/control-plane
@@ -33,18 +32,12 @@ tolerations:
 - key: node.kubernetes.io/disk-pressure
 - key: node.kubernetes.io/pid-pressure
 - key: node.kubernetes.io/network-unavailable
-{{- $singleMaster := include "registry_single_master" $context }}
-{{- if and .leaveUnreachableNode (not $singleMaster) }}
+{{- if .leaveUnreachableNode }}
 - key: node.kubernetes.io/unreachable
   operator: Exists
   effect: NoExecute
   tolerationSeconds: 60
 {{- else }}
 - key: node.kubernetes.io/unreachable
-{{- end }}
-{{- if $singleMaster }}
-- key: node.kubernetes.io/unschedulable
-  operator: Exists
-  effect: NoSchedule
 {{- end }}
 {{- end }}
