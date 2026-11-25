@@ -4,7 +4,7 @@ permalink: ru/admin/integrations/public/yandex/authorization.html
 lang: ru
 ---
 
-Для того чтобы Deckhouse Platform (DP) мог управлять ресурсами в Yandex Cloud, необходимо:
+Для того чтобы Deckhouse Platform мог управлять ресурсами в Yandex Cloud, необходимо:
 
 - создать сервисный аккаунт;
 - назначить ему необходимые IAM-роли;
@@ -37,12 +37,13 @@ systemctl status cloud-init.service
 {% alert level="warning" %}
 Начиная с версии 1.77, новые кластеры в Yandex Cloud по умолчанию используют CNI Cilium с туннелированием трафика подов через VXLAN. В существующих кластерах CNI не меняется.
 
-Убедитесь, что на всех узлах используется ядро Linux версии 5.8 или новее, а группы безопасности разрешают UDP-трафик между узлами. Список портов приведён в разделе [«Сетевое взаимодействие компонентов платформы»](../../../../reference/network_interaction.html), настройка CNI описана в разделе [«Настройка внутренней сети»](../../../configuration/network/internal/configuration.html).
+Убедитесь, что на всех узлах используется ядро Linux версии 5.8 или новее, а группы безопасности разрешают UDP-трафик между узлами. Список портов приведён в разделе
+[«Сетевое взаимодействие компонентов платформы»](../../../../reference/network_interaction.html), настройка CNI описана в разделе [«Настройка внутренней сети»](../../../configuration/network/internal/configuration.html).
 {% endalert %}
 
 ## Создание сервисного аккаунта
 
-Для управления ресурсами в Yandex Cloud через DP создайте сервисный аккаунт и выдайте ему права на редактирование.
+Для управления ресурсами в Yandex Cloud через Deckhouse Platform создайте сервисный аккаунт и выдайте ему права на редактирование.
 Подробную инструкцию по созданию сервисного аккаунта смотрите в [документации Yandex Cloud](https://cloud.yandex.com/ru/docs/resource-manager/operations/cloud/set-access-bindings).
 
 Для создания сервисного аккаунта выполните команду:
@@ -66,7 +67,7 @@ name: deckhouse
 
 ## Назначение IAM-ролей
 
-Для работы DP с ресурсами облака назначьте сервисному аккаунту следующие роли:
+Для работы Deckhouse Platform с ресурсами облака назначьте сервисному аккаунту следующие роли:
 
 ```shell
 yc resource-manager folder add-access-binding --id <FOLDER_ID> --role compute.editor --subject serviceAccount:<USER_ID>
@@ -118,9 +119,10 @@ d8 k -n d8-cloud-provider-yandex edit secret d8-credentials
 
 В [схеме размещения WithNATInstance](layout.html#withnatinstance) API-ключ для мониторинга NAT-инстанса хранится во втором секрете `d8-credentials-exporter` в том же неймспейсе. У него поле `authScheme` со значением `apiToken`, а ключ записан в поле `secret`.
 
-Вместо готового ключа в поле `secret` можно указать значение `Auto`. В этом случае при развёртывании инфраструктуры DP создаёт в каталоге сервисный аккаунт с именем `<CLUSTER_PREFIX>-monitoring`, выдаёт ему роль `monitoring.viewer` и генерирует для него API-ключ, который дальше использует экспортер метрик.
+Вместо готового ключа в поле `secret` можно указать значение `Auto`. В этом случае при развёртывании инфраструктуры Deckhouse Platform создаёт в каталоге сервисный аккаунт с именем `<CLUSTER_PREFIX>-monitoring`, выдаёт ему роль `monitoring.viewer` и генерирует для него API-ключ, который дальше использует экспортер метрик.
 
-В кластерах, переведённых на ModuleConfig, ключ сервисного аккаунта переносится в секрет `d8-credentials` из параметра [`provider.serviceAccountJSON`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-provider-serviceaccountjson) ресурса [YandexClusterConfiguration](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration). API-ключ мониторинга переносится в секрет `d8-credentials-exporter` из параметра [`withNATInstance.exporterAPIKey`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-withnatinstance-exporterapikey).
+В кластерах, переведённых на ModuleConfig, ключ сервисного аккаунта переносится в секрет `d8-credentials` из параметра [`provider.serviceAccountJSON`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-provider-serviceaccountjson) ресурса
+[YandexClusterConfiguration](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration). API-ключ мониторинга переносится в секрет `d8-credentials-exporter` из параметра [`withNATInstance.exporterAPIKey`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-withnatinstance-exporterapikey).
 
 ## Проверка и увеличение квот
 
@@ -134,7 +136,8 @@ d8 k -n d8-cloud-provider-yandex edit secret d8-credentials
 
 ## Резервирование публичного IP
 
-Если используется [схема размещения](../../../../glossary.html#layout) WithoutNAT или WithNATInstance, и требуется фиксированный внешний IP-адрес (например, для указания в [`externalIPAddresses`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-externalipaddresses), [`natInstanceExternalAddress`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-withnatinstance-natinstanceexternaladdress) или для [bastion-хоста](../../../../glossary.html#bastion-host)), выполните команду:
+Если используется [схема размещения](../../../../glossary.html#layout) WithoutNAT или WithNATInstance, и требуется фиксированный внешний IP-адрес (например, для указания в [`externalIPAddresses`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-externalipaddresses),
+[`natInstanceExternalAddress`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-withnatinstance-natinstanceexternaladdress) или для [bastion-хоста](../../../../glossary.html#bastion-host)), выполните команду:
 
 ```shell
 yc vpc address create --external-ipv4 zone=ru-central1-a
@@ -153,4 +156,4 @@ external_ipv4_address:
 reserved: true
 ```
 
-После выполнения этих шагов у вас будут все необходимые данные для настройки провайдера, порядок описан в разделе [«Конфигурация»](layout.html#конфигурация).
+После выполнения этих шагов у вас будут все необходимые данные для настройки провайдера, порядок описан в разделе [«Конфигурация»](configuration.html#конфигурация).

@@ -10,7 +10,7 @@ description: "Configure Azure connection and authorization for Deckhouse Platfor
 The provider supports working with only one disk in the virtual machine template. Make sure the template contains only one disk.
 {% endalert %}
 
-To ensure Deckhouse Platform (DP) works correctly with Microsoft Azure, the following conditions must be met:
+To ensure Deckhouse Platform works correctly with Microsoft Azure, the following conditions must be met:
 
 - The selected region must support [Availability Zones](../../../../glossary.html#availability-zone).
 - All virtual machines must have the `cloud-init` package installed.
@@ -27,7 +27,7 @@ Make sure all nodes run Linux kernel 5.8 or newer and that firewall rules allow 
 
 ## Accessing the Azure API
 
-To manage Azure resources from DP, you need a service account with the `Contributor` role within the appropriate subscription.
+To manage Azure resources from Deckhouse Platform, you need a service account with the `Contributor` role within the appropriate subscription.
 Follow these steps:
 
 1. Install Azure CLI and log in:

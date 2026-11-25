@@ -150,7 +150,7 @@ The four-zone limit applies to an explicit [`zones`](configuration.html#paramete
 
 Before changing zones, review the effects and perform the checks below. Then proceed to the [zone replacement procedure](#zone-replacement-procedure).
 
-Deckhouse Platform does not move resources between zones. When a worker NodeGroup's zones change, Deckhouse Platform removes nodes from the excluded zones. The number of nodes in the remaining zones is determined by the group settings and, for CloudEphemeral, also depends on autoscaling. A zonal volume uses a Yandex Cloud disk that can be [attached only to a node in the same zone](https://yandex.cloud/en/docs/compute/concepts/disk). Before changing zones, migrate workloads and volume data using the procedure for the corresponding application. For general information about disks and PersistentVolumes, see the [Yandex Cloud storage section](/products/kubernetes-platform/documentation/v1/admin/integrations/public/yandex/storage.html).
+Deckhouse Platform does not move resources between zones. When a worker NodeGroup's zones change, Deckhouse Platform removes nodes from the excluded zones. The number of nodes in the remaining zones is determined by the group settings and, for CloudEphemeral, also depends on autoscaling. A zonal volume uses a Yandex Cloud disk that can be [attached only to a node in the same zone](https://yandex.cloud/en/docs/compute/concepts/disk). Before changing zones, migrate workloads and volume data using the procedure for the corresponding application. For general information about disks and PersistentVolumes, see the [Yandex Cloud storage section](/products/kubernetes-platform/documentation/v1/admin/integrations/public/yandex/load-balancing-and-storage.html).
 
 {% alert level="warning" %}
 A subnet cannot be deleted while other Yandex Cloud resources use it. Before applying the change, remove nodes from the excluded zone, migrate volume data, and disconnect other resources from the subnets being deleted. For the required checks, see the [Yandex Cloud subnet deletion instructions](https://yandex.cloud/en/docs/vpc/operations/subnet-delete).
@@ -194,7 +194,7 @@ Before changing the zone list, perform the following checks:
 
    Find the name of the excluded zone in the output.
 1. Migrate data from volumes available only in the excluded zone using the corresponding application's tools.
-   For general information about disks and PersistentVolumes, see the [Yandex Cloud storage section](/products/kubernetes-platform/documentation/v1/admin/integrations/public/yandex/storage.html).
+   For general information about disks and PersistentVolumes, see the [Yandex Cloud storage section](/products/kubernetes-platform/documentation/v1/admin/integrations/public/yandex/load-balancing-and-storage.html).
 1. Determine the temporary and final zone lists for each node group. Use zones from the cluster-wide [`zones`](configuration.html#parameters-nodes-parameters-zones) list where nodes should be placed at each stage.
    For NodeGroups of type `CloudEphemeral`, set the list in [`spec.cloudInstances.zones`](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-zones) with any provider configuration method.
    For groups of type `CloudPermanent` with the provider configured through ModuleConfig, use the same NodeGroup parameter. With the legacy configuration method through YandexClusterConfiguration, change [`nodeGroups[].zones`](cluster_configuration.html#yandexclusterconfiguration-nodegroups-zones) and [`masterNodeGroup.zones`](cluster_configuration.html#yandexclusterconfiguration-masternodegroup-zones).
@@ -859,7 +859,7 @@ Do not manually delete managed virtual machines or Machine objects, as this can 
 
 ## An example of the YandexInstanceClass custom resource
 
-YandexInstanceClass describes the virtual machines that DP provisions for a node group. Only two parameters are required, [`cores`](cr.html#yandexinstanceclass-v1-spec-cores) and [`memory`](cr.html#yandexinstanceclass-v1-spec-memory). The other parameters are optional.
+YandexInstanceClass describes the virtual machines that Deckhouse Platform provisions for a node group. Only two parameters are required, [`cores`](cr.html#yandexinstanceclass-v1-spec-cores) and [`memory`](cr.html#yandexinstanceclass-v1-spec-memory). The other parameters are optional.
 
 The example below also sets the OS image, the disk type and size, the share of a vCPU, and the network interface mode:
 

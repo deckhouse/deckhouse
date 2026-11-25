@@ -1,14 +1,7 @@
 ---
-title: Integration with Huawei Cloud services
-permalink: en/admin/integrations/private/huaweicloud/services.html
+title: Node management in Huawei Cloud
+permalink: en/admin/integrations/private/huaweicloud/node-management.html
 ---
-
-Deckhouse Platform leverages Huawei Cloud's capabilities to operate Kubernetes clusters.
-The following features are supported:
-
-- Resource management in Huawei Cloud via `cloud-controller-manager`.
-- Disk provisioning using the [CSI driver](../../../../glossary.html#csi-driver).
-- Integration with the `node-manager` module, allowing the use of [HuaweiCloudInstanceClass](/modules/cloud-provider-huaweicloud/cr.html#huaweicloudinstanceclass) in [NodeGroup](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-classreference).
 
 ## Working with InstanceClass
 

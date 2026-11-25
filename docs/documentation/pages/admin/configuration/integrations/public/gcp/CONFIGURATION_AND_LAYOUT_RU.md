@@ -1,37 +1,34 @@
 ---
-title: Схемы размещения и настройка Google Cloud Platform
-permalink: ru/admin/integrations/public/gcp/configuration-and-layout-scheme.html
+title: Схемы размещения Google Cloud Platform
+permalink: ru/admin/integrations/public/gcp/layout.html
 lang: ru
 ---
 
 ## Схемы размещения
 
-Данный раздел описывает возможные [схемы размещения](../../../../glossary.html#layout) узлов кластера в инфраструктуре Google Cloud Platform (GCP) и связанные с ними настройки. От выбора схемы (layout) зависят принципы сетевого взаимодействия, наличие публичных IP-адресов, маршрутизация исходящего трафика и способ подключения к узлам.
+Данный раздел описывает возможные [схемы размещения](../../../../glossary.html#layout)
+узлов кластера в инфраструктуре Google Cloud Platform (GCP). От
+выбора схемы (layout) зависят принципы сетевого взаимодействия, наличие публичных
+IP-адресов, маршрутизация исходящего трафика и способ подключения к узлам.
 
-DP поддерживает две схемы размещения ресурсов в облаке GCP.
+Deckhouse Platform поддерживает две схемы размещения ресурсов в облаке GCP.
 
 ### Standard
 
+В этой схеме для кластера создаются отдельные VPC и Cloud NAT.
+
 * Для кластера создается отдельная VPC с [Cloud NAT](https://cloud.google.com/nat/docs/overview).
 * Узлы в кластере не имеют публичных IP-адресов.
-* Публичные IP-адреса можно назначить на статические и [master-узлы](../../../../glossary.html#master-node):
+* Публичные IP-адреса можно назначить на статические и
+  [master-узлы](../../../../glossary.html#master-node):
   * при этом будет использоваться One-to-One NAT для отображения публичного IP-адреса в IP-адрес узла (следует помнить, что CloudNAT в этом случае использоваться не будет).
-* Если master-узел не имеет публичного IP-адреса, для установки и доступа в кластер необходим дополнительный инстанс с публичным IP-адресом (например, [bastion-хост](../../../../glossary.html#bastion-host)).
+* Если master-узел не имеет публичного IP-адреса, для
+  установки и доступа в кластер необходим дополнительный
+  инстанс с публичным IP-адресом (например, [bastion-хост](../../../../glossary.html#bastion-host)).
 * Между VPC кластера и другими VPC можно настроить пиринговое соединение.
 
 ![resources](../../../../images/cloud-provider-gcp/gcp-standard.png)
 <!--- Исходник: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-10164&t=Qb5yyWumzPiTBtfL-0 --->
-
-При создании кластера DP создаёт в VPC кластера следующие правила файрвола:
-
-- `<CLUSTER_PREFIX>-ssh-and-ping` — разрешение входящего трафика по протоколам ICMP и TCP (порт `22`) к узлам с network tag `<CLUSTER_PREFIX>` из CIDR, указанных в [`sshAllowList`](/modules/cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration-sshallowlist) (по умолчанию `0.0.0.0/0`);
-- `<CLUSTER_PREFIX>-intercommunication` — разрешение любого трафика между узлами с network tag `<CLUSTER_PREFIX>`, а также из подсети подов ([`podSubnetCIDR`](/modules/control-plane-manager/configuration.html#parameters-network-podsubnetcidr)).
-
-Собственные правила файрвола применяются к узлам через дополнительные network tags ([`additionalNetworkTags`](/modules/cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration-masternodegroup-instanceclass-additionalnetworktags)):
-
-- для master-узлов — в параметре [`masterNodeGroup.instanceClass.additionalNetworkTags`](/modules/cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration-masternodegroup-instanceclass-additionalnetworktags) ресурса [GCPClusterConfiguration](/modules/cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration);
-- для [статических узлов](../../../../glossary.html#static-node) — в параметре [`nodeGroups[].instanceClass.additionalNetworkTags`](/modules/cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration-nodegroups-instanceclass-additionalnetworktags) ресурса [GCPClusterConfiguration](/modules/cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration);
-- для эфемерных узлов — в параметре [`spec.additionalNetworkTags`](/modules/cloud-provider-gcp/cr.html#gcpinstanceclass-v1-spec-additionalnetworktags) ресурса [GCPInstanceClass](/modules/cloud-provider-gcp/cr.html#gcpinstanceclass).
 
 Пример конфигурации схемы размещения:
 
@@ -82,38 +79,20 @@ nodeGroups:
       kube-node: static
 provider:
   region: europe-west4              # Обязательный параметр.
-  serviceAccountJSON: |             # Обязательный параметр.
-    {
-      "type": "service_account",
-      "project_id": "sandbox",
-      "private_key_id": "98sdcj5e8c7asd98j4j3n9csakn",
-      "private_key": "-----BEGIN PRIVATE KEY-----",
-      "client_id": "342975658279248",
-      "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-      "token_uri": "https://oauth2.googleapis.com/token",
-      "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-      "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/k8s-test%40sandbox.iam.gserviceaccount.com"
-    }
+  serviceAccountJSON: "<SERVICE_ACCOUNT_JSON>"  # Обязательный параметр.
 ```
 
+Замените `<SERVICE_ACCOUNT_JSON>` на JSON-ключ сервисного аккаунта GCP.
+
 ### WithoutNAT
+
+В этой схеме для кластера создаётся отдельная VPC без Cloud NAT.
 
 * Для кластера создается отдельная VPC, все узлы кластера имеют публичные IP-адреса.
 * Между VPC кластера и другими VPC можно настроить пиринговое соединение.
 
 ![resources](../../../../images/cloud-provider-gcp/gcp-withoutnat.png)
 <!--- Исходник: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-10296&t=Qb5yyWumzPiTBtfL-0 --->
-
-При создании кластера DP создаёт в VPC кластера следующие правила файрвола:
-
-- `<CLUSTER_PREFIX>-ssh-and-ping` — разрешение входящего трафика по протоколам ICMP и TCP (порт `22`) к узлам с network tag `<CLUSTER_PREFIX>` из CIDR, указанных в [`sshAllowList`](/modules/cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration-sshallowlist) (по умолчанию `0.0.0.0/0`);
-- `<CLUSTER_PREFIX>-intercommunication` — разрешение любого трафика между узлами с network tag `<CLUSTER_PREFIX>`, а также из подсети подов ([`podSubnetCIDR`](/modules/control-plane-manager/configuration.html#parameters-network-podsubnetcidr)).
-
-Собственные правила файрвола применяются к узлам через дополнительные network tags ([`additionalNetworkTags`](/modules/cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration-masternodegroup-instanceclass-additionalnetworktags)):
-
-- для master-узлов — в параметре [`masterNodeGroup.instanceClass.additionalNetworkTags`](/modules/cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration-masternodegroup-instanceclass-additionalnetworktags) ресурса [GCPClusterConfiguration](/modules/cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration);
-- для статических узлов — в параметре [`nodeGroups[].instanceClass.additionalNetworkTags`](/modules/cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration-nodegroups-instanceclass-additionalnetworktags) ресурса [GCPClusterConfiguration](/modules/cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration);
-- для эфемерных узлов — в параметре [`spec.additionalNetworkTags`](/modules/cloud-provider-gcp/cr.html#gcpinstanceclass-v1-spec-additionalnetworktags) ресурса [GCPInstanceClass](/modules/cloud-provider-gcp/cr.html#gcpinstanceclass).
 
 Пример конфигурации схемы размещения:
 
@@ -155,143 +134,11 @@ nodeGroups:
       kube-node: static
 provider:
   region: europe-west4              # Обязательный параметр.
-  serviceAccountJSON: |             # Обязательный параметр.
-    {
-      "type": "service_account",
-      "project_id": "sandbox",
-      "private_key_id": "98sdcj5e8c7asd98j4j3n9csakn",
-      "private_key": "-----BEGIN PRIVATE KEY-----",
-      "client_id": "342975658279248",
-      "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-      "token_uri": "https://oauth2.googleapis.com/token",
-      "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-      "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/k8s-test%40sandbox.iam.gserviceaccount.com"
-    }
+  serviceAccountJSON: "<SERVICE_ACCOUNT_JSON>"  # Обязательный параметр.
 ```
 
-## Конфигурация
+Замените `<SERVICE_ACCOUNT_JSON>` на JSON-ключ сервисного аккаунта GCP.
 
-Интеграции с GCP осуществляется с помощью [ресурса GCPClusterConfiguration](/modules/cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration), который описывает конфигурацию [облачного кластера](../../../../glossary.html#cloud-cluster) в GCP и используется [облачным провайдером](../../../../glossary.html#cloud-provider), если управляющий слой (control plane) кластера размещён в облаке. Отвечающий за интеграцию модуль DP настраивается автоматически, исходя из выбранной [схемы размещения](../../../../glossary.html#layout).
+[Настройка интеграции](configuration.html).
 
-Выполните следующую команду, чтобы изменить конфигурацию в работающем кластере:
-
-```shell
-d8 system edit provider-cluster-configuration
-```
-
-{% alert level="info" %}
-После изменения параметров узлов необходимо выполнить команду `dhctl converge`, чтобы изменения вступили в силу.
-{% endalert %}
-
-Пример конфигурации:
-
-```yaml
-apiVersion: deckhouse.io/v1
-kind: GCPClusterConfiguration
-layout: WithoutNAT
-sshKey: "<SSH_PUBLIC_KEY>"
-subnetworkCIDR: 10.36.0.0/24
-masterNodeGroup:
-  replicas: 1
-  zones:
-  - europe-west3-b
-  instanceClass:
-    machineType: n1-standard-4
-    image: projects/ubuntu-os-cloud/global/images/ubuntu-2404-noble-amd64-v20240523a
-    diskSizeGb: 50
-nodeGroups:
-- name: static
-  replicas: 1
-  zones:
-  - europe-west3-b
-  instanceClass:
-    machineType: n1-standard-4
-    image: projects/ubuntu-os-cloud/global/images/ubuntu-2404-noble-amd64-v20240523a
-    diskSizeGb: 50
-    additionalNetworkTags:
-    - tag1
-    additionalLabels:
-      kube-node: static
-provider:
-  region: europe-west3
-  serviceAccountJSON: "<SERVICE_ACCOUNT_JSON>"
-```
-
-Количество и параметры процесса заказа машин в облаке настраиваются в кастомном ресурсе [NodeGroup](/modules/node-manager/cr.html#nodegroup), в котором также указывается название используемого для этой [группы узлов](../../../../glossary.html#node-group) [инстанс-класса](../../../../glossary.html#instance-class) ([параметр `cloudInstances.classReference`](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-classreference) NodeGroup). Инстанс-класс для cloud-провайдера GCP — это кастомный ресурс [GCPInstanceClass](/modules/cloud-provider-gcp/cr.html#gcpinstanceclass), в котором указываются конкретные параметры самих машин.
-
-Также для работы автоматически создаются StorageClass'ы, покрывающие все варианты дисков в GCP:
-
-| Тип | Репликация | Имя StorageClass |
-|---|---|---|
-| standard | none | `pd-standard-not-replicated` |
-| standard | regional | `pd-standard-replicated` |
-| balanced | none | `pd-balanced-not-replicated` |
-| balanced | regional | `pd-balanced-replicated` |
-| ssd | none | `pd-ssd-not-replicated` |
-| ssd | regional | `pd-ssd-replicated` |
-
-Можно отфильтровать ненужные StorageClass'ы, для этого укажите их в [параметре `exclude`](/modules/cloud-provider-gcp/configuration.html#parameters-storageclass-exclude).
-
-### Включение вложенной виртуализации
-
-Для запуска виртуальных машин (например, KVM) внутри GCP-инстансов необходимо включить вложенную виртуализацию.
-
-{% alert %}
-Вложенная виртуализация поддерживается только на определённых типах машин. Список совместимых типов приведён [в документации GCP](https://cloud.google.com/compute/docs/instances/nested-virtualization/overview#supported_machine_types).
-{% endalert %}
-
-```yaml
-apiVersion: deckhouse.io/v1
-kind: GCPInstanceClass
-metadata:
-  name: vm-nodes
-spec:
-  machineType: n2-standard-8
-  nestedVirtualization: true
-```
-
-### Добавление дополнительных дисков
-
-Чтобы подключить к инстансам дополнительные диски (например, для узлов хранилища LINSTOR, Ceph, NFS и аналогичных решений), задайте их в параметре `additionalDisks`:
-
-```yaml
-apiVersion: deckhouse.io/v1
-kind: GCPInstanceClass
-metadata:
-  name: storage-nodes
-spec:
-  machineType: n1-standard-8
-  additionalDisks:
-  - sizeGb: 200
-    type: pd-ssd
-  - sizeGb: 500
-    type: pd-standard
-    autoDelete: true
-```
-
-### Добавление CloudStatic узлов в кластер
-
-К виртуальным машинам, которые вы хотите добавить к кластеру в качестве узлов, добавьте `Network Tag`, аналогичный префиксу кластера.
-
-Префикс кластера можно узнать с помощью команды:
-
-```shell
-d8 k get mc global -o jsonpath='{.spec.settings.prefix}{"\n"}'
-```
-
-Если значение пустое, возьмите его из устаревшего параметра [`cloud.prefix`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-cloud-prefix) модуля `control-plane-manager` (префикс перенесён в ModuleConfig `global`):
-
-```shell
-d8 k -n kube-system get secret d8-cluster-configuration -o json | jq -r '.data."cluster-configuration.yaml"' \
-  | base64 -d | grep prefix
-```
-
-## Прерываемые узлы
-
-Прерываемые виртуальные машины в Google Cloud называются preemptible-инстансами. Чтобы [группа узлов](../../../../glossary.html#node-group) заказывала их, установите параметр [`preemptible`](/modules/cloud-provider-gcp/cr.html#gcpinstanceclass-v1-spec-preemptible) ресурса GCPInstanceClass в `true`.
-
-Порядок создания таких узлов и особенности их работы описаны в разделе [«Как создать прерываемые узлы в GCP?»](/modules/cloud-provider-gcp/faq.html#как-создать-прерываемые-узлы-в-gcp).
-
-## Замена образа ОС
-
-Образ ОС узлов задаётся параметром [`image`](/modules/cloud-provider-gcp/cr.html#gcpinstanceclass-v1-spec-image) ресурса GCPInstanceClass для узлов типа `CloudEphemeral` и в секции `instanceClass` ресурса GCPClusterConfiguration для узлов типа `CloudPermanent` и master-узлов. Чтобы перевести узлы кластера на новый образ, выполните шаги из раздела [«Как заменить образ ОС в облачном кластере?»](../../../../faq.html#как-заменить-образ-ос-в-облачном-кластере).
+[Настройка сети](network.html).

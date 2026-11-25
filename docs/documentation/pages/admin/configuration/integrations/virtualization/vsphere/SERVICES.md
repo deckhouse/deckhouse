@@ -1,24 +1,10 @@
 ---
-title: Integration with VMware vSphere services
-permalink: en/admin/integrations/virtualization/vsphere/services.html
+title: Node management in VMware vSphere
+permalink: en/admin/integrations/virtualization/vsphere/node-management.html
 ---
 
-Deckhouse Platform integrates with VMware vSphere infrastructure and uses [VsphereInstanceClass](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass) resources
-to describe the specifications of virtual machines created as part of the Kubernetes cluster.
-
-Key features:
-
-- Provisioning and removal of virtual machines via the vCenter API.
-- Node placement across multiple clusters ([`zones`](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration-zones)) and datacenters ([`region`](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration-region)).
-- Use of VM templates with `cloud-init`.
-- Support for networks with DHCP, static addressing, and additional interfaces.
-- Storage management: provisioning root disks and PVCs based on Datastore or CNS disks.
-- Support for incoming traffic load balancing:
-  - Via external load balancers.
-  - Via MetalLB (in BGP mode).
-
-{% alert level="info" %}
-DP supports hybrid integration with VMware vSphere. For configuration details, see [Hybrid cluster with vSphere](../../hybrid/vsphere-hybrid.html) section.
+{% alert level="warning" %}
+CloudEphemeral node management is moving from Machine Controller Manager (MCM) to Cluster API (CAPI). Existing [NodeGroups](/modules/node-manager/cr.html#nodegroup) keep running on MCM, new ones are created on CAPI by default. The procedure for moving existing groups is described in [How to migrate node groups to Cluster API (CAPI)](../../../../faq.html#how-to-migrate-node-groups-to-cluster-api-capi).
 {% endalert %}
 
 ## vSphere resource management
@@ -67,7 +53,7 @@ To reduce the number of nodes in a `CloudPermanent` group:
 
    Save the changes.
 
-1. In the [DP installer container](/products/kubernetes-platform/documentation/v1/installing/#installing), apply the updated configuration:
+1. In the [Deckhouse Platform installer container](/products/kubernetes-platform/documentation/v1/installing/#installing), apply the updated configuration:
 
    ```shell
    dhctl converge \
@@ -116,7 +102,7 @@ To completely remove a `CloudPermanent` group:
 
    Save the changes.
 
-1. In the [DP installer container](/products/kubernetes-platform/documentation/v1/installing/#installing), apply the updated configuration:
+1. In the [Deckhouse Platform installer container](/products/kubernetes-platform/documentation/v1/installing/#installing), apply the updated configuration:
 
    ```shell
    dhctl converge \

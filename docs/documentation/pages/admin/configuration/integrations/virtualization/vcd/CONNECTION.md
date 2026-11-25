@@ -1,7 +1,20 @@
 ---
 title: Connection and authorization in VMware Cloud Director
 permalink: en/admin/integrations/virtualization/vcd/connection-and-authorization.html
+lang: en
 ---
+
+## List of required VMware Cloud Director services
+
+The following VMware Cloud Director service must be available for Deckhouse Platform to operate:
+
+| Service                   | API version      |
+| :------------------------ | :---------:      |
+| VMware Cloud Director API | `37.2` and later |
+
+{% alert level="info" %}
+For VMware Cloud Director API versions earlier than `37.2`, compatibility mode for legacy API versions is used.
+{% endalert %}
 
 ## Resource preparation
 
@@ -65,7 +78,8 @@ To create a custom role, enable the rights as shown below. Right names match the
 
    ![User permissions, Organization VDC](../../../../images/cloud-provider-vcd/role-setup/compute-organization-vdc.png)
 
-1. In the "COMPUTE" → "vApp" section, enable the rights as shown in the screenshot. Make sure that `Preserve All ExtraConfig Elements During OVF Import and Export` is enabled. In the verified role, View includes `View Encryption Status of VMs and VM's disks` and `View VM metrics`; `View vApp Shadow VMs` and the other Preserve ExtraConfig options are not enabled:
+1. In the "COMPUTE" → "vApp" section, enable the rights as shown in the screenshot. Make sure that `Preserve All ExtraConfig Elements During OVF Import and Export` is enabled. In the
+   verified role, View includes `View Encryption Status of VMs and VM's disks` and `View VM metrics`; `View vApp Shadow VMs` and the other Preserve ExtraConfig options are not enabled:
 
    ![User permissions, vApp](../../../../images/cloud-provider-vcd/role-setup/compute-vapp.png)
 
@@ -139,7 +153,7 @@ This instruction applies only to the "Standard" placement scheme.
 To dynamically provision nodes, enable the DHCP server for the internal network.
 
 {% alert level="info" %}
-We recommend reserving the beginning of the address range for system workloads (control plane, [frontend nodes](../../../../glossary.html#frontend-node), [system nodes](../../../../glossary.html#system-node)), and using the rest for the DHCP pool.  
+We recommend reserving the beginning of the address range for system workloads (control plane, [frontend nodes](../../../../glossary.html#frontend-node), [system nodes](../../../../glossary.html#system-node)), and using the rest for the DHCP pool.
 For example, for a "/24" network, reserving 20 addresses for system workloads is sufficient.
 {% endalert %}
 
@@ -199,10 +213,12 @@ After creating the vApp, attach the created internal network to it.
 
 ### Incoming traffic
 
-Incoming traffic must be directed to the edge router (ports "80", "443") using DNAT rules to the allocated address in the internal network.  
+Incoming traffic must be directed to the edge router (ports "80", "443") using DNAT rules to the allocated address in the internal network.
 This address is managed by MetalLB in L2 mode on dedicated frontend nodes.
 
 ### Configuring DNAT/SNAT rules on the Edge Gateway
+
+Configure DNAT and SNAT rules on the Edge Gateway as follows.
 
 1. Go to "Networking" → "Edge Gateways", open the edge gateway:
 
@@ -232,9 +248,11 @@ This instruction is applicable only for the `Standard` deployment [layout](../..
 
 When using [`cert-manager`](/modules/cert-manager/) with the HTTP-01 ACME challenge type, you may need to configure Hairpin NAT (NAT loopback) on the Edge Gateway.
 
-This is required when the Ingress domain name resolves to the external IP address of the Edge Gateway, while requests to that address are made from **inside** the cluster (from the node network). In this case, the traffic must be correctly routed back to the internal network to the Ingress address (for example, the [MetalLB](/modules/metallb/) address).
+This is required when the Ingress domain name resolves to the external IP address of the Edge Gateway, while requests to that address are made from **inside** the cluster (from
+the node network). In this case, the traffic must be correctly routed back to the internal network to the Ingress address (for example, the [MetalLB](/modules/metallb/) address).
 
-This is important for issuing Let's Encrypt certificates because [cert-manager](/modules/cert-manager/) performs a preliminary self-check of the challenge URL before sending a request to the ACME provider. If the URL is not reachable from inside the cluster, certificate issuance will not start, even if the address is accessible from outside.
+This is important for issuing Let's Encrypt certificates because [cert-manager](/modules/cert-manager/) performs a preliminary self-check of the challenge URL before sending
+a request to the ACME provider. If the URL is not reachable from inside the cluster, certificate issuance will not start, even if the address is accessible from outside.
 
 Example (cluster network `192.168.199.0/24`):
 
@@ -277,15 +295,18 @@ The provider has been tested only with virtual machine templates based on "Ubunt
 {% endalert %}
 
 {% alert level="warning" %}
-Disable vApp/Guest OS Customization (Guest Customization, vApp Customization, and similar mechanisms) for the cluster template and virtual machines in VMware Cloud Director. DP performs the initial node provisioning via `cloud-init` (OVF/VMware GuestInfo datasource). If customization is enabled, it may conflict with `cloud-init` and result in incorrect node initialization.
+Disable vApp/Guest OS Customization (Guest Customization, vApp Customization, and similar mechanisms) for the cluster template and virtual machines in VMware Cloud Director. Deckhouse Platform
+performs the initial node provisioning via `cloud-init` (OVF/VMware GuestInfo datasource). If customization is enabled, it may conflict with `cloud-init` and result in incorrect node initialization.
 {% endalert %}
 
 {% include notice_envinronment.liquid %}
 
-In the example, an "OVA" file provided by Ubuntu is used, with two modifications.  
+In the example, an "OVA" file provided by Ubuntu is used, with two modifications.
 These modifications are required for proper provisioning of [CloudPermanent nodes](../../../../glossary.html#cloud-permanent-node) and to allow attaching disks created by CSI.
 
 ### Preparing the template from an OVA file
+
+Prepare the virtual machine template from an OVA file as follows.
 
 1. Download [the OVA file](https://cloud-images.ubuntu.com/jammy/):
 
@@ -362,6 +383,8 @@ shutdown -P now
 
 ### Configuring the template in VCD
 
+Configure the template in VCD by completing the following steps.
+
 1. Power off the virtual machine and delete all filled "Guest Properties" fields:
 
    ![Template setup, Guest Properties 1](../../../../images/cloud-provider-vcd/template/GuestProperties1.png)
@@ -410,19 +433,3 @@ shutdown -P now
 ### Replacing the OS image
 
 Deckhouse Platform creates the nodes from a virtual machine template that is specified in the [`template`](/modules/cloud-provider-vcd/cr.html#vcdinstanceclass-v1-spec-template) parameter of the VCDInstanceClass resource for `CloudEphemeral` nodes and in the `instanceClass` section of the VCDClusterConfiguration resource for `CloudPermanent` nodes and master nodes. To move the cluster nodes to a new OS image, prepare a new template based on it and follow the steps from ["How do I replace the OS image in a cloud cluster?"](../../../../faq.html#how-do-i-replace-the-os-image-in-a-cloud-cluster).
-
-## Storage usage
-
-* VCD supports CSI. Disks are created as VCD Independent Disks.
-* The guest property `disk.EnableUUID` must be enabled for the VM templates in use.
-* Deckhouse Platform supports disk resizing starting from version v1.59.1.
-
-## Using the LoadBalancer
-
-- DP components support `Service` resources of type `LoadBalancer` when deployed on VMware Cloud Director (VCD).
-- VMware NSX [Advanced Load Balancer](../../../../glossary.html#advanced-load-balancer) (ALB or Avi Networks) is used as the load balancer.
-- Support is available **only** when using the `NSX-T` network virtualization platform.
-- The load balancer functionality must be enabled on the Edge Gateway by your VCD provider. You can verify this under Edge Gateway → Load Balancer → General Settings — the `State` parameter must be `Active`.
-- If the load balancer was enabled after the DP cluster was successfully created, the components will automatically pick up the changes within an hour (no additional actions are required).
-- For each open port, a Pool + Virtual Service pair is created.
-- If a firewall is in place, you must create an allow rule for the load balancer’s external IP address and the corresponding ports.

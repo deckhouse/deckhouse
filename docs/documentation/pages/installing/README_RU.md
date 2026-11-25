@@ -81,7 +81,7 @@ relatedLinks:
 1. `<PROVIDER>ClusterConfiguration` — параметры интеграции с [облачным провайдером](../glossary.html#cloud-provider). Является **обязательным** при интеграции Deckhouse Platform с [поддерживаемой облачной инфраструктурой](../admin/integrations/public/overview.html).
 
    {% alert level="info" %}
-   Ресурсы DVPClusterConfiguration, YandexClusterConfiguration и ZvirtClusterConfiguration устарели. Параметры интеграции со встроенной виртуализацией, Yandex Cloud и zVirt задаются в ModuleConfig модулей [`cloud-provider-dvp`](/modules/cloud-provider-dvp/configuration.html), [`cloud-provider-yandex`](/modules/cloud-provider-yandex/configuration.html) и [`cloud-provider-zvirt`](/modules/cloud-provider-zvirt/configuration.html) и в связанных с ними ресурсах. Эти ресурсы описаны в разделах [«Схемы размещения и настройка встроенной виртуализации»](../admin/integrations/virtualization/dvp/configuration-and-layout-scheme.html), [«Схемы размещения и настройка Yandex Cloud»](../admin/integrations/public/yandex/layout.html) и [«Схемы размещения и настройка zVirt»](../admin/integrations/virtualization/zvirt/layout.html).
+   Ресурсы DVPClusterConfiguration, YandexClusterConfiguration и ZvirtClusterConfiguration устарели. Параметры интеграции со встроенной виртуализацией, Yandex Cloud и zVirt задаются в ModuleConfig модулей [`cloud-provider-dvp`](/modules/cloud-provider-dvp/configuration.html), [`cloud-provider-yandex`](/modules/cloud-provider-yandex/configuration.html) и [`cloud-provider-zvirt`](/modules/cloud-provider-zvirt/configuration.html) и в связанных с ними ресурсах. Эти ресурсы описаны в разделах [«Схемы размещения и настройка встроенной виртуализации»](../admin/integrations/virtualization/dvp/layout.html), [«Схемы размещения и настройка Yandex Cloud»](../admin/integrations/public/yandex/layout.html) и [«Схемы размещения и настройка zVirt»](../admin/integrations/virtualization/zvirt/layout.html).
    {% endalert %}
 
    Примеры ресурсов, настраивающих интеграцию Deckhouse Platform с облачным провайдером:
@@ -498,7 +498,7 @@ lb_ip=""
 # Получение IP-адреса балансировщика нагрузки.
 for i in {0..100}
 do
-  if lb_ip="$(kubectl -n d8-ingress-nginx get svc "${INGRESS_NAME}-load-balancer" -o jsonpath='{.status.loadBalancer.ingress[0].ip}')"; then
+  if lb_ip="$(d8 k -n d8-ingress-nginx get svc "${INGRESS_NAME}-load-balancer" -o jsonpath='{.status.loadBalancer.ingress[0].ip}')"; then
     if [ -n "$lb_ip" ]; then
       break
     fi

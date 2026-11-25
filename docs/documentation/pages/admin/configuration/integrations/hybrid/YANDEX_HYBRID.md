@@ -7,12 +7,12 @@ description: Preparation for hybrid integration with Yandex Cloud in Deckhouse P
 
 The following describes the process of adding nodes from Yandex Cloud to an existing static Deckhouse Platform cluster.
 
-Integration with Yandex Cloud uses the [`cloud-provider-yandex`](/modules/cloud-provider-yandex/) module. It provides interaction between DP and the Yandex Cloud API, retrieval of information about cloud infrastructure, creation of virtual machines, work with network parameters, and connection of nodes to an existing cluster.
+Integration with Yandex Cloud uses the [`cloud-provider-yandex`](/modules/cloud-provider-yandex/) module. It provides interaction between Deckhouse Platform and the Yandex Cloud API, retrieval of information about cloud infrastructure, creation of virtual machines, work with network parameters, and connection of nodes to an existing cluster.
 
 This section describes two ways to add nodes:
 
-- **Automatic node creation in Yandex Cloud**. DP creates virtual machines through the Yandex Cloud API. VM parameters are defined by the [YandexInstanceClass](/modules/cloud-provider-yandex/cr.html#yandexinstanceclass) resource, and the required number of nodes and placement zones are defined by the [NodeGroup](/modules/node-manager/cr.html#nodegroup) resource with the `CloudEphemeral` type.
-- **Connecting manually created nodes through a [bootstrap script](../../../glossary.html#bootstrap-script)**. A virtual machine is created by the user in advance and connected to the cluster using the DP bootstrap script. This scenario uses [NodeGroup](/modules/node-manager/cr.html#nodegroup) with the `CloudStatic` type.
+- **Automatic node creation in Yandex Cloud**. Deckhouse Platform creates virtual machines through the Yandex Cloud API. VM parameters are defined by the [YandexInstanceClass](/modules/cloud-provider-yandex/cr.html#yandexinstanceclass) resource, and the required number of nodes and placement zones are defined by the [NodeGroup](/modules/node-manager/cr.html#nodegroup) resource with the `CloudEphemeral` type.
+- **Connecting manually created nodes through a [bootstrap script](../../../glossary.html#bootstrap-script)**. A virtual machine is created by the user in advance and connected to the cluster using the Deckhouse Platform bootstrap script. This scenario uses [NodeGroup](/modules/node-manager/cr.html#nodegroup) with the `CloudStatic` type.
 
 ## Prerequisites
 
@@ -179,7 +179,7 @@ To run the preparation commands, you need the [Yandex Cloud CLI](https://yandex.
 
    The manifest automatically uses the values of the environment variables set in the previous steps: `CLOUD_ID`, `FOLDER_ID`, `NODE_NETWORK_CIDR`, `SSH_PUBLIC_KEY`, `NETWORK_ID`, `ZONE`, and `SUBNET_ID`.
 
-   The [`existingNetworkID`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-existingnetworkid), [`existingZoneToSubnetIDMap`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-existingzonetosubnetidmap), and [`existingRouteTableID`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-existingroutetableid) parameters describe the Yandex Cloud resources that already exist, because in a hybrid cluster DP does not create the network, the subnets, or the route table. The route table is required because the cloud controller manager creates the pod subnet routes in it and does not start with an empty value.
+   The [`existingNetworkID`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-existingnetworkid), [`existingZoneToSubnetIDMap`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-existingzonetosubnetidmap), and [`existingRouteTableID`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-existingroutetableid) parameters describe the Yandex Cloud resources that already exist, because in a hybrid cluster Deckhouse Platform does not create the network, the subnets, or the route table. The route table is required because the cloud controller manager creates the pod subnet routes in it and does not start with an empty value.
 
    The layout is set by the [`layout`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-layout) parameter. The available layouts are described in ["Configuration and layouts"](../public/yandex/layout.html#layouts).
 
@@ -189,7 +189,7 @@ To run the preparation commands, you need the [Yandex Cloud CLI](https://yandex.
    d8 k apply -f yandex-module-config.yaml
    ```
 
-   While DP is enabling the module, the validating webhooks of DP and the provider may be unavailable, and the command fails with `failed calling webhook`. This state is temporary, repeat the command in half a minute. The same applies to the next step with the Secret.
+   While Deckhouse Platform is enabling the module, the validating webhooks of Deckhouse Platform and the provider may be unavailable, and the command fails with `failed calling webhook`. This state is temporary, repeat the command in half a minute. The same applies to the next step with the Secret.
 
 1. Wait until the module creates the `d8-cloud-provider-yandex` namespace:
 
@@ -256,7 +256,7 @@ To run the preparation commands, you need the [Yandex Cloud CLI](https://yandex.
 
    - YandexInstanceClass describes the parameters of the virtual machine that will be created in Yandex Cloud;
    - `mainSubnet` — ID of the subnet from which the created nodes must have access to the [static cluster](../../../glossary.html#static-cluster) nodes;
-   - NodeGroup describes the [node group](../../../glossary.html#node-group) that DP must maintain in the cluster;
+   - NodeGroup describes the [node group](../../../glossary.html#node-group) that Deckhouse Platform must maintain in the cluster;
    - `nodeType: CloudEphemeral` means that nodes will be created automatically through the [cloud provider](../../../glossary.html#cloud-provider);
    - `cloudInstances.zones` must contain zones from the `zones` list in the module settings.
 
@@ -268,7 +268,7 @@ To run the preparation commands, you need the [Yandex Cloud CLI](https://yandex.
    d8 k apply -f yandex-instanceclass-nodegroup.yaml
    ```
 
-   After the manifest is applied, DP will start creating a virtual machine in Yandex Cloud through machine-controller-manager.
+   After the manifest is applied, Deckhouse Platform will start creating a virtual machine in Yandex Cloud through machine-controller-manager.
 
 1. Check that the node appears in the cluster:
 

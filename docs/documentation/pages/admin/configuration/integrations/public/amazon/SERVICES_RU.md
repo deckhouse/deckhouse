@@ -8,7 +8,7 @@ lang: ru
 
 Чтобы узлы кластера имели доступ к частным репозиториям Amazon ECR:
 
-1. Определите права на чтение образов в политиках репозитория. Важно, чтобы в `Principal` был указан существующий IAM-Role (IAM-роль), привязанная к узлам Deckhouse Platform (DP).
+1. Определите права на чтение образов в политиках репозитория. Важно, чтобы в `Principal` был указан существующий IAM-Role (IAM-роль), привязанная к узлам Deckhouse Platform.
 
     Пример политики:
 
@@ -48,7 +48,7 @@ lang: ru
      - ecr:DescribeRepositories
    ```
 
-Параметр [additionalRolePolicies](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-additionalrolepolicies) позволяет расширить набор IAM-действий, назначаемых EC2-инстансам, управляемым DP. Это особенно полезно, если требуется доступ к:
+Параметр [additionalRolePolicies](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-additionalrolepolicies) позволяет расширить набор IAM-действий, назначаемых EC2-инстансам, управляемым Deckhouse Platform. Это особенно полезно, если требуется доступ к:
 
 - Amazon ECR;
 - Amazon S3;

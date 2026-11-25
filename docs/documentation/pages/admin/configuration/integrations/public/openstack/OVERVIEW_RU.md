@@ -1,0 +1,8 @@
+---
+title: Интеграция с облаками на базе OpenStack
+permalink: ru/admin/integrations/public/openstack/overview.html
+cloud_type: openstack
+lang: ru
+---
+
+{% include admin/integrations/openstack-based-overview-ru.md %}

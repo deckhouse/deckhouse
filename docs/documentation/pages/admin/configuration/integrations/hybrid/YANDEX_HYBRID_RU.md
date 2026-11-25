@@ -6,14 +6,14 @@ search: гибрид с Yandex Cloud
 description: Подготовка к гибридной интеграции с Yandex Cloud в Deckhouse Platform.
 ---
 
-Далее описан процесс добавления узлов из Yandex Cloud в существующий [статический кластер](../../../glossary.html#static-cluster) Deckhouse Platform (DP).
+Далее описан процесс добавления узлов из Yandex Cloud в существующий [статический кластер](../../../glossary.html#static-cluster) Deckhouse Platform.
 
-Для интеграции с Yandex Cloud используется модуль [`cloud-provider-yandex`](/modules/cloud-provider-yandex/). Он обеспечивает взаимодействие DP с API Yandex Cloud, получение информации об облачной инфраструктуре, создание виртуальных машин, работу с сетевыми параметрами и подключение узлов к существующему кластеру.
+Для интеграции с Yandex Cloud используется модуль [`cloud-provider-yandex`](/modules/cloud-provider-yandex/). Он обеспечивает взаимодействие Deckhouse Platform с API Yandex Cloud, получение информации об облачной инфраструктуре, создание виртуальных машин, работу с сетевыми параметрами и подключение узлов к существующему кластеру.
 
 В разделе описаны два способа добавления узлов:
 
-- **Автоматическое создание узлов в Yandex Cloud**. DP создаёт виртуальные машины через API Yandex Cloud. Параметры ВМ задаются ресурсом [YandexInstanceClass](/modules/cloud-provider-yandex/cr.html#yandexinstanceclass), а количество узлов и зоны размещения задаются ресурсом [NodeGroup](/modules/node-manager/cr.html#nodegroup) с типом `CloudEphemeral`.
-- **Подключение вручную созданных узлов через [bootstrap-скрипт](../../../glossary.html#bootstrap-script)**. Виртуальная машина создаётся пользователем заранее и подключается к кластеру с помощью bootstrap-скрипта DP. Для такого сценария используется [NodeGroup](/modules/node-manager/cr.html#nodegroup) с типом `CloudStatic`.
+- **Автоматическое создание узлов в Yandex Cloud**. Deckhouse Platform создаёт виртуальные машины через API Yandex Cloud. Параметры ВМ задаются ресурсом [YandexInstanceClass](/modules/cloud-provider-yandex/cr.html#yandexinstanceclass), а количество узлов и зоны размещения задаются ресурсом [NodeGroup](/modules/node-manager/cr.html#nodegroup) с типом `CloudEphemeral`.
+- **Подключение вручную созданных узлов через [bootstrap-скрипт](../../../glossary.html#bootstrap-script)**. Виртуальная машина создаётся пользователем заранее и подключается к кластеру с помощью bootstrap-скрипта Deckhouse Platform. Для такого сценария используется [NodeGroup](/modules/node-manager/cr.html#nodegroup) с типом `CloudStatic`.
 
 ## Предварительные требования
 
@@ -180,7 +180,7 @@ description: Подготовка к гибридной интеграции с 
 
    В манифест автоматически подставляются значения переменных окружения, заданных на предыдущих шагах: `CLOUD_ID`, `FOLDER_ID`, `NODE_NETWORK_CIDR`, `SSH_PUBLIC_KEY`, `NETWORK_ID`, `ZONE` и `SUBNET_ID`.
 
-   Параметры [`existingNetworkID`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-existingnetworkid), [`existingZoneToSubnetIDMap`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-existingzonetosubnetidmap) и [`existingRouteTableID`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-existingroutetableid) описывают уже созданные ресурсы Yandex Cloud, потому что в гибридном кластере DP не создаёт сеть, подсети и таблицу маршрутизации. Таблица маршрутизации обязательна, так как cloud-controller-manager создаёт в ней маршруты до подсетей подов и не запускается с пустым значением.
+   Параметры [`existingNetworkID`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-existingnetworkid), [`existingZoneToSubnetIDMap`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-existingzonetosubnetidmap) и [`existingRouteTableID`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-existingroutetableid) описывают уже созданные ресурсы Yandex Cloud, потому что в гибридном кластере Deckhouse Platform не создаёт сеть, подсети и таблицу маршрутизации. Таблица маршрутизации обязательна, так как cloud-controller-manager создаёт в ней маршруты до подсетей подов и не запускается с пустым значением.
 
    Схема размещения задаётся параметром [`layout`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-layout), её варианты описаны в разделе [«Конфигурация и схемы размещения»](../public/yandex/layout.html#схемы-размещения).
 
@@ -190,7 +190,7 @@ description: Подготовка к гибридной интеграции с 
    d8 k apply -f yandex-module-config.yaml
    ```
 
-   Пока DP включает модуль, валидирующие вебхуки DP и провайдера могут быть недоступны, и команда завершится ошибкой `failed calling webhook`. Это временное состояние, повторите команду через полминуты. То же относится к следующему шагу с секретом.
+   Пока Deckhouse Platform включает модуль, валидирующие вебхуки Deckhouse Platform и провайдера могут быть недоступны, и команда завершится ошибкой `failed calling webhook`. Это временное состояние, повторите команду через полминуты. То же относится к следующему шагу с секретом.
 
 1. Дождитесь, пока модуль создаст неймспейс `d8-cloud-provider-yandex`:
 
@@ -257,7 +257,7 @@ description: Подготовка к гибридной интеграции с 
 
    - YandexInstanceClass описывает параметры виртуальной машины, которая будет создана в Yandex Cloud;
    - `mainSubnet` — ID подсети, из которой создаваемые узлы должны иметь доступ к [статическим узлам](../../../glossary.html#static-node) кластера;
-   - NodeGroup описывает [группу узлов](../../../glossary.html#node-group), которую DP должен поддерживать в кластере;
+   - NodeGroup описывает [группу узлов](../../../glossary.html#node-group), которую Deckhouse Platform должна поддерживать в кластере;
    - `nodeType: CloudEphemeral` означает, что узлы будут создаваться автоматически через [облачного провайдера](../../../glossary.html#cloud-provider);
    - `cloudInstances.zones` должен содержать зоны из списка `zones` в настройках модуля.
 
@@ -269,7 +269,7 @@ description: Подготовка к гибридной интеграции с 
    d8 k apply -f yandex-instanceclass-nodegroup.yaml
    ```
 
-   После применения DP начнёт создавать виртуальную машину в Yandex Cloud через machine-controller-manager.
+   После применения Deckhouse Platform начнёт создавать виртуальную машину в Yandex Cloud через machine-controller-manager.
 
 1. Проверьте появление узла в кластере:
 

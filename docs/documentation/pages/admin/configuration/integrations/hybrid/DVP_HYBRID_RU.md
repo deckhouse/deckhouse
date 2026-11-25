@@ -2,25 +2,25 @@
 title: Гибридный кластер со встроенной виртуализацией
 permalink: ru/admin/integrations/hybrid/dvp-hybrid.html
 lang: ru
-search: гибрид с DVP
+search: гибрид со встроенной виртуализацией
 description: Подготовка к гибридной интеграции со встроенной виртуализацией в Deckhouse Platform.
 ---
 
-Далее описан процесс добавления узлов из встроенной виртуализации в существующий [статический кластер](../../../glossary.html#static-cluster) DP.
+Далее описан процесс добавления узлов из встроенной виртуализации в существующий [статический кластер](../../../glossary.html#static-cluster) Deckhouse Platform.
 
-Для интеграции со встроенной виртуализацией используется модуль [`cloud-provider-dvp`](/modules/cloud-provider-dvp/). Он обеспечивает взаимодействие с API подсистемы виртуализации DP, создание виртуальных машин, подключение созданных ВМ к существующему Kubernetes-кластеру и управление жизненным циклом узлов через механизмы Cluster API.
+Для интеграции со встроенной виртуализацией используется модуль [`cloud-provider-dvp`](/modules/cloud-provider-dvp/). Он обеспечивает взаимодействие с API подсистемы виртуализации Deckhouse Platform, создание виртуальных машин, подключение созданных ВМ к существующему Kubernetes-кластеру и управление жизненным циклом узлов через механизмы Cluster API.
 
 В разделе описаны два способа добавления узлов:
 
-- **Автоматическое создание узлов виртуализации**. DP создаёт виртуальные машины через API встроенной виртуализации. Параметры ВМ задаются ресурсом [DVPInstanceClass](/modules/cloud-provider-dvp/cr.html#dvpinstanceclass), а требуемое количество узлов и зоны размещения — ресурсом [NodeGroup](/modules/node-manager/cr.html#nodegroup) с типом [`CloudEphemeral`](../../../../architecture/cluster-and-infrastructure/node-management/cloud-ephemeral-nodes.html).
-- **Подключение вручную созданных узлов через [bootstrap-скрипт](../../../glossary.html#bootstrap-script)**. Виртуальная машина создаётся пользователем заранее и подключается к кластеру с помощью bootstrap-скрипта DP. Для такого сценария используется [NodeGroup](/modules/node-manager/cr.html#nodegroup) с типом [`CloudStatic`](../../../../architecture/cluster-and-infrastructure/node-management/cloud-static-nodes.html).
+- **Автоматическое создание узлов виртуализации**. Deckhouse Platform создаёт виртуальные машины через API встроенной виртуализации. Параметры ВМ задаются ресурсом [DVPInstanceClass](/modules/cloud-provider-dvp/cr.html#dvpinstanceclass), а требуемое количество узлов и зоны размещения — ресурсом [NodeGroup](/modules/node-manager/cr.html#nodegroup) с типом [`CloudEphemeral`](../../../../architecture/cluster-and-infrastructure/node-management/cloud-ephemeral-nodes.html).
+- **Подключение вручную созданных узлов через [bootstrap-скрипт](../../../glossary.html#bootstrap-script)**. Виртуальная машина создаётся пользователем заранее и подключается к кластеру с помощью bootstrap-скрипта Deckhouse Platform. Для такого сценария используется [NodeGroup](/modules/node-manager/cr.html#nodegroup) с типом [`CloudStatic`](../../../../architecture/cluster-and-infrastructure/node-management/cloud-static-nodes.html).
 
 ## Предварительные требования
 
 Перед началом убедитесь, что выполнены следующие условия:
 
 - Кластер создан с параметром [`clusterType: Static`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clustertype).
-- Между сетью [статических узлов](../../../glossary.html#static-node) кластера DP и сетью виртуальных машин во встроенной виртуализации настроена [сетевая связность](./overview.html#общие-сетевые-требования). Создаваемые во встроенной виртуализации узлы имеют доступ к Kubernetes API подключаемого DP-кластера, DNS и необходимым адресам согласно разделам [Сетевое взаимодействие](../../../../reference/network_interaction.html) и [«Настройка сетевых политик»](../../configuration/network/policy/configuration.html). При использовании Cilium с туннелированием трафика подов выбран режим [`tunnelMode`](/modules/cni-cilium/configuration.html#parameters-tunnelmode), соответствующий сетевой связности между площадками. Из кластера DP доступен Kubernetes API кластера встроенной виртуализации.
+- Между сетью [статических узлов](../../../glossary.html#static-node) кластера Deckhouse Platform и сетью виртуальных машин во встроенной виртуализации настроена [сетевая связность](./overview.html#общие-сетевые-требования). Создаваемые во встроенной виртуализации узлы имеют доступ к Kubernetes API подключаемого кластера Deckhouse Platform, DNS и необходимым адресам согласно разделам [Сетевое взаимодействие](../../../../reference/network_interaction.html) и [«Настройка сетевых политик»](../../configuration/network/policy/configuration.html). При использовании Cilium с туннелированием трафика подов выбран режим [`tunnelMode`](/modules/cni-cilium/configuration.html#parameters-tunnelmode), соответствующий сетевой связности между площадками. Из кластера Deckhouse Platform доступен Kubernetes API кластера встроенной виртуализации.
 - Выполнены требования из раздела [«Подготовка окружения»](/modules/cloud-provider-dvp/environment.html):
   - создан [ServiceAccount](/modules/cloud-provider-dvp/environment.html#создание-пользователя) для доступа к API встроенной виртуализации;
   - сгенерирован kubeconfig для подключения к API встроенной виртуализации;
@@ -31,13 +31,13 @@ description: Подготовка к гибридной интеграции с�
 - Если используется шаблон виртуальной машины, убедитесь, что он содержит только один диск.
 
 {% alert level="warning" %}
-В параметрах [DVPInstanceClass](/modules/cloud-provider-dvp/cr.html#dvpinstanceclass) используются ресурсы кластера встроенной виртуализации: VirtualMachineClass, ClusterVirtualImage, VirtualImage, VirtualDisk и StorageClass из встроенной виртуализации, а не из подключаемого DP-кластера.
+В параметрах [DVPInstanceClass](/modules/cloud-provider-dvp/cr.html#dvpinstanceclass) используются ресурсы кластера встроенной виртуализации: VirtualMachineClass, ClusterVirtualImage, VirtualImage, VirtualDisk и StorageClass из встроенной виртуализации, а не из подключаемого кластера Deckhouse Platform.
 {% endalert %}
 
 {% alert level="warning" %}
-Убедитесь, что в статическом DP-кластере отсутствуют StorageClass с именами, совпадающими с именами StorageClass в кластере встроенной виртуализации.
+Убедитесь, что в статическом кластере Deckhouse Platform отсутствуют StorageClass с именами, совпадающими с именами StorageClass в кластере встроенной виртуализации.
 
-При включении модуля `cloud-provider-dvp` соответствующие StorageClass автоматически синхронизируются из встроенной виртуализации в DP-кластер. Если StorageClass с таким именем уже существует в статическом кластере, может возникнуть конфликт ресурсов, из-за которого установка или обновление модуля завершится с ошибкой.
+При включении модуля `cloud-provider-dvp` соответствующие StorageClass автоматически синхронизируются из встроенной виртуализации в кластер Deckhouse Platform. Если StorageClass с таким именем уже существует в статическом кластере, может возникнуть конфликт ресурсов, из-за которого установка или обновление модуля завершится с ошибкой.
 {% endalert %}
 
 ## Добавление автоматически создаваемых узлов
@@ -72,7 +72,7 @@ description: Подготовка к гибридной интеграции с�
    ```
 
    {% alert level="warning" %}
-   Значение зоны в ModuleConfig и NodeGroup должно совпадать. Пока в DVP доступно только значение `default`.
+   Значение зоны в ModuleConfig и NodeGroup должно совпадать. Пока во встроенной виртуализации доступно только значение `default`.
    {% endalert %}
 
 1. Создайте файл, например `cloud-provider-dvp-mc.yaml`, с конфигурацией модуля `cloud-provider-dvp`:
@@ -113,7 +113,7 @@ description: Подготовка к гибридной интеграции с�
    d8 k get ns d8-cloud-provider-dvp
    ```
 
-   Неймспейс создаёт модуль `cloud-provider-dvp`, поэтому секрет с учётными данными применяется отдельным шагом, а не вместе с ModuleConfig. Пока секрета нет, компоненты модуля не могут обратиться к API DVP.
+   Неймспейс создаёт модуль `cloud-provider-dvp`, поэтому секрет с учётными данными применяется отдельным шагом, а не вместе с ModuleConfig. Пока секрета нет, компоненты модуля не могут обратиться к API встроенной виртуализации.
 
 1. Создайте секрет с учётными данными:
 
@@ -218,7 +218,7 @@ description: Подготовка к гибридной интеграции с�
    d8 k apply -f dvp-instanceclass-nodegroup.yaml
    ```
 
-   После применения DP начнёт создавать виртуальную машину во встроенной виртуализации и подключать её к кластеру как узел.
+   После применения Deckhouse Platform начнёт создавать виртуальную машину во встроенной виртуализации и подключать её к кластеру как узел.
 
 1. Проверьте состояние NodeGroup:
 
@@ -227,7 +227,7 @@ description: Подготовка к гибридной интеграции с�
    d8 k describe nodegroup dvp-worker
    ```
 
-1. Проверьте появление нового узла в DP-кластере:
+1. Проверьте появление нового узла в кластере Deckhouse Platform:
 
    ```shell
    d8 k get nodes -o wide

@@ -1,5 +1,5 @@
 ---
-title: Схемы размещения и настройка zVirt
+title: Схемы размещения zVirt
 permalink: ru/admin/integrations/virtualization/zvirt/layout.html
 lang: ru
 ---
@@ -62,13 +62,6 @@ d8 k edit mc cloud-provider-zvirt
 ```shell
 dhctl converge
 ```
-
-{% alert level="warning" %}
-Если кластер был установлен со схемой [ZvirtClusterConfiguration](/modules/cloud-provider-zvirt/cluster_configuration.html#zvirtclusterconfiguration), необходима миграция на конфигурацию через ModuleConfig.
-Пока миграция не выполнена, может срабатывать [алерт `D8CloudProviderZvirtMigrationPending`](../../../../reference/alerts.html#cloud-provider-zvirt-d8cloudproviderzvirtmigrationpending) и блокироваться обновление Deckhouse Platform.
-
-Порядок миграции описан [в разделе «Как мигрировать облачный провайдер на конфигурацию через ModuleConfig?»](../../../../faq.html#как-мигрировать-облачный-провайдер-на-конфигурацию-через-modulec).
-{% endalert %}
 
 ### Пример конфигурации
 

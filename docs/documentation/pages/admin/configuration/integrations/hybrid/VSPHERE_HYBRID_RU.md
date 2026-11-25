@@ -6,14 +6,14 @@ search: гибрид с vSphere
 description: Подготовка к гибридной интеграции с VMware vSphere в Deckhouse Platform.
 ---
 
-Далее описан процесс добавления узлов из vSphere в существующий [статический кластер](../../../glossary.html#static-cluster) Deckhouse Platform (DP).
+Далее описан процесс добавления узлов из vSphere в существующий [статический кластер](../../../glossary.html#static-cluster) Deckhouse Platform.
 
-Для интеграции с vSphere используется модуль [`cloud-provider-vsphere`](/modules/cloud-provider-vsphere/). Он обеспечивает взаимодействие DP с vCenter, получение информации о виртуальных машинах, работу с параметрами размещения и интеграцию с инфраструктурными возможностями vSphere.
+Для интеграции с vSphere используется модуль [`cloud-provider-vsphere`](/modules/cloud-provider-vsphere/). Он обеспечивает взаимодействие Deckhouse Platform с vCenter, получение информации о виртуальных машинах, работу с параметрами размещения и интеграцию с инфраструктурными возможностями vSphere.
 
 В разделе описаны два способа добавления узлов:
 
-- **Автоматическое создание узлов в vSphere**. DP создаёт виртуальные машины через API vSphere. Параметры ВМ задаются ресурсом [VsphereInstanceClass](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass), а требуемое количество узлов и зоны размещения — ресурсом [NodeGroup](/modules/node-manager/cr.html#nodegroup) с типом [`CloudEphemeral`](../../../../architecture/cluster-and-infrastructure/node-management/cloud-ephemeral-nodes.html).
-- **Подключение вручную созданных узлов через [bootstrap-скрипт](../../../glossary.html#bootstrap-script)**. Виртуальная машина создаётся пользователем заранее и подключается к кластеру с помощью bootstrap-скрипта DP. Для такого сценария используется [NodeGroup](/modules/node-manager/cr.html#nodegroup) с типом [`CloudStatic`](../../../../architecture/cluster-and-infrastructure/node-management/cloud-static-nodes.html).
+- **Автоматическое создание узлов в vSphere**. Deckhouse Platform создаёт виртуальные машины через API vSphere. Параметры ВМ задаются ресурсом [VsphereInstanceClass](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass), а требуемое количество узлов и зоны размещения — ресурсом [NodeGroup](/modules/node-manager/cr.html#nodegroup) с типом [`CloudEphemeral`](../../../../architecture/cluster-and-infrastructure/node-management/cloud-ephemeral-nodes.html).
+- **Подключение вручную созданных узлов через [bootstrap-скрипт](../../../glossary.html#bootstrap-script)**. Виртуальная машина создаётся пользователем заранее и подключается к кластеру с помощью bootstrap-скрипта Deckhouse Platform. Для такого сценария используется [NodeGroup](/modules/node-manager/cr.html#nodegroup) с типом [`CloudStatic`](../../../../architecture/cluster-and-infrastructure/node-management/cloud-static-nodes.html).
 
 ## Предварительные требования для vSphere
 
@@ -122,7 +122,7 @@ description: Подготовка к гибридной интеграции с 
    Где:
 
    - [VsphereInstanceClass](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass) описывает параметры виртуальной машины, которая будет создана во vSphere;
-   - [NodeGroup](/modules/node-manager/cr.html#nodegroup) описывает [группу узлов](../../../glossary.html#node-group), которую DP должен поддерживать в кластере;
+   - [NodeGroup](/modules/node-manager/cr.html#nodegroup) описывает [группу узлов](../../../glossary.html#node-group), которую Deckhouse Platform должна поддерживать в кластере;
    - `nodeType: CloudEphemeral` означает, что узлы будут создаваться автоматически через [облачный провайдер](../../../glossary.html#cloud-provider);
    - `cloudInstances.classReference` указывает на VsphereInstanceClass;
    - `cloudInstances.zones` должен содержать зоны из списка `zones` в ModuleConfig.
@@ -133,7 +133,7 @@ description: Подготовка к гибридной интеграции с 
    d8 k apply -f vsphere-instance.yaml
    ```
 
-   После применения манифеста DP начнёт создавать виртуальную машину во vSphere. После загрузки ВМ kubelet подключится к Kubernetes API, и новый узел появится в кластере.
+   После применения манифеста Deckhouse Platform начнёт создавать виртуальную машину во vSphere. После загрузки ВМ kubelet подключится к Kubernetes API, и новый узел появится в кластере.
 
 1. Проверьте состояние узлов:
 

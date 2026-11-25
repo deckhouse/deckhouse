@@ -1,24 +1,11 @@
 ---
-title: Интеграция со службами VMware vSphere
-permalink: ru/admin/integrations/virtualization/vsphere/services.html
+title: Управление узлами в VMware vSphere
+permalink: ru/admin/integrations/virtualization/vsphere/node-management.html
 lang: ru
 ---
 
-Deckhouse Platform интегрируется с инфраструктурой VMware vSphere и использует [ресурсы VsphereInstanceClass](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass) для описания характеристик виртуальных машин, создаваемых в составе кластера Kubernetes.
-
-Основные возможности:
-
-- Заказ и удаление виртуальных машин через vCenter API;
-- Размещение узлов кластера в разных кластерах ([`zones`](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration-zones)) и датацентрах ([`region`](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration-region));
-- Использование шаблонов виртуальных машин с `cloud-init`;
-- Поддержка сетей с DHCP, статической адресацией и дополнительными интерфейсами;
-- Работа с хранилищем: заказ root-дисков и PVC на базе Datastore или CNS-дисков;
-- Поддержка механизмов балансировки входящего трафика:
-  - через внешние балансировщики;
-  - через MetalLB (в режиме BGP).
-
-{% alert level="info" %}
-DP поддерживает гибридную интеграцию с VMware vSphere. Подробнее о настройке можно узнать в разделе [«Гибридный кластер с vSphere»](../../hybrid/vsphere-hybrid.html).
+{% alert level="warning" %}
+Управление CloudEphemeral-узлами переводится с Machine Controller Manager (MCM) на Cluster API (CAPI). Существующие [NodeGroup](/modules/node-manager/cr.html#nodegroup) продолжают работать через MCM, новые по умолчанию создаются через CAPI. Порядок перевода существующих групп описан в разделе [«Как мигрировать группы узлов на Cluster API (CAPI)»](../../../../faq.html#как-мигрировать-группы-узлов-на-cluster-api-capi).
 {% endalert %}
 
 ## Управление ресурсами vSphere
@@ -67,7 +54,7 @@ DP поддерживает гибридную интеграцию с VMware vS
 
    Сохраните изменения.
 
-1. [В установочном контейнере DP](/products/kubernetes-platform/documentation/v1/installing/#установка) примените изменённую конфигурацию:
+1. [В установочном контейнере Deckhouse Platform](/products/kubernetes-platform/documentation/v1/installing/#установка) примените изменённую конфигурацию:
 
    ```shell
    dhctl converge \
@@ -116,7 +103,7 @@ DP поддерживает гибридную интеграцию с VMware vS
 
    Сохраните изменения.
 
-1. [В установочном контейнере DP](/products/kubernetes-platform/documentation/v1/installing/#установка) примените изменённую конфигурацию:
+1. [В установочном контейнере Deckhouse Platform](/products/kubernetes-platform/documentation/v1/installing/#установка) примените изменённую конфигурацию:
 
    ```shell
    dhctl converge \

@@ -3,7 +3,7 @@ title: Integration with Yandex Cloud services
 permalink: en/admin/integrations/public/yandex/services.html
 ---
 
-Deckhouse Platform (DP) supports native integration with several Yandex Cloud services.
+Deckhouse Platform supports native integration with several Yandex Cloud services.
 This allows for external monitoring, secure secret management, and automated data synchronization between the infrastructure and the cluster.
 
 This section describes steps to configure the following integrations:
@@ -13,7 +13,7 @@ This section describes steps to configure the following integrations:
 
 ## Integration with Yandex Lockbox
 
-DP supports integration with Yandex Lockbox using the External Secrets Operator (ESO).
+Deckhouse Platform supports integration with Yandex Lockbox using the External Secrets Operator (ESO).
 This allows Kubernetes secrets in the cluster to be automatically synchronized with Lockbox secrets.
 
 To set up the integration:
@@ -69,8 +69,8 @@ To set up the integration:
 1. Create a [SecretStore](https://external-secrets.io/latest/api/secretstore/) resource containing the `sa-creds` secret:
 
    ```console
-   kubectl -n external-secrets apply -f - <<EOF
-   
+   d8 k -n external-secrets apply -f - <<EOF
+
    apiVersion: external-secrets.io/v1alpha1
    kind: SecretStore
    metadata:
@@ -93,7 +93,7 @@ To set up the integration:
 1. Verify that External Secrets Operator is working:
 
    ```shell
-   kubectl -n external-secrets get po
+   d8 k -n external-secrets get po
    ```
 
    Example output:
@@ -111,7 +111,7 @@ To set up the integration:
    Check the SecretStore status as well:
 
    ```shell
-   kubectl -n external-secrets get secretstores.external-secrets.io 
+   d8 k -n external-secrets get secretstores.external-secrets.io
    ```
 
    Example output:
@@ -133,7 +133,7 @@ To set up the integration:
 1. Create an [ExternalSecret](https://external-secrets.io/latest/api/externalsecret/) pointing to the `lockbox-secret` in the `secret-store`:
 
    ```console
-   kubectl -n external-secrets apply -f - <<EOF
+   d8 k -n external-secrets apply -f - <<EOF
 
    apiVersion: external-secrets.io/v1alpha1
    kind: ExternalSecret
@@ -157,7 +157,7 @@ To set up the integration:
    Where:
 
    - `target.name`: Name of the new secret.
-     External Secret Operator will create this secret in the DP cluster
+     External Secret Operator will create this secret in the Deckhouse Platform cluster
      and put the `lockbox-secret` Yandex Lockbox secret parameters into it.
    - `data[].secretKey`: Name of the key in the `.data` field of the secret created by External Secret Operator.
    - `data[].remoteRef.key`: ID of the `lockbox-secret` Yandex Lockbox secret created earlier
@@ -167,7 +167,7 @@ To set up the integration:
 1. Verify that the new `k8s-secret` key contains the `lockbox-secret` secret value:
 
    ```shell
-   kubectl -n external-secrets get secret k8s-secret -ojson | jq -r '.data.password' | base64 -d
+   d8 k -n external-secrets get secret k8s-secret -ojson | jq -r '.data.password' | base64 -d
    ```
 
    The output will contain the `password` key value of the `lockbox-secret` secret created earlier:
@@ -187,8 +187,8 @@ To configure PrometheusRemoteWrite, follow these steps:
 1. Create a [PrometheusRemoteWrite](/modules/prometheus/cr.html#prometheusremotewrite) resource:
 
    ```console
-   kubectl apply -f - <<EOF
-   
+   d8 k apply -f - <<EOF
+
    apiVersion: deckhouse.io/v1
    kind: PrometheusRemoteWrite
    metadata:

@@ -1,25 +1,8 @@
 ---
-title: Схемы размещения и настройка Huawei Cloud
+title: Схемы размещения Huawei Cloud
 permalink: ru/admin/integrations/private/huaweicloud/layout.html
 lang: ru
 ---
-
-Данный раздел описывает [схемы размещения](../../../../glossary.html#layout) кластера в инфраструктуре Huawei Cloud и связанные с ними параметры.
-
-## Список необходимых сервисов Huawei Cloud
-
-Для работы Deckhouse Platform (DP) должны быть доступны следующие сервисы Huawei Cloud:
-
-| Сервис                           | Версия API |
-|:---------------------------------|:----------:|
-| Identity                         | [v3](https://support.huaweicloud.com/intl/en-us/api-iam/iam_30_0001.html) |
-| Compute                          | [v2.1](https://support.huaweicloud.com/intl/en-us/api-ecs/ecs_04_0001.html) |
-| Network (VPC)                    | [v1/v2](https://support.huaweicloud.com/intl/en-us/api-vpc/vpc-api-pdf.pdf) |
-| Network (OpenStack Neutron API)  | [v2.0](https://support.huaweicloud.com/intl/en-us/api-vpc/vpc-api-pdf.pdf) |
-| Block Storage                    | [v3](https://support.huaweicloud.com/intl/en-us/api-evs/evs_04_2065.html) |
-| Load Balancing (ELB) *           | [v3](https://support.huaweicloud.com/intl/en-us/api-elb/CreateLoadBalancer.html) |
-
-\* Требуется, если в кластере необходимо заказывать балансировщики нагрузки.
 
 ## Standard
 
@@ -29,16 +12,6 @@ lang: ru
 
 ![Схема размещения Standard](../../../../images/cloud-provider-huawei/huawei-standard.png)
 <!--- Source: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-10811&t=Qb5yyWumzPiTBtfL-0 --->
-
-Параметр [`internalNetworkSecurity`](/modules/cloud-provider-huaweicloud/cluster_configuration.html#huaweicloudclusterconfiguration-standard-internalnetworksecurity) (по умолчанию `true`) включает создание группы безопасности (SecurityGroup) при создании кластера. DP создаёт группу с именем префикса кластера и назначает её узлам.
-
-Будут созданы следующие правила входящего трафика:
-
-- разрешение входящего трафика по протоколу TCP и порту `22` из `0.0.0.0/0`;
-- разрешение входящего трафика по протоколу ICMP из `0.0.0.0/0`;
-- разрешение входящего трафика по протоколу TCP и портам `30000`–`32767` для использования сервисов типа `NodePort`. Входящий трафик по протоколу UDP на порты `NodePort` по умолчанию не разрешается.
-
-Собственные группы безопасности для CloudEphemeral-узлов задаются в ресурсе [HuaweiCloudInstanceClass](/modules/cloud-provider-huaweicloud/cr.html#huaweicloudinstanceclass) параметром [`spec.securityGroups`](/modules/cloud-provider-huaweicloud/cr.html#huaweicloudinstanceclass-v1-spec-securitygroups) и применяются вместе с группой, созданной DP.
 
 Пример конфигурации:
 
@@ -80,16 +53,6 @@ masterNodeGroup:
 
 <!--- Исходник: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-11715&t=Qb5yyWumzPiTBtfL-0 --->
 
-Параметр [`internalNetworkSecurity`](/modules/cloud-provider-huaweicloud/cluster_configuration.html#huaweicloudclusterconfiguration-vpcpeering-internalnetworksecurity) (по умолчанию `true`) включает создание группы безопасности (SecurityGroup) при создании кластера. DP создаёт группу с именем префикса кластера и назначает её узлам.
-
-Будут созданы следующие правила входящего трафика:
-
-- разрешение входящего трафика по протоколу TCP и порту `22` из `0.0.0.0/0`;
-- разрешение входящего трафика по протоколу ICMP из `0.0.0.0/0`;
-- разрешение входящего трафика по протоколу TCP и портам `30000`–`32767` для использования сервисов типа `NodePort`. Входящий трафик по протоколу UDP на порты `NodePort` по умолчанию не разрешается.
-
-Собственные группы безопасности для CloudEphemeral-узлов задаются в ресурсе [HuaweiCloudInstanceClass](/modules/cloud-provider-huaweicloud/cr.html#huaweicloudinstanceclass) параметром [`spec.securityGroups`](/modules/cloud-provider-huaweicloud/cr.html#huaweicloudinstanceclass-v1-spec-securitygroups) и применяются вместе с группой, созданной DP.
-
 Пример конфигурации:
 
 ```yaml
@@ -104,3 +67,5 @@ vpcPeering:
   internalNetworkSecurity: true
   subnet: subnet-43b4
 ```
+
+[Настройка сети](network.html).

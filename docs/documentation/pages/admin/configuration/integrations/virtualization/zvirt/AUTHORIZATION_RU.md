@@ -145,3 +145,12 @@ d8 k -n d8-cloud-provider-zvirt edit secret d8-credentials
 ```
 
 В кластерах, переведённых на ModuleConfig, логин и пароль переносятся в этот секрет из параметров [`provider.username`](/modules/cloud-provider-zvirt/cluster_configuration.html#zvirtclusterconfiguration-provider-username) и [`provider.password`](/modules/cloud-provider-zvirt/cluster_configuration.html#zvirtclusterconfiguration-provider-password) ресурса [ZvirtClusterConfiguration](/modules/cloud-provider-zvirt/cluster_configuration.html#zvirtclusterconfiguration).
+
+## Миграция конфигурации
+
+{% alert level="warning" %}
+Если кластер был установлен со схемой [ZvirtClusterConfiguration](/modules/cloud-provider-zvirt/cluster_configuration.html#zvirtclusterconfiguration), необходима миграция на конфигурацию через ModuleConfig.
+Пока миграция не выполнена, может срабатывать [алерт `D8CloudProviderZvirtMigrationPending`](../../../../reference/alerts.html#cloud-provider-zvirt-d8cloudproviderzvirtmigrationpending) и блокироваться обновление Deckhouse Platform.
+
+Порядок миграции описан в разделе [«Как мигрировать облачный провайдер на конфигурацию через ModuleConfig?»](../../../../faq.html#как-мигрировать-облачный-провайдер-на-конфигурацию-через-modulec).
+{% endalert %}

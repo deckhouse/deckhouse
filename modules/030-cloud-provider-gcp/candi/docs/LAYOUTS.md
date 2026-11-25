@@ -75,19 +75,10 @@ nodeGroups:
       kube-node: static
 provider:
   region: europe-west4              # Required.
-  serviceAccountJSON: |             # Required.
-    {
-      "type": "service_account",
-      "project_id": "sandbox",
-      "private_key_id": "98sdcj5e8c7asd98j4j3n9csakn",
-      "private_key": "-----BEGIN PRIVATE KEY-----",
-      "client_id": "342975658279248",
-      "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-      "token_uri": "https://oauth2.googleapis.com/token",
-      "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-      "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/k8s-test%40sandbox.iam.gserviceaccount.com"
-    }
+  serviceAccountJSON: "<SERVICE_ACCOUNT_JSON>"  # Required.
 ```
+
+Replace `<SERVICE_ACCOUNT_JSON>` with the GCP service account JSON key.
 
 ## WithoutNAT
 
@@ -147,16 +138,7 @@ nodeGroups:
       kube-node: static
 provider:
   region: europe-west4              # Required.
-  serviceAccountJSON: |             # Required.
-    {
-      "type": "service_account",
-      "project_id": "sandbox",
-      "private_key_id": "98sdcj5e8c7asd98j4j3n9csakn",
-      "private_key": "-----BEGIN PRIVATE KEY-----",
-      "client_id": "342975658279248",
-      "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-      "token_uri": "https://oauth2.googleapis.com/token",
-      "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-      "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/k8s-test%40sandbox.iam.gserviceaccount.com"
-    }
+  serviceAccountJSON: "<SERVICE_ACCOUNT_JSON>"  # Required.
 ```
+
+Replace `<SERVICE_ACCOUNT_JSON>` with the GCP service account JSON key.

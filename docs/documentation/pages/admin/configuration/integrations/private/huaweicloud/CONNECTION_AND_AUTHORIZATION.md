@@ -3,13 +3,30 @@ title: Connection and authorization in Huawei Cloud
 permalink: en/admin/integrations/private/huaweicloud/authorization.html
 ---
 
+This section describes the cluster [layouts](../../../../glossary.html#layout) in Huawei Cloud infrastructure and the associated parameters.
+
+## List of required Huawei Cloud services
+
+A list of services required for Deckhouse Platform to work in Huawei Cloud:
+
+| Service                         | API version |
+|:--------------------------------|:-----------:|
+| Identity                        | [v3](https://support.huaweicloud.com/intl/en-us/api-iam/iam_30_0001.html) |
+| Compute                         | [v2.1](https://support.huaweicloud.com/intl/en-us/api-ecs/ecs_04_0001.html) |
+| Network (VPC)                   | [v1/v2](https://support.huaweicloud.com/intl/en-us/api-vpc/vpc-api-pdf.pdf) |
+| Network (OpenStack Neutron API) | [v2.0](https://support.huaweicloud.com/intl/en-us/api-vpc/vpc-api-pdf.pdf) |
+| Block Storage                   | [v3](https://support.huaweicloud.com/intl/en-us/api-evs/evs_04_2065.html) |
+| Load Balancing (ELB) *          | [v3](https://support.huaweicloud.com/intl/en-us/api-elb/CreateLoadBalancer.html) |
+
+\* Required if load balancers need to be provisioned in the cluster.
+
 ## Requirements
 
 {% alert level="warning" %}
 The provider supports working with only one disk in the virtual machine template. Make sure the template contains only one disk.
 {% endalert %}
 
-To ensure proper operation of Deckhouse Platform (DP) with Huawei Cloud, make sure of the following:
+To ensure proper operation of Deckhouse Platform with Huawei Cloud, make sure of the following:
 
 - The `cloud-init` package is installed on the virtual machines.
 - After the VMs start, the following services must be active:
@@ -19,7 +36,7 @@ To ensure proper operation of Deckhouse Platform (DP) with Huawei Cloud, make su
 
 ## Accessing the Huawei Cloud API
 
-DP uses the Huawei Cloud API to manage resources.
+Deckhouse Platform uses the Huawei Cloud API to manage resources.
 To configure access, you need to create an IAM user and assign the necessary permissions.
 
 ### Creating a user group

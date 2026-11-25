@@ -1,6 +1,7 @@
 ---
-title: Layouts and configuration in Basis Dynamix
+title: Layouts in Basis Dynamix
 permalink: en/admin/integrations/private/dynamix/layout.html
+lang: en
 ---
 
 Deckhouse Platform supports two [layouts](../../../../glossary.html#layout) in the Basis Dynamix cloud:
@@ -14,8 +15,6 @@ Both layouts let you manage cluster node placement, network settings, the OS ima
 
 ![Standard layout in Basis Dynamix](../../../../images/cloud-provider-dynamix/dynamix-standard.png)
 <!--- Source: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-11150&t=Qb5yyWumzPiTBtfL-0 --->
-
-If the external network doesn't provide DNS server addresses to the nodes, set them in the [`nameservers`](/modules/cloud-provider-dynamix/cluster_configuration.html#dynamixclusterconfiguration-nameservers) parameter.
 
 Example layout configuration:
 
@@ -74,20 +73,4 @@ masterNodeGroup:
     externalNetwork: "<external network>"
 ```
 
-## Required parameters
-
-- `layout`: [Layout](../../../../glossary.html#layout)
-- `sshPublicKey`: Public key for accessing the nodes
-- `location`: Name of the Basis Dynamix location where the cluster resource group is created
-- `account`: Account name in the cloud
-- `storagePolicy`: Name of the storage policy used by default for [virtual machine disks](../../../../glossary.html#vm-disk)
-- `provider.controllerUrl`, `oAuth2Url`, `appId`, `appSecret`: API access parameters
-- `imageName`: OS image name
-- `externalNetwork`: External network name
-- `nodeNetworkCIDR`: Address space of the internal network (only for the `StandardWithInternalNetwork` layout)
-
-{% alert level="warning" %}
-Changing `storagePolicy` recreates nodes of the `CloudEphemeral` type. The nodes that are recreated are listed in the [Changing the storage policy](storage.html#changing-the-storage-policy) section.
-{% endalert %}
-
-To apply the parameter changes, run [`dhctl converge`](../../../configuration/#modifying-cluster-configuration).
+[Integration configuration](configuration.html).

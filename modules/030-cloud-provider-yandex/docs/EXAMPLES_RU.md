@@ -150,7 +150,7 @@ spec:
 
 Перед изменением зон ознакомьтесь с последствиями и выполните проверки ниже. Затем перейдите [к порядку замены зоны](#порядок-замены-зоны).
 
-Deckhouse Platform не переносит ресурсы между зонами. При изменении зон рабочей NodeGroup Deckhouse Platform удаляет узлы из исключённых зон. Количество узлов в оставшихся зонах определяется настройками группы, а для CloudEphemeral зависит и от автомасштабирования. Зональный том использует диск Yandex Cloud, который можно [подключить только к узлу в той же зоне](https://yandex.cloud/ru/docs/compute/concepts/disk). До изменения зон перенесите рабочие нагрузки и данные томов по процедуре для соответствующего приложения. Общая информация о дисках и PersistentVolume приведена в [разделе о хранилище Yandex Cloud](/products/kubernetes-platform/documentation/v1/admin/integrations/public/yandex/storage.html).
+Deckhouse Platform не переносит ресурсы между зонами. При изменении зон рабочей NodeGroup Deckhouse Platform удаляет узлы из исключённых зон. Количество узлов в оставшихся зонах определяется настройками группы, а для CloudEphemeral зависит и от автомасштабирования. Зональный том использует диск Yandex Cloud, который можно [подключить только к узлу в той же зоне](https://yandex.cloud/ru/docs/compute/concepts/disk). До изменения зон перенесите рабочие нагрузки и данные томов по процедуре для соответствующего приложения. Общая информация о дисках и PersistentVolume приведена в [разделе о хранилище Yandex Cloud](/products/kubernetes-platform/documentation/v1/admin/integrations/public/yandex/load-balancing-and-storage.html).
 
 {% alert level="warning" %}
 Подсеть нельзя удалить, пока её используют другие ресурсы Yandex Cloud. Перед применением изменения выведите узлы из исключаемой зоны, перенесите данные томов и отключите остальные ресурсы от удаляемых подсетей. Проверки описаны в [инструкции Yandex Cloud по удалению подсети](https://yandex.cloud/ru/docs/vpc/operations/subnet-delete).
@@ -194,7 +194,7 @@ Deckhouse Platform не переносит ресурсы между зонам�
 
    В выводе найдите имя исключаемой зоны.
 1. Перенесите данные томов, доступных только в исключаемой зоне, средствами соответствующего приложения.
-   Общая информация о дисках и PersistentVolume приведена [в разделе о хранилище Yandex Cloud](/products/kubernetes-platform/documentation/v1/admin/integrations/public/yandex/storage.html).
+   Общая информация о дисках и PersistentVolume приведена [в разделе о хранилище Yandex Cloud](/products/kubernetes-platform/documentation/v1/admin/integrations/public/yandex/load-balancing-and-storage.html).
 1. Определите временный и итоговый списки зон каждой группы узлов. Используйте зоны из общего списка [`zones`](configuration.html#parameters-nodes-parameters-zones), в которых узлы должны размещаться на соответствующем этапе.
    Для NodeGroup типа `CloudEphemeral` указывайте список в [`spec.cloudInstances.zones`](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-zones) при любом способе конфигурации провайдера.
    Для групп типа `CloudPermanent` при конфигурации провайдера через ModuleConfig используйте тот же параметр NodeGroup. При устаревшем способе конфигурации через YandexClusterConfiguration изменяйте [`nodeGroups[].zones`](cluster_configuration.html#yandexclusterconfiguration-nodegroups-zones) и [`masterNodeGroup.zones`](cluster_configuration.html#yandexclusterconfiguration-masternodegroup-zones).
@@ -859,7 +859,7 @@ yc vpc subnet list
 
 ## Пример кастомного ресурса YandexInstanceClass
 
-YandexInstanceClass описывает виртуальные машины, которые DP заказывает для группы узлов. Обязательны только два параметра, [`cores`](cr.html#yandexinstanceclass-v1-spec-cores) и [`memory`](cr.html#yandexinstanceclass-v1-spec-memory). Остальные параметры можно не задавать.
+YandexInstanceClass описывает виртуальные машины, которые Deckhouse Platform заказывает для группы узлов. Обязательны только два параметра, [`cores`](cr.html#yandexinstanceclass-v1-spec-cores) и [`memory`](cr.html#yandexinstanceclass-v1-spec-memory). Остальные параметры можно не задавать.
 
 В примере ниже дополнительно заданы образ ОС, тип и размер диска, доля вычислительной мощности ядра и режим работы сетевого интерфейса:
 

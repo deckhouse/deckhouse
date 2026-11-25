@@ -4,13 +4,30 @@ permalink: ru/admin/integrations/private/huaweicloud/authorization.html
 lang: ru
 ---
 
+Данный раздел описывает [схемы размещения](../../../../glossary.html#layout) кластера в инфраструктуре Huawei Cloud и связанные с ними параметры.
+
+## Список необходимых сервисов Huawei Cloud
+
+Для работы Deckhouse Platform должны быть доступны следующие сервисы Huawei Cloud:
+
+| Сервис                           | Версия API |
+|:---------------------------------|:----------:|
+| Identity                         | [v3](https://support.huaweicloud.com/intl/en-us/api-iam/iam_30_0001.html) |
+| Compute                          | [v2.1](https://support.huaweicloud.com/intl/en-us/api-ecs/ecs_04_0001.html) |
+| Network (VPC)                    | [v1/v2](https://support.huaweicloud.com/intl/en-us/api-vpc/vpc-api-pdf.pdf) |
+| Network (OpenStack Neutron API)  | [v2.0](https://support.huaweicloud.com/intl/en-us/api-vpc/vpc-api-pdf.pdf) |
+| Block Storage                    | [v3](https://support.huaweicloud.com/intl/en-us/api-evs/evs_04_2065.html) |
+| Load Balancing (ELB) *           | [v3](https://support.huaweicloud.com/intl/en-us/api-elb/CreateLoadBalancer.html) |
+
+\* Требуется, если в кластере необходимо заказывать балансировщики нагрузки.
+
 ## Требования
 
 {% alert level="warning" %}
 Провайдер поддерживает работу только с одним диском в шаблоне виртуальной машины. Убедитесь, что шаблон содержит только один диск.
 {% endalert %}
 
-Для корректной работы Deckhouse Platform (DP) с Huawei Cloud необходимо:
+Для корректной работы Deckhouse Platform с Huawei Cloud необходимо:
 
 - Убедиться, что на виртуальных машинах установлен пакет `cloud-init`.
 - После запуска ВМ должны быть активны следующие службы:
@@ -20,7 +37,7 @@ lang: ru
 
 ## Доступ к Huawei Cloud API
 
-DP использует API Huawei Cloud для управления ресурсами. Для настройки доступа необходимо создать IAM-пользователя и предоставить ему необходимые права.
+Deckhouse Platform использует API Huawei Cloud для управления ресурсами. Для настройки доступа необходимо создать IAM-пользователя и предоставить ему необходимые права.
 
 ### Создание группы пользователей
 

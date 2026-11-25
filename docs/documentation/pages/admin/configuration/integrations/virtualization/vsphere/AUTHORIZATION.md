@@ -32,7 +32,7 @@ The following prerequisites must be met for Deckhouse Platform to work correctly
      - This parameter is optional.
      - By default, the root virtual machine folder is used.
   1. Role:
-     - The role must include the required [set of privileges](/modules/cloud-provider-vsphere/environment.html#list-of-required-privileges).
+     - The role must include the required [set of privileges](#list-of-required-privileges).
   1. User:
      - The user must be assigned the role specified in the previous item.
 - A tag from the category specified in the [`regionTagCategory`](/modules/cloud-provider-vsphere/configuration.html#parameters-regiontagcategory) parameter must be assigned to the created Datacenter (default: `k8s-region`). This tag defines the region.
@@ -53,7 +53,7 @@ The provider supports working with only one disk in the virtual machine template
 ### Preparing the virtual machine image
 
 {% alert level="warning" %}
-Disable VMware Guest OS Customization (and any vApp/OS customization mechanisms, if applicable in your setup) for the template and the cluster virtual machines. DP performs the initial node configuration via `cloud-init` (VMware GuestInfo datasource). Enabled customization can conflict with `cloud-init` and lead to incorrect node initialization.
+Disable VMware Guest OS Customization (and any vApp/OS customization mechanisms, if applicable in your setup) for the template and the cluster virtual machines. Deckhouse Platform performs the initial node configuration via `cloud-init` (VMware GuestInfo datasource). Enabled customization can conflict with `cloud-init` and lead to incorrect node initialization.
 {% endalert %}
 
 1. Install the required packages:
@@ -123,12 +123,12 @@ enabled
 {% endalert %}
 
 {% alert %}
-DP creates [VM disks](../../../../glossary.html#vm-disk) of type `eagerZeroedThick`, but the type of disks of created VMs may be changed without notification according to the `VM Storage Policy` settings in vSphere.  
+Deckhouse Platform creates [VM disks](../../../../glossary.html#vm-disk) of type `eagerZeroedThick`, but the type of disks of created VMs may be changed without notification according to the `VM Storage Policy` settings in vSphere.
 For more details, see the [documentation](https://techdocs.broadcom.com/us/en/vmware-cis/vsphere/vsphere/8-0/vsphere-single-host-management-vmware-host-client-8-0/virtual-machine-management-with-the-vsphere-host-client-vSphereSingleHostManagementVMwareHostClient/configuring-virtual-machines-in-the-vsphere-host-client-vSphereSingleHostManagementVMwareHostClient/virtual-disk-configuration-vSphereSingleHostManagementVMwareHostClient/about-virtual-disk-provisioning-policies-vSphereSingleHostManagementVMwareHostClient.html).
 {% endalert %}
 
 {% alert %}
-DP uses the `ens192` interface as the default interface for VMs in vSphere. Therefore, when using static IP addresses in [`mainNetwork`](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass-v1-spec-mainnetwork), you must create an interface named `ens192` in the OS image as the default interface.
+Deckhouse Platform uses the `ens192` interface as the default interface for VMs in vSphere. Therefore, when using static IP addresses in [`mainNetwork`](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass-v1-spec-mainnetwork), you must create an interface named `ens192` in the OS image as the default interface.
 {% endalert %}
 
 ### Replacing the OS image
@@ -138,6 +138,8 @@ Deckhouse Platform creates the nodes from a virtual machine template that is spe
 ## vSphere configuration
 
 ### Configuration in vSphere Client
+
+Configure tags, categories and roles in vSphere Client before connecting the platform.
 
 #### Creating tags and tag categories in vSphere Client
 
@@ -177,11 +179,13 @@ In the "Inventory" tab, select the Datastore, open the "Summary" panel, then cho
 
 #### Creating and assigning a role in vSphere Client
 
+Create and assign the required role by following these steps.
+
 1. Go to "Menu" → "Administration" → "Access Control" → "Roles".
 
    ![Creating and assigning a role, step 1](/modules/cloud-provider-vsphere/images/role-setup/Screenshot-1.png)
 
-1. Click "NEW", enter a role name (for example, `deckhouse`), and add the privileges from the [list](/modules/cloud-provider-vsphere/environment.htmllist-of-required-privileges).
+1. Click "NEW", enter a role name (for example, `deckhouse`), and add the privileges from the [list](#list-of-required-privileges).
 
    ![Creating and assigning a role, step 2](/modules/cloud-provider-vsphere/images/role-setup/Screenshot-2.png)
 
@@ -190,6 +194,8 @@ In the "Inventory" tab, select the Datastore, open the "Summary" panel, then cho
    ![Creating and assigning a role, step 3](/modules/cloud-provider-vsphere/images/role-setup/Screenshot-3.png)
 
 ### Configuration with govc
+
+Configure the integration with govc by completing the following steps.
 
 #### Installing govc
 
@@ -261,7 +267,7 @@ govc tags.attach -c k8s-zone test-zone-2 /<DATACENTER_NAME>/datastore/<DATASTORE
 {% alert %}
 We've intentionally skipped User creation since there are many ways to authenticate a user in the vSphere.
 
-The role described below includes the privileges from [the list of required privileges](environment.html#list-of-required-privileges) section. If you need a more granular Role, please contact your Deckhouse support.
+The role described below includes the privileges from [the list of required privileges](#list-of-required-privileges) section. If you need a more granular Role, please contact your Deckhouse support.
 {% endalert %}
 
 Create a role with the required privileges:
@@ -315,3 +321,302 @@ govc permissions.set -principal <username>@vsphere.local -role deckhouse /
 {% alert level="info" %}
 For more detailed permission configuration, refer to [the official documentation](https://pkg.go.dev/github.com/vmware/govmomi).
 {% endalert %}
+
+## List of required privileges
+
+{% alert level="info" %}
+To create a role and assign it to a user, refer to [Configuration in vSphere Client](authorization.html#configuration-in-vsphere-client) and [Configuration with govc](authorization.html#configuration-with-govc) sections.
+{% endalert %}
+
+A detailed list of privileges required for Deckhouse Platform to work in vSphere:
+
+<table>
+  <thead>
+    <tr>
+      <th>Privilege category in UI</th>
+      <th>Privileges in UI</th>
+      <th>Privileges in API</th>
+      <th>Purpose in Deckhouse</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>—</td>
+      <td>— (assigned by default when creating a role)</td>
+      <td>
+        <code>System.Anonymous</code><br/>
+        <code>System.Read</code><br/>
+        <code>System.View</code>
+      </td>
+      <td>Basic access to vSphere Inventory objects required for all Deckhouse vSphere integration components.</td>
+    </tr>
+    <tr>
+      <td>Cns</td>
+      <td>Searchable</td>
+      <td><code>Cns.Searchable</code></td>
+      <td>Search and mapping of Container Native Storage objects when the CSI driver works with Kubernetes volumes.</td>
+    </tr>
+    <tr>
+      <td>Datastore</td>
+      <td>
+        Allocate space,<br/>
+        Browse datastore,<br/>
+        Low level file operations
+      </td>
+      <td>
+        <code>Datastore.AllocateSpace</code><br/>
+        <code>Datastore.Browse</code><br/>
+        <code>Datastore.FileManagement</code>
+      </td>
+      <td>Disk provisioning when creating virtual machines and ordering <code>PersistentVolumes</code> in the cluster.</td>
+    </tr>
+    <tr>
+      <td>Folder</td>
+      <td>
+        Create folder,<br/>
+        Delete folder,<br/>
+        Move folder,<br/>
+        Rename folder
+      </td>
+      <td>
+        <code>Folder.Create</code><br/>
+        <code>Folder.Delete</code><br/>
+        <code>Folder.Move</code><br/>
+        <code>Folder.Rename</code>
+      </td>
+      <td>Grouping a Deckhouse Platform cluster in a single <code>Folder</code> in vSphere Inventory.</td>
+    </tr>
+    <tr>
+      <td>Global</td>
+      <td>
+        Global tag,<br/>
+        System tag
+      </td>
+      <td>
+        <code>Global.GlobalTag</code><br/>
+        <code>Global.SystemTag</code>
+      </td>
+      <td>Access to global and system tags used by Deckhouse Platform when working with vSphere objects.</td>
+    </tr>
+    <tr>
+      <td>vSphere Tagging</td>
+      <td>
+        Assign or Unassign vSphere Tag,<br/>
+        Assign or Unassign vSphere Tag on Object,<br/>
+        Create vSphere Tag,<br/>
+        Create vSphere Tag Category,<br/>
+        Delete vSphere Tag,<br/>
+        Delete vSphere Tag Category,<br/>
+        Edit vSphere Tag,<br/>
+        Edit vSphere Tag Category,<br/>
+        Modify UsedBy Field for Category,<br/>
+        Modify UsedBy Field for Tag
+      </td>
+      <td>
+        <code>InventoryService.Tagging.AttachTag</code><br/>
+        <code>InventoryService.Tagging.ObjectAttachable</code><br/>
+        <code>InventoryService.Tagging.CreateTag</code><br/>
+        <code>InventoryService.Tagging.CreateCategory</code><br/>
+        <code>InventoryService.Tagging.DeleteTag</code><br/>
+        <code>InventoryService.Tagging.DeleteCategory</code><br/>
+        <code>InventoryService.Tagging.EditTag</code><br/>
+        <code>InventoryService.Tagging.EditCategory</code><br/>
+        <code>InventoryService.Tagging.ModifyUsedByForCategory</code><br/>
+        <code>InventoryService.Tagging.ModifyUsedByForTag</code>
+      </td>
+      <td>Deckhouse Platform uses tags to identify the <code>Datacenter</code>, <code>Cluster</code>, and <code>Datastore</code> objects available to it, as well as to identify the virtual machines under its control.</td>
+    </tr>
+    <tr>
+      <td>Network</td>
+      <td>Assign network</td>
+      <td><code>Network.Assign</code></td>
+      <td>Connecting networks and port groups to Deckhouse Platform cluster virtual machines.</td>
+    </tr>
+    <tr>
+      <td>Resource</td>
+      <td>
+        Assign virtual machine to resource pool,<br/>
+        Create resource pool,<br/>
+        Modify resource pool,<br/>
+        Remove resource pool,<br/>
+        Rename resource pool
+      </td>
+      <td>
+        <code>Resource.AssignVMToPool</code><br/>
+        <code>Resource.CreatePool</code><br/>
+        <code>Resource.DeletePool</code><br/>
+        <code>Resource.EditPool</code><br/>
+        <code>Resource.RenamePool</code>
+      </td>
+      <td>Placement of Deckhouse Platform cluster virtual machines into the target resource pool and management of this pool.</td>
+    </tr>
+    <tr>
+      <td>VM Storage Policies (<em>Profile-driven Storage Privileges</em> in vSphere 7)</td>
+      <td>View VM storage policies (<em>Profile-driven storage view</em> in vSphere 7)</td>
+      <td><code>StorageProfile.View</code></td>
+      <td>Viewing storage policies used when creating virtual machines and dynamically provisioning volumes in the cluster.</td>
+    </tr>
+    <tr>
+      <td>vApp</td>
+      <td>
+        Add virtual machine,<br/>
+        Assign resource pool,<br/>
+        Create,<br/>
+        Delete,<br/>
+        Import,<br/>
+        Power Off,<br/>
+        Power On,<br/>
+        View OVF Environment,<br/>
+        vApp application configuration,<br/>
+        vApp instance configuration,<br/>
+        vApp resource configuration
+      </td>
+      <td>
+        <code>VApp.ApplicationConfig</code><br/>
+        <code>VApp.AssignResourcePool</code><br/>
+        <code>VApp.AssignVM</code><br/>
+        <code>VApp.Create</code><br/>
+        <code>VApp.Delete</code><br/>
+        <code>VApp.ExtractOvfEnvironment</code><br/>
+        <code>VApp.Import</code><br/>
+        <code>VApp.InstanceConfig</code><br/>
+        <code>VApp.PowerOff</code><br/>
+        <code>VApp.PowerOn</code><br/>
+        <code>VApp.ResourceConfig</code>
+      </td>
+      <td>Managing operations related to deployment and configuration of vApp and OVF templates used when creating virtual machines.</td>
+    </tr>
+    <tr>
+      <td>Virtual Machine > Change Configuration</td>
+      <td>
+        Add existing disk,<br/>
+        Add new disk,<br/>
+        Add or remove device,<br/>
+        Advanced configuration,<br/>
+        Set annotation,<br/>
+        Change CPU count,<br/>
+        Toggle disk change tracking,<br/>
+        Extend virtual disk,<br/>
+        Acquire disk lease,<br/>
+        Modify device settings,<br/>
+        Configure managedBy,<br/>
+        Change Memory,<br/>
+        Query unowned files,<br/>
+        Configure Raw device,<br/>
+        Reload from path,<br/>
+        Remove disk,<br/>
+        Rename,<br/>
+        Reset guest information,<br/>
+        Change resource,<br/>
+        Change Settings,<br/>
+        Change Swapfile placement,<br/>
+        Upgrade virtual machine compatibility
+      </td>
+      <td>
+        <code>VirtualMachine.Config.AddExistingDisk</code><br/>
+        <code>VirtualMachine.Config.AddNewDisk</code><br/>
+        <code>VirtualMachine.Config.AddRemoveDevice</code><br/>
+        <code>VirtualMachine.Config.AdvancedConfig</code><br/>
+        <code>VirtualMachine.Config.Annotation</code><br/>
+        <code>VirtualMachine.Config.CPUCount</code><br/>
+        <code>VirtualMachine.Config.ChangeTracking</code><br/>
+        <code>VirtualMachine.Config.DiskExtend</code><br/>
+        <code>VirtualMachine.Config.DiskLease</code><br/>
+        <code>VirtualMachine.Config.EditDevice</code><br/>
+        <code>VirtualMachine.Config.ManagedBy</code><br/>
+        <code>VirtualMachine.Config.Memory</code><br/>
+        <code>VirtualMachine.Config.QueryUnownedFiles</code><br/>
+        <code>VirtualMachine.Config.RawDevice</code><br/>
+        <code>VirtualMachine.Config.ReloadFromPath</code><br/>
+        <code>VirtualMachine.Config.RemoveDisk</code><br/>
+        <code>VirtualMachine.Config.Rename</code><br/>
+        <code>VirtualMachine.Config.ResetGuestInfo</code><br/>
+        <code>VirtualMachine.Config.Resource</code><br/>
+        <code>VirtualMachine.Config.Settings</code><br/>
+        <code>VirtualMachine.Config.SwapPlacement</code><br/>
+        <code>VirtualMachine.Config.UpgradeVirtualHardware</code>
+      </td>
+      <td>Managing the lifecycle of Deckhouse Platform cluster virtual machines.</td>
+    </tr>
+    <tr>
+      <td>Virtual Machine > Edit Inventory</td>
+      <td>
+        Create new,<br/>
+        Create from existing,<br/>
+        Remove,<br/>
+        Move
+      </td>
+      <td>
+        <code>VirtualMachine.Inventory.Create</code><br/>
+        <code>VirtualMachine.Inventory.CreateFromExisting</code><br/>
+        <code>VirtualMachine.Inventory.Delete</code><br/>
+        <code>VirtualMachine.Inventory.Move</code>
+      </td>
+      <td>Creating, deleting, and moving Deckhouse Platform cluster virtual machines in vSphere Inventory.</td>
+    </tr>
+    <tr>
+      <td>Virtual Machine > Guest Operations</td>
+      <td>Guest Operation Queries</td>
+      <td><code>VirtualMachine.GuestOperations.Query</code></td>
+      <td>Retrieving information from the guest operating system of virtual machines.</td>
+    </tr>
+    <tr>
+      <td>Virtual Machine > Interaction</td>
+      <td>
+        Answer question,<br/>
+        Device connection,<br/>
+        Guest operating system management by VIX API,<br/>
+        Power Off,<br/>
+        Power On,<br/>
+        Reset,<br/>
+        Configure CD media,<br/>
+        Install VMware Tools
+      </td>
+      <td>
+        <code>VirtualMachine.Interact.AnswerQuestion</code><br/>
+        <code>VirtualMachine.Interact.DeviceConnection</code><br/>
+        <code>VirtualMachine.Interact.GuestControl</code><br/>
+        <code>VirtualMachine.Interact.PowerOff</code><br/>
+        <code>VirtualMachine.Interact.PowerOn</code><br/>
+        <code>VirtualMachine.Interact.Reset</code><br/>
+        <code>VirtualMachine.Interact.SetCDMedia</code><br/>
+        <code>VirtualMachine.Interact.ToolsInstall</code>
+      </td>
+      <td>Managing virtual machine power state, device connections, and interaction with the guest operating system.</td>
+    </tr>
+    <tr>
+      <td>Virtual Machine > Provisioning</td>
+      <td>
+        Clone virtual machine,<br/>
+        Customize guest,<br/>
+        Deploy template,<br/>
+        Allow virtual machine download,<br/>
+        Allow virtual machine files upload,<br/>
+        Read customization specifications
+      </td>
+      <td>
+        <code>VirtualMachine.Provisioning.Clone</code><br/>
+        <code>VirtualMachine.Provisioning.Customize</code><br/>
+        <code>VirtualMachine.Provisioning.DeployTemplate</code><br/>
+        <code>VirtualMachine.Provisioning.GetVmFiles</code><br/>
+        <code>VirtualMachine.Provisioning.PutVmFiles</code><br/>
+        <code>VirtualMachine.Provisioning.ReadCustSpecs</code>
+      </td>
+      <td>Cloning virtual machine templates, customizing them, and deploying them when creating Deckhouse Platform cluster nodes.</td>
+    </tr>
+    <tr>
+      <td>Virtual Machine > Snapshot Management</td>
+      <td>
+        Create snapshot,<br/>
+        Remove Snapshot,<br/>
+        Rename Snapshot
+      </td>
+      <td>
+        <code>VirtualMachine.State.CreateSnapshot</code><br/>
+        <code>VirtualMachine.State.RemoveSnapshot</code><br/>
+        <code>VirtualMachine.State.RenameSnapshot</code>
+      </td>
+      <td>Managing snapshots of virtual machines and volumes in scenarios where this functionality is used by platform components.</td>
+    </tr>
+  </tbody>
+</table>

@@ -1,9 +1,10 @@
 ---
 title: Connection and authorization in Yandex Cloud
 permalink: en/admin/integrations/public/yandex/authorization.html
+lang: en
 ---
 
-To allow Deckhouse Platform (DP) to manage resources in Yandex Cloud, you need to:
+To allow Deckhouse Platform to manage resources in Yandex Cloud, you need to:
 
 - Create a service account.
 - Assign the required IAM roles to it.
@@ -42,7 +43,7 @@ Make sure all nodes run Linux kernel 5.8 or newer and that security groups allow
 
 ## Creating a service account
 
-To enable DP to manage Yandex Cloud resources, create a service account and assign it editing permissions.
+To enable Deckhouse Platform to manage Yandex Cloud resources, create a service account and assign it editing permissions.
 You can find detailed instructions on service account creation in the [Yandex Cloud documentation](https://yandex.cloud/en/docs/resource-manager/operations/cloud/set-access-bindings).
 
 To create the service account, run the following command:
@@ -66,7 +67,7 @@ Save the `userID` and `folderID` as they will be needed in the following steps.
 
 ## Assigning IAM roles
 
-To allow DP to work with cloud resources, assign the following roles to the service account:
+To allow Deckhouse Platform to work with cloud resources, assign the following roles to the service account:
 
 ```shell
 yc resource-manager folder add-access-binding --id <FOLDER_ID> --role compute.editor --subject serviceAccount:<USER_ID>
@@ -118,7 +119,7 @@ d8 k -n d8-cloud-provider-yandex edit secret d8-credentials
 
 In the ["WithNATInstance layout"](layout.html#withnatinstance), the API key for monitoring the NAT instance is stored in a second Secret, `d8-credentials-exporter`, in the same namespace. Its `authScheme` field is set to `apiToken` and the key is placed in the `secret` field.
 
-Instead of a ready key, the `secret` field can hold the `Auto` value. In that case, while provisioning the infrastructure, DP creates a service account named `<CLUSTER_PREFIX>-monitoring` in the folder, grants it the `monitoring.viewer` role, and generates an API key for it, which the metrics exporter then uses.
+Instead of a ready key, the `secret` field can hold the `Auto` value. In that case, while provisioning the infrastructure, Deckhouse Platform creates a service account named `<CLUSTER_PREFIX>-monitoring` in the folder, grants it the `monitoring.viewer` role, and generates an API key for it, which the metrics exporter then uses.
 
 In clusters migrated to ModuleConfig, the service account key moves to the `d8-credentials` Secret from the [`provider.serviceAccountJSON`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-provider-serviceaccountjson) parameter of the [YandexClusterConfiguration](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration) resource. The monitoring API key moves to the `d8-credentials-exporter` Secret from the [`withNATInstance.exporterAPIKey`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-withnatinstance-exporterapikey) parameter.
 
@@ -155,4 +156,4 @@ external_ipv4_address:
 reserved: true
 ```
 
-After completing these steps, you will have all the information needed to configure the provider. For the order of steps, see ["Configuration"](layout.html#configuration).
+After completing these steps, you will have all the information needed to configure the provider. For the order of steps, see ["Configuration"](configuration.html#configuration).

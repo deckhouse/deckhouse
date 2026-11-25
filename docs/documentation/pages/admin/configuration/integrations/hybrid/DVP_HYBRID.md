@@ -2,25 +2,25 @@
 title: Hybrid cluster with built-in virtualization
 permalink: en/admin/integrations/hybrid/dvp-hybrid.html
 lang: en
-search: hybrid with DVP
+search: hybrid with built-in virtualization
 description: Preparing for hybrid integration with built-in virtualization in Deckhouse Platform.
 ---
 
-This section describes how to add built-in virtualization nodes to an existing static DP cluster.
+This section describes how to add built-in virtualization nodes to an existing static Deckhouse Platform cluster.
 
-Integration with built-in virtualization uses the [`cloud-provider-dvp`](/modules/cloud-provider-dvp/) module. It enables DP to interact with the built-in virtualization cluster API, create virtual machines, connect the created VMs to an existing Kubernetes cluster, and manage the lifecycle of nodes through Cluster API mechanisms.
+Integration with built-in virtualization uses the [`cloud-provider-dvp`](/modules/cloud-provider-dvp/) module. It enables Deckhouse Platform to interact with the built-in virtualization cluster API, create virtual machines, connect the created VMs to an existing Kubernetes cluster, and manage the lifecycle of nodes through Cluster API mechanisms.
 
 This section describes two ways to add nodes:
 
-- **Automatically creating built-in virtualization nodes**. DP creates virtual machines through the built-in virtualization API. VM parameters are specified using the [DVPInstanceClass](/modules/cloud-provider-dvp/cr.html#dvpinstanceclass) resource, while the required number of nodes and placement zones are specified using the [NodeGroup](/modules/node-manager/cr.html#nodegroup) resource with the [`CloudEphemeral`](../../../../architecture/cluster-and-infrastructure/node-management/cloud-ephemeral-nodes.html) type.
-- **Connecting manually created nodes using a [bootstrap script](../../../glossary.html#bootstrap-script)**. A virtual machine is created in advance by the user and connected to the cluster using a DP bootstrap script. This scenario uses a [NodeGroup](/modules/node-manager/cr.html#nodegroup) with the [`CloudStatic`](../../../../architecture/cluster-and-infrastructure/node-management/cloud-static-nodes.html) type.
+- **Automatically creating built-in virtualization nodes**. Deckhouse Platform creates virtual machines through the built-in virtualization API. VM parameters are specified using the [DVPInstanceClass](/modules/cloud-provider-dvp/cr.html#dvpinstanceclass) resource, while the required number of nodes and placement zones are specified using the [NodeGroup](/modules/node-manager/cr.html#nodegroup) resource with the [`CloudEphemeral`](../../../../architecture/cluster-and-infrastructure/node-management/cloud-ephemeral-nodes.html) type.
+- **Connecting manually created nodes using a [bootstrap script](../../../glossary.html#bootstrap-script)**. A virtual machine is created in advance by the user and connected to the cluster using a Deckhouse Platform bootstrap script. This scenario uses a [NodeGroup](/modules/node-manager/cr.html#nodegroup) with the [`CloudStatic`](../../../../architecture/cluster-and-infrastructure/node-management/cloud-static-nodes.html) type.
 
 ## Prerequisites
 
 Before you begin, make sure that the following requirements are met:
 
 - The cluster is created with the [`clusterType: Static`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clustertype) parameter.
-- Network connectivity is configured between the network of the static DP cluster nodes and the network of virtual machines in built-in virtualization. For details, see [Network requirements](./overview.html##general-network-requirements). Nodes created in built-in virtualization have access to the Kubernetes API of the target DP cluster, DNS, and the required addresses according to the [Network interaction](../../../../reference/network_interaction.html) and [Configuring network policies](../../configuration/network/policy/configuration.html) sections. If Cilium is used with pod traffic tunneling, the [`tunnelMode`](/modules/cni-cilium/configuration.html#parameters-tunnelmode) mode is selected according to the network connectivity between sites. The Kubernetes API of the built-in virtualization cluster is accessible from the DP cluster.
+- Network connectivity is configured between the network of the static Deckhouse Platform cluster nodes and the network of virtual machines in built-in virtualization. For details, see [Network requirements](./overview.html#general-network-requirements). Nodes created in built-in virtualization have access to the Kubernetes API of the target Deckhouse Platform cluster, DNS, and the required addresses according to the [Network interaction](../../../../reference/network_interaction.html) and [Configuring network policies](../../configuration/network/policy/configuration.html) sections. If Cilium is used with pod traffic tunneling, the [`tunnelMode`](/modules/cni-cilium/configuration.html#parameters-tunnelmode) mode is selected according to the network connectivity between sites. The Kubernetes API of the built-in virtualization cluster is accessible from the Deckhouse Platform cluster.
 - The requirements from the [Preparing the environment](/modules/cloud-provider-dvp/environment.html) section are met:
   - a [ServiceAccount](/modules/cloud-provider-dvp/environment.html#creating-a-user) has been created to access the built-in virtualization API;
   - a kubeconfig has been generated to connect to the built-in virtualization API;
@@ -31,13 +31,13 @@ Before you begin, make sure that the following requirements are met:
 - If a virtual machine template is used, make sure that it contains only one disk.
 
 {% alert level="warning" %}
-[DVPInstanceClass](/modules/cloud-provider-dvp/cr.html#dvpinstanceclass) parameters use resources from the built-in virtualization cluster: VirtualMachineClass, ClusterVirtualImage, VirtualImage, VirtualDisk, and StorageClass from built-in virtualization, not from the target DP cluster.
+[DVPInstanceClass](/modules/cloud-provider-dvp/cr.html#dvpinstanceclass) parameters use resources from the built-in virtualization cluster: VirtualMachineClass, ClusterVirtualImage, VirtualImage, VirtualDisk, and StorageClass from built-in virtualization, not from the target Deckhouse Platform cluster.
 {% endalert %}
 
 {% alert level="warning" %}
-Make sure there are no StorageClass resources in the static DP cluster whose names match the names of StorageClass resources in the built-in virtualization cluster.
+Make sure there are no StorageClass resources in the static Deckhouse Platform cluster whose names match the names of StorageClass resources in the built-in virtualization cluster.
 
-When the `cloud-provider-dvp` module is enabled, the corresponding StorageClass resources are automatically synchronized from built-in virtualization to the DP cluster. If a StorageClass with the same name already exists in the [static cluster](../../../glossary.html#static-cluster), a resource conflict may occur, causing the module installation or upgrade to fail.
+When the `cloud-provider-dvp` module is enabled, the corresponding StorageClass resources are automatically synchronized from built-in virtualization to the Deckhouse Platform cluster. If a StorageClass with the same name already exists in the [static cluster](../../../glossary.html#static-cluster), a resource conflict may occur, causing the module installation or upgrade to fail.
 {% endalert %}
 
 ## Adding automatically created nodes
@@ -72,7 +72,7 @@ When the `cloud-provider-dvp` module is enabled, the corresponding StorageClass 
    ```
 
    {% alert level="warning" %}
-   The zone value in ModuleConfig and NodeGroup must match. Currently, only the `default` value is available in DVP.
+   The zone value in ModuleConfig and NodeGroup must match. Currently, only the `default` value is available in built-in virtualization.
    {% endalert %}
 
 1. Create a file with the `cloud-provider-dvp` module configuration. For example, `cloud-provider-dvp-mc.yaml`:
@@ -113,7 +113,7 @@ When the `cloud-provider-dvp` module is enabled, the corresponding StorageClass 
    d8 k get ns d8-cloud-provider-dvp
    ```
 
-   The namespace is created by the `cloud-provider-dvp` module, so the credentials Secret is applied as a separate step rather than together with the ModuleConfig. Until the Secret exists, the module components cannot reach the DVP API.
+   The namespace is created by the `cloud-provider-dvp` module, so the credentials Secret is applied as a separate step rather than together with the ModuleConfig. Until the Secret exists, the module components cannot reach the built-in virtualization API.
 
 1. Create the credentials Secret:
 
@@ -218,7 +218,7 @@ When the `cloud-provider-dvp` module is enabled, the corresponding StorageClass 
    d8 k apply -f dvp-instanceclass-nodegroup.yaml
    ```
 
-   After the manifest is applied, DP will start creating a virtual machine in DVP and connect it to the cluster as a node.
+   After the manifest is applied, Deckhouse Platform will start creating a virtual machine in built-in virtualization and connect it to the cluster as a node.
 
 1. Check the NodeGroup status:
 
@@ -227,7 +227,7 @@ When the `cloud-provider-dvp` module is enabled, the corresponding StorageClass 
    d8 k describe nodegroup dvp-worker
    ```
 
-1. Check that a new node appears in the DP cluster:
+1. Check that a new node appears in the Deckhouse Platform cluster:
 
    ```shell
    d8 k get nodes -o wide

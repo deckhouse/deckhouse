@@ -1,43 +1,18 @@
 ---
-title: Layouts and configuration in Huawei Cloud
+title: Layouts in Huawei Cloud
 permalink: en/admin/integrations/private/huaweicloud/layout.html
+lang: en
 ---
-
-This section describes the cluster [layouts](../../../../glossary.html#layout) in Huawei Cloud infrastructure and the associated parameters.
-
-## List of required Huawei Cloud services
-
-A list of services required for Deckhouse Platform (DP) to work in Huawei Cloud:
-
-| Service                         | API version |
-|:--------------------------------|:-----------:|
-| Identity                        | [v3](https://support.huaweicloud.com/intl/en-us/api-iam/iam_30_0001.html) |
-| Compute                         | [v2.1](https://support.huaweicloud.com/intl/en-us/api-ecs/ecs_04_0001.html) |
-| Network (VPC)                   | [v1/v2](https://support.huaweicloud.com/intl/en-us/api-vpc/vpc-api-pdf.pdf) |
-| Network (OpenStack Neutron API) | [v2.0](https://support.huaweicloud.com/intl/en-us/api-vpc/vpc-api-pdf.pdf) |
-| Block Storage                   | [v3](https://support.huaweicloud.com/intl/en-us/api-evs/evs_04_2065.html) |
-| Load Balancing (ELB) *          | [v3](https://support.huaweicloud.com/intl/en-us/api-elb/CreateLoadBalancer.html) |
-
-\* Required if load balancers need to be provisioned in the cluster.
 
 ## Standard
 
 - An internal cluster network is created with a gateway to the public network.
-- An Elastic IP can be assigned to the [master node](../../../../glossary.html#master-node).
+- An Elastic IP can be assigned to the
+  [master node](../../../../glossary.html#master-node).
 - Nodes managed by the Cluster API do not have public IP addresses.
 
 ![Standard layout in Huawei CLoud](../../../../images/cloud-provider-huawei/huawei-standard.png)
 <!--- Source: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-10811&t=Qb5yyWumzPiTBtfL-0 --->
-
-The [`internalNetworkSecurity`](/modules/cloud-provider-huaweicloud/cluster_configuration.html#huaweicloudclusterconfiguration-standard-internalnetworksecurity) parameter (default `true`) enables the creation of a security group (SecurityGroup) when a cluster is created. DP creates the group named after the cluster prefix and assigns it to the nodes.
-
-The following inbound rules will be created:
-
-- Allow incoming traffic over the TCP protocol on port `22` from `0.0.0.0/0`.
-- Allow incoming traffic over the ICMP protocol from `0.0.0.0/0`.
-- Allow incoming traffic over the TCP protocol on ports `30000`–`32767` for services of the `NodePort` type. Inbound UDP traffic to `NodePort` ports is not allowed by default.
-
-Attach custom security groups for [CloudEphemeral nodes](../../../../glossary.html#cloud-ephemeral-node) in the [HuaweiCloudInstanceClass](/modules/cloud-provider-huaweicloud/cr.html#huaweicloudinstanceclass) resource via [`spec.securityGroups`](/modules/cloud-provider-huaweicloud/cr.html#huaweicloudinstanceclass-v1-spec-securitygroups). They are applied together with the group created by DP.
 
 Example configuration:
 
@@ -78,16 +53,6 @@ masterNodeGroup:
 ![VpcPeering layout in Huawei Cloud](../../../../images/cloud-provider-huawei/huawei-vpc-peering-ru.png)
 <!--- Source: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-11715&t=Qb5yyWumzPiTBtfL-0 --->
 
-The [`internalNetworkSecurity`](/modules/cloud-provider-huaweicloud/cluster_configuration.html#huaweicloudclusterconfiguration-vpcpeering-internalnetworksecurity) parameter (default `true`) enables the creation of a security group (SecurityGroup) when a cluster is created. DP creates the group named after the cluster prefix and assigns it to the nodes.
-
-The following inbound rules will be created:
-
-- Allow incoming traffic over the TCP protocol on port `22` from `0.0.0.0/0`.
-- Allow incoming traffic over the ICMP protocol from `0.0.0.0/0`.
-- Allow incoming traffic over the TCP protocol on ports `30000`–`32767` for services of the `NodePort` type. Inbound UDP traffic to `NodePort` ports is not allowed by default.
-
-Attach custom security groups for CloudEphemeral nodes in the [HuaweiCloudInstanceClass](/modules/cloud-provider-huaweicloud/cr.html#huaweicloudinstanceclass) resource via [`spec.securityGroups`](/modules/cloud-provider-huaweicloud/cr.html#huaweicloudinstanceclass-v1-spec-securitygroups). They are applied together with the group created by DP.
-
 Example configuration:
 
 ```yaml
@@ -102,3 +67,5 @@ vpcPeering:
   internalNetworkSecurity: true
   subnet: subnet-43b4
 ```
+
+[Network configuration](network.html).

@@ -4,6 +4,18 @@ permalink: ru/admin/integrations/virtualization/vcd/connection-and-authorization
 lang: ru
 ---
 
+## Список необходимых сервисов VMware Cloud Director
+
+Для работы Deckhouse Platform должен быть доступен следующий сервис VMware Cloud Director:
+
+| Сервис                    | Версия API    |
+| :------------------------ | :--------:    |
+| VMware Cloud Director API | `37.2` и выше |
+
+{% alert level="info" %}
+Для версий VMware Cloud Director API ниже `37.2` используется режим совместимости с устаревшими версиями API.
+{% endalert %}
+
 ## Подготовка ресурсов
 
 {% alert level="warning" %}
@@ -204,6 +216,8 @@ Network (внутренняя сеть) может быть настроена �
 
 ### Настройка правил DNAT/SNAT на edge gateway
 
+Настройте правила DNAT и SNAT на edge gateway, выполнив следующие действия.
+
 1. Перейдите на вкладку «Networking» → «Edge Gateways», откройте edge gateway:
 
    ![Настройка правил DNAT на edge gateway, шаг 1](../../../../images/cloud-provider-vcd/edge-gateway-setup/Screenshot.png)
@@ -279,7 +293,7 @@ Network (внутренняя сеть) может быть настроена �
 {% endalert %}
 
 {% alert level="warning" %}
-Отключите vApp/Guest OS Customization (Guest Customization, vApp Customization и аналогичные механизмы) для шаблона и виртуальных машин кластера в VMware Cloud Director. DP выполняет первичную настройку узлов через `cloud-init` (datasource OVF/VMware GuestInfo). Включенная customization может конфликтовать с `cloud-init` и приводить к некорректной инициализации узла.
+Отключите vApp/Guest OS Customization (Guest Customization, vApp Customization и аналогичные механизмы) для шаблона и виртуальных машин кластера в VMware Cloud Director. Deckhouse Platform выполняет первичную настройку узлов через `cloud-init` (datasource OVF/VMware GuestInfo). Включенная customization может конфликтовать с `cloud-init` и приводить к некорректной инициализации узла.
 {% endalert %}
 
 {% include notice_envinronment.liquid %}
@@ -288,6 +302,8 @@ Network (внутренняя сеть) может быть настроена �
 Исправления необходимы для корректного заказа CloudPermanent-узлов и для возможности подключать диски, созданные CSI.
 
 ### Подготовка шаблона из OVA-файла
+
+Подготовьте шаблон виртуальной машины из OVA-файла, выполнив следующие действия.
 
 1. Скачайте [OVA-файл](https://cloud-images.ubuntu.com/jammy/):
 
@@ -367,6 +383,8 @@ shutdown -P now
 
 ### Настройка шаблона в VCD
 
+Настройте шаблон в VCD, выполнив следующие действия.
+
 1. Выключите виртуальную машину и удалите все заполненные поля «Guest Properties»:
 
    ![Настройка шаблона, Guest Properties 1](../../../../images/cloud-provider-vcd/template/GuestProperties1.png)
@@ -415,19 +433,3 @@ shutdown -P now
 ### Замена образа ОС
 
 Deckhouse Platform создаёт узлы из шаблона виртуальной машины, который указывается в параметре [`template`](/modules/cloud-provider-vcd/cr.html#vcdinstanceclass-v1-spec-template) ресурса VCDInstanceClass для узлов типа `CloudEphemeral` и в секции `instanceClass` ресурса VCDClusterConfiguration для узлов типа `CloudPermanent` и master-узлов. Чтобы перевести узлы кластера на новый образ ОС, подготовьте на его основе новый шаблон и выполните шаги из раздела [«Как заменить образ ОС в облачном кластере?»](../../../../faq.html#как-заменить-образ-ос-в-облачном-кластере).
-
-## Использование хранилища
-
-* VCD поддерживает CSI. Диски создаются как VCD Independent Disks.
-* Guest property `disk.EnableUUID` должно быть разрешено для используемых шаблонов виртуальных машин.
-* Deckhouse Platform поддерживает изменение размера дисков с версии v1.59.1.
-
-## Использование балансировщика нагрузки
-
-* Компоненты DP поддерживают ресурсов Service типа LoadBalancer при установке в VMware Cloud Director (VCD).
-* В качестве балансировщика используется VMware NSX Advanced Load Balancer (ALB или Avi Networks).
-* Поддержка доступна **только** при использовании платформы виртуализации сети `NSX-T`.
-* Балансировка должна быть включёна на Edge Gateway вашим провайдером VCD. Проверить, включёна ли балансировка, можно в разделе Edge Gateway → Load Balancer → General Settings — параметр `State` должен быть в статусе `Active`.
-* Если балансировщик был активирован после успешного создания кластера DP, компоненты автоматически подхватят изменения в течение часа (дополнительных действий не требуется).
-* Для каждого открытого порта создаётся связка Pool + Virtual Service.
-* При наличии межсетевого экрана необходимо создать разрешающее правило для внешнего IP-адреса балансировщика и соответствующих портов.

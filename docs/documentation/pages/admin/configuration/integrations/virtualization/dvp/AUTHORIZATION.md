@@ -70,7 +70,7 @@ roleRef:
 EOF
 ```
 
-If the virtualization cluster runs a DP version earlier than 1.78, the `d8:namespace:*` roles do not exist there. In this case, specify the `d8:use:role:manager` role in `roleRef.name`.
+If the virtualization cluster runs a Deckhouse Platform version earlier than 1.78, the `d8:namespace:*` roles do not exist there. In this case, specify the `d8:use:role:manager` role in `roleRef.name`.
 
 ## Generating a kubeconfig
 
@@ -107,9 +107,9 @@ base64 kubeconfig | tr -d '\n'
 
 ## Credentials Secret
 
-The credentials for accessing the parent cluster API are stored in a separate Secret rather than in the ModuleConfig. The provider reads it when starting the components that access the DVP API.
+The credentials for accessing the parent cluster API are stored in a separate Secret rather than in the ModuleConfig. The provider reads it when starting the components that access the built-in virtualization API.
 
-The Secret is created during cluster installation together with the other resources of the initial configuration. If the module is added to a running cluster, the Secret is applied after the module creates the namespace, and the order is covered in the [Hybrid cluster with DVP](../../hybrid/dvp-hybrid.html) section. The Secret must meet the following requirements:
+The Secret is created during cluster installation together with the other resources of the initial configuration. If the module is added to a running cluster, the Secret is applied after the module creates the namespace, and the order is covered in the [Hybrid cluster with built-in virtualization](../../hybrid/dvp-hybrid.html) section. The Secret must meet the following requirements:
 
 - The name is `d8-credentials` and the namespace is `d8-cloud-provider-dvp`.
 - The type is `cloud-provider.deckhouse.io/credentials`.

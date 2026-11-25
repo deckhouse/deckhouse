@@ -6,11 +6,11 @@ lang: ru
 search: virtualization integration, virtualization systems, hypervisor integration, интеграция с виртуализацией
 ---
 
-В Deckhouse Platform (DP) поддерживаются следующие системы виртуализации:
+В Deckhouse Platform поддерживаются следующие системы виртуализации:
 
-* [Deckhouse Virtualization Platform (DVP)](./dvp/services.html);
-* [VMware Cloud Director](./vcd/connection-and-authorization.html);
-* [VMware vSphere](./vsphere/authorization.html);
-* [zVirt](./zvirt/authorization.html).
+* [Встроенная виртуализация](./dvp/overview.html);
+* [VMware Cloud Director](./vcd/overview.html);
+* [VMware vSphere](./vsphere/overview.html);
+* [zVirt](./zvirt/overview.html).
 
 В следующих разделах описано, как настроить интеграцию с различными системами виртуализации.

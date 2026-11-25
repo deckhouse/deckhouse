@@ -1,10 +1,10 @@
 ---
-title: Схемы размещения и настройка Microsoft Azure
+title: Схемы размещения Microsoft Azure
 permalink: ru/admin/integrations/public/azure/layout.html
 lang: ru
 ---
 
-Данный раздел описывает [схему размещения](../../../../glossary.html#layout) кластера в инфраструктуре Azure и связанные с ней параметры.
+Данный раздел описывает [схему размещения](../../../../glossary.html#layout) кластера в инфраструктуре Azure.
 
 ## Standard
 
@@ -15,17 +15,9 @@ Standard — поддерживаемая схема размещения:
 - Для SNAT используется до 64 000 портов на один IP-адрес.
 - Поддерживается NAT Gateway с возможностью тарификации — позволяет использовать статические публичные IP-адреса для SNAT.
 - Публичные IP могут быть назначены как на [master-узлы](../../../../glossary.html#master-node), так и на узлы, созданные через Terraform.
-- При отсутствии внешнего IP у master-узла требуется [bastion-хост](../../../../glossary.html#bastion-host) и VNet-пиринг между кластерами.
+- При отсутствии внешнего IP у master-узла требуется
+  [bastion-хост](../../../../glossary.html#bastion-host) и VNet-пиринг между кластерами.
 - Поддерживается пиринг между VNet кластера и другими VNet.
-
-При создании кластера Deckhouse Platform (DP) создаёт Network Security Group (NSG) с именем префикса кластера и привязывает её к подсети узлов.
-
-Будут созданы следующие правила:
-
-- `AllowIcmp` — разрешение входящего трафика по протоколу ICMP из любого источника;
-- `AllowSsh` — разрешение входящего трафика по протоколу TCP и порту `22` из CIDR, указанных в [`sshAllowList`](/modules/cloud-provider-azure/cluster_configuration.html#azureclusterconfiguration-sshallowlist) (если список не задан — из любого источника).
-
-Подключить заранее созданную собственную NSG к узлам через параметры DP нельзя. Для ограничения SSH используйте [`sshAllowList`](/modules/cloud-provider-azure/cluster_configuration.html#azureclusterconfiguration-sshallowlist).
 
 Пример конфигурации размещения:
 
@@ -56,6 +48,8 @@ peeredVNets:                            # Необязательный пара�
   - resourceGroupName: kube-bastion    # Обязательный параметр.
     vnetName: kube-bastion-vnet        # Обязательный параметр.
 ```
+
+[Настройка сети](network.html).
 
 ## Замена образа ОС
 

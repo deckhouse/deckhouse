@@ -11,7 +11,7 @@ The provider supports working with only one disk in the virtual machine template
 {% endalert %}
 
 Before you begin, you must prepare the cloud environment
-and provide access to AWS resources for Deckhouse Platform (DP) components that interact with the AWS API.
+and provide access to AWS resources for Deckhouse Platform components that interact with the AWS API.
 
 The `cloud-init` package must be installed on all virtual machines that will be part of the cluster.
 After booting up, make sure the following services are running:
@@ -21,7 +21,7 @@ After booting up, make sure the following services are running:
 - `cloud-init.service`
 
 These services are required for correct EC2 instance initialization
-and for integration with DP infrastructure modules such as [`cloud-provider-aws`](/modules/cloud-provider-aws/) and `machine-controller-manager`.
+and for integration with Deckhouse Platform infrastructure modules such as [`cloud-provider-aws`](/modules/cloud-provider-aws/) and `machine-controller-manager`.
 
 ## Accessing the AWS API
 
@@ -174,6 +174,8 @@ Example JSON policy with the required permission configuration:
 
 ### Configuring IAM via the AWS web console
 
+Use the AWS web console to configure the required IAM policies and user.
+
 1. Create policies:
    - Go to **Identity and Access Management (IAM)** → **Policies**.
    - Click **Create policy**.
@@ -197,7 +199,7 @@ Example JSON policy with the required permission configuration:
 
 {% alert level="info" %}
 Save the generated `Access key ID` and `Secret access key`.
-You will need these to configure DP.
+You will need these to configure Deckhouse Platform.
 {% endalert %}
 
 Ensure that your account (and the created user) has access to the required regions.
@@ -325,9 +327,9 @@ resource "aws_iam_user_policy_attachment" "policy-attachment" {
 ### Using a custom IAM role for nodes (iamNodeRole)
 
 The `iamNodeRole` parameter in the AWSClusterConfiguration resource
-lets you override the default IAM role that DP assigns to all EC2 instances of the cluster nodes.
+lets you override the default IAM role that Deckhouse Platform assigns to all EC2 instances of the cluster nodes.
 
-By default, DP creates and assigns an IAM role named `<prefix>-node`,
+By default, Deckhouse Platform creates and assigns an IAM role named `<prefix>-node`,
 where `<prefix>` is the value of the `global` ModuleConfig `prefix` parameter.
 This role includes the minimum permissions required for node operation.
 
@@ -337,7 +339,7 @@ You can specify the IAM role name in the `iamNodeRole` parameter if you want to:
 - Grant additional permissions to nodes (for example, access to specific AWS services).
 
 {% alert level="info" %}
-The specified role must include all permissions required by DP.
+The specified role must include all permissions required by Deckhouse Platform.
 Without them, the nodes will not function properly.
 In particular, it must include the same permissions as the default `<prefix>-node` role, even if they are assigned manually.
 {% endalert %}

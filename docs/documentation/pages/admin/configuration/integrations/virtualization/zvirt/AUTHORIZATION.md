@@ -1,6 +1,7 @@
 ---
 title: Connection and authorization in zVirt
 permalink: en/admin/integrations/virtualization/zvirt/authorization.html
+lang: en
 ---
 
 For Deckhouse Platform to create virtual machines in zVirt, assign the required roles to the zVirt user, prepare a cloud image of the operating system and a virtual machine template, and pass the user login and password in the credentials Secret.
@@ -144,3 +145,12 @@ d8 k -n d8-cloud-provider-zvirt edit secret d8-credentials
 ```
 
 In clusters migrated to ModuleConfig, the login and password are moved to this Secret from the [`provider.username`](/modules/cloud-provider-zvirt/cluster_configuration.html#zvirtclusterconfiguration-provider-username) and [`provider.password`](/modules/cloud-provider-zvirt/cluster_configuration.html#zvirtclusterconfiguration-provider-password) parameters of the [ZvirtClusterConfiguration](/modules/cloud-provider-zvirt/cluster_configuration.html#zvirtclusterconfiguration) resource.
+
+## Configuration migration
+
+{% alert level="warning" %}
+If the cluster was installed with the [ZvirtClusterConfiguration](/modules/cloud-provider-zvirt/cluster_configuration.html#zvirtclusterconfiguration) schema, it must be migrated to the ModuleConfig-based configuration.
+Until the migration is complete, the [`D8CloudProviderZvirtMigrationPending`](../../../../reference/alerts.html#cloud-provider-zvirt-d8cloudproviderzvirtmigrationpending) alert may fire and Deckhouse Platform updates may be blocked.
+
+The migration procedure is described in ["How to migrate a cloud provider to ModuleConfig-based configuration?"](../../../../faq.html#how-to-migrate-a-cloud-provider-to-moduleconfig-based-configurat).
+{% endalert %}

@@ -1,0 +1,155 @@
+---
+title: Network configuration in Amazon Web Services
+permalink: en/admin/integrations/public/amazon/network.html
+lang: en
+---
+
+## Internal addressing and subnets
+
+The [`nodeNetworkCIDR`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-nodenetworkcidr) parameter defines the address range to be split among [availability zones](../../../../glossary.html#availability-zone).
+This range must match or be a subset of [`vpcNetworkCIDR`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-vpcnetworkcidr).
+Subnets are automatically created based on the number of zones in the region.
+
+Example:
+
+```yaml
+nodeNetworkCIDR: 10.241.1.0/20
+vpcNetworkCIDR: 10.241.0.0/16
+```
+
+## Security groups
+
+AWS security groups are used to manage incoming and outgoing traffic to virtual machines.
+In Deckhouse Platform, they can be used to:
+
+- Allow access to cluster nodes from other subnets.
+- Open access to applications running on [static nodes](../../../../glossary.html#static-node).
+- Restrict or allow access to external resources based on security policies.
+
+When the [`disableDefaultSecurityGroup: false`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-disabledefaultsecuritygroup) parameter is set, Deckhouse Platform creates the following default security groups when a cluster is created:
+
+- `<CLUSTER_PREFIX>-node`, assigned to cluster nodes:
+  - Allows any outgoing traffic to `0.0.0.0/0`.
+  - Allows any incoming traffic from the `<CLUSTER_PREFIX>-loadbalancer` group.
+  - Allows any incoming traffic from nodes in the same `<CLUSTER_PREFIX>-node` group.
+  - Allows incoming traffic over the ICMP protocol from the CIDRs listed in [`publicNetworkAllowList`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-publicnetworkallowlist) (default `0.0.0.0/0`).
+- `<CLUSTER_PREFIX>-loadbalancer`, used by load balancers:
+  - Allows any incoming traffic from the CIDRs listed in [`publicNetworkAllowList`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-publicnetworkallowlist).
+  - Allows any outgoing traffic to the `<CLUSTER_PREFIX>-node` group.
+- `<CLUSTER_PREFIX>-ssh-accessible`, created if [`sshAllowList`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-sshallowlist) is set. It allows incoming traffic over the TCP protocol on port `22` from the listed CIDRs (default `0.0.0.0/0`). It is assigned to [master nodes](../../../../glossary.html#master-node) or to the bastion host in the WithNAT layout.
+
+In addition to the default groups, you can attach custom security groups created in the cloud beforehand.
+
+You can assign additional security groups in the following cases:
+
+| Node type              | Where to configure                                                                 |
+|------------------------|-------------------------------------------------------------------------------|
+| Master nodes            | In the [`masterNodeGroup.instanceClass.additionalSecurityGroups`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-masternodegroup-instanceclass-additionalsecuritygroups) field of the AWSClusterConfiguration resource |
+| Static [worker nodes](../../../../glossary.html#worker-node) | In the [`nodeGroups[].instanceClass.additionalSecurityGroups`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-nodegroups-instanceclass-additionalsecuritygroups) field of the same resource |
+| Ephemeral nodes         | In the [`spec.additionalSecurityGroups`](/modules/cloud-provider-aws/cr.html#awsinstanceclass-v1-spec-additionalsecuritygroups) field of the AWSInstanceClass object         |
+
+In all cases, the `additionalSecurityGroups` parameter must be an array of strings (AWS security group IDs or names).
+
+If `disableDefaultSecurityGroup: true` is set, the default security groups will not be created.
+
+When using `disableDefaultSecurityGroup: true`, you must manually create all required security groups to allow access to cluster nodes. Additionally, you must explicitly specify them in the following parameters:
+
+- [`additionalSecurityGroups`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-masternodegroup-instanceclass-additionalsecuritygroups) in the `masterNodeGroup` section of the AWSClusterConfiguration resource;
+- [`additionalSecurityGroups`](/modules/cloud-provider-aws/cr.html#awsinstanceclass-v1-spec-additionalsecuritygroups) in the AWSInstanceClass resource;
+- [`additionalSecurityGroups`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-nodegroups-instanceclass-additionalsecuritygroups) in the `nodeGroups.instanceClass` section.
+
+To configure the security groups used by load balancers, specify them using the `service.beta.kubernetes.io/aws-load-balancer-security-groups` annotation.
+
+## Setting up VPC peering
+
+The following example shows how to set up VPC peering between two sample VPCs: `vpc-a` and `vpc-b`.
+
+{% alert level="warning" %}
+The IPv4 CIDR blocks of both VPCs must be different.
+{% endalert %}
+
+To configure peering, follow these steps:
+
+1. Go to the region where `vpc-a` is working.
+1. Navigate to VPC → VPC Peering Connections → Create Peering Connection, then configure the peering:
+   - Name: `vpc-a-vpc-b`.
+   - Fill in "Local" and "Another VPC" sections.
+1. Go to the region where `vpc-b` is working.
+1. Navigate to VPC → VPC Peering Connections.
+1. Select the created connection and click **Accept Request**.
+1. In `vpc-a`, add routes to the `vpc-b` CIDR in all route tables via the peering connection.
+1. In `vpc-b`, add routes to the `vpc-a` CIDR in all route tables via the peering connection.
+
+## Configuring access via bastion host
+
+To access nodes in private subnets, use the [`withNAT.bastionInstance`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-withnat-bastioninstance) parameter in AWSClusterConfiguration.
+The [bastion host](../../../../glossary.html#bastion-host) is provisioned with the infrastructure according to the `instanceClass` settings.
+
+The following scenarios are supported:
+
+- The bastion host already exists in an external VPC:
+  1. Run the base infrastructure bootstrap: `dhctl bootstrap-phase base-infra`.
+  1. Set up VPC peering between the external and new VPC.
+  1. Continue installation using the bastion host: `dhctl bootstrap --ssh-bastion...`.
+
+- The bastion host is required in the new VPC:
+  1. Run the base infrastructure bootstrap: `dhctl bootstrap-phase base-infra`.
+  1. Manually launch the bastion host in the `<CLUSTER_PREFIX>-public-0` subnet.
+  1. Continue installation using the bastion host: `dhctl bootstrap --ssh-bastion...`.
+
+### Creating a cluster in a new VPC with an existing bastion host
+
+Complete the following steps to create a cluster that uses an existing bastion host.
+
+1. Bootstrap the cluster's base infrastructure:
+
+   ```shell
+   dhctl bootstrap-phase base-infra --config config
+   ```
+
+1. Set up VPC peering as described [above](#setting-up-vpc-peering).
+1. Continue cluster installation.
+   When prompted about the Terraform cache, answer with `y`:
+
+   ```shell
+   dhctl bootstrap --config config --ssh-...
+   ```
+
+### Creating a cluster in a new VPC and deploying a bastion host
+
+Complete the following steps to create a cluster and deploy a bastion host for access to its nodes.
+
+1. Bootstrap the cluster's base infrastructure:
+
+   ```shell
+   dhctl bootstrap-phase base-infra --config config
+   ```
+
+1. Manually launch a bastion host in the `<CLUSTER_PREFIX>-public-0` subnet.
+1. Continue cluster installation.
+   When prompted about the Terraform cache, answer with `y`:
+
+   ```shell
+   dhctl bootstrap --config config --ssh-...
+   ```
+
+## Using an existing VPC (existingVPCID)
+
+The [`existingVPCID`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-existingvpcid) parameter in the AWSClusterConfiguration resource lets you use an existing VPC
+for Deckhouse Platform cluster deployment instead of automatically creating a new one.
+
+This may be useful when:
+
+- Your AWS infrastructure is already partially deployed.
+- You need to integrate with other services or resources in the same VPC.
+- Security policies or architectural guidelines prevent automatic VPC creation.
+
+{% alert level="warning" %}
+If the existing VPC already has an Internet Gateway, the base infrastructure bootstrap will fail.
+Reusing an existing Internet Gateway is not supported in the current Deckhouse Platform version.
+{% endalert %}
+
+Compatibility with other parameters:
+
+- If `existingVPCID` is specified, do not specify [`vpcNetworkCIDR`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-vpcnetworkcidr) as they are mutually exclusive.
+- The [`nodeNetworkCIDR`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-nodenetworkcidr) parameter can (and should) be specified. It must be a subset of the existing VPC.

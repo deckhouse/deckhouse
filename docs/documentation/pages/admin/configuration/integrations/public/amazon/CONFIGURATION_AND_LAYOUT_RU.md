@@ -1,16 +1,21 @@
 ---
-title: Схемы размещения и настройка Amazon Web Services
+title: Схемы размещения Amazon Web Services
 permalink: ru/admin/integrations/public/amazon/layout.html
 lang: ru
 ---
 
-Данный раздел описывает [схемы размещения](../../../../glossary.html#layout) кластера в инфраструктуре AWS и связанные с ними параметры. Выбор схемы (layout) влияет на способ назначения публичных IP-адресов, работу NAT и возможность подключения к узлам.
+Данный раздел описывает [схемы размещения](../../../../glossary.html#layout)
+кластера в инфраструктуре AWS. Выбор
+схемы (layout) влияет на способ назначения публичных
+IP-адресов, работу NAT и возможность подключения к узлам.
 
 ## WithoutNAT
 
 Рекомендуемая схема размещения.
 
-Каждому узлу назначается публичный IP-адрес (Elastic IP), NAT-шлюз не используется. Такая схема обеспечивает прямой доступ к узлам по публичным IP-адресам и позволяет упростить маршрутизацию исходящего трафика.
+Каждому узлу назначается публичный IP-адрес (Elastic
+IP), NAT-шлюз не используется. Такая схема обеспечивает
+прямой доступ к узлам по публичным IP-адресам и позволяет упростить маршрутизацию исходящего трафика.
 
 ![resources](../../../../images/cloud-provider-aws/aws-withoutnat.png)
 <!--- Исходник: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-10681&t=Qb5yyWumzPiTBtfL-0 --->
@@ -61,7 +66,9 @@ tags:
 
 {% alert level="warning" %} В данной схеме NAT Gateway всегда создается в зоне `a`. Если узлы кластера размещены в других зонах, то при сбое зоны a кластер может стать недоступным. [Bastion-хост](../../../../glossary.html#bastion-host) обязателен для подключения к узлам. {% endalert %}
 
-В этой схеме размещения NAT Gateway используется для выхода в интернет, а публичные IP-адреса узлам не присваиваются. Доступ к узлам возможен только через bastion-хост, размещаемый в отдельной подсети.
+В этой схеме размещения NAT Gateway используется для выхода в интернет, а публичные IP-адреса узлам
+не присваиваются. Доступ к узлам возможен только
+через bastion-хост, размещаемый в отдельной подсети.
 
 ![resources](../../../../images/cloud-provider-aws/aws-withnat.png)
 <!--- Исходник: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-9864&t=Qb5yyWumzPiTBtfL-0 --->
@@ -115,194 +122,5 @@ tags:
   team: torpedo
 ```
 
-## Назначение AWSClusterConfiguration
-
-[Ресурс AWSClusterConfiguration](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration) описывает параметры кластера и используется Deckhouse Platform (DP) для:
-
-- задания схемы размещения и сетевых CIDR;
-- конфигурации master- и рабочих узлов;
-- указания параметров подключения к AWS API (ключи доступа, регион);
-- назначения общих и специфичных тегов;
-- описания настроек bastion-хоста (в схеме WithNAT).
-
-Обязательные поля:
-
-- `apiVersion` — должен быть `deckhouse.io/v1`;
-- `kind` — всегда AWSClusterConfiguration.
-
-Пример заголовка ресурса:
-
-```yaml
-apiVersion: deckhouse.io/v1
-kind: AWSClusterConfiguration
-```
-
-Чтобы отредактировать этот ресурс в работающем кластере, выполните команду:
-
-```shell
-d8 system edit provider-cluster-configuration
-```
-
-После внесения изменений их необходимо применить с помощью команды:
-
-```shell
-dhctl converge
-```
-
-## Внутренняя адресация и подсети
-
-[Параметр `nodeNetworkCIDR`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-nodenetworkcidr) определяет диапазон адресов, который будет распределен по [зонам доступности](../../../../glossary.html#availability-zone). Этот диапазон должен соответствовать или быть вложенным в [`vpcNetworkCIDR`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-vpcnetworkcidr). Подсети автоматически создаются на основании количества зон региона.
-
-Пример:
-
-```yaml
-nodeNetworkCIDR: 10.241.1.0/20
-vpcNetworkCIDR: 10.241.0.0/16
-```
-
-## Группы безопасности
-
-Группы безопасности (security groups) в AWS используются для управления входящим и исходящим сетевым трафиком на виртуальные машины. В DP они позволяют:
-
-- разрешить подключение к узлам кластера с других подсетей;
-- открыть доступ к приложениям, размещённым на [статических узлах](../../../../glossary.html#static-node);
-- ограничить или разрешить доступ к внешним ресурсам в соответствии с требованиями безопасности.
-
-Если задан параметр [`disableDefaultSecurityGroup: false`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-disabledefaultsecuritygroup), при создании кластера DP создаёт группы безопасности по умолчанию:
-
-- `<CLUSTER_PREFIX>-node` — назначается узлам кластера:
-  - разрешение любого исходящего трафика в `0.0.0.0/0`;
-  - разрешение любого входящего трафика от группы `<CLUSTER_PREFIX>-loadbalancer`;
-  - разрешение любого входящего трафика от узлов той же группы `<CLUSTER_PREFIX>-node`;
-  - разрешение входящего трафика по протоколу ICMP из CIDR, указанных в [`publicNetworkAllowList`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-publicnetworkallowlist) (по умолчанию `0.0.0.0/0`).
-- `<CLUSTER_PREFIX>-loadbalancer` — используется балансировщиками нагрузки:
-  - разрешение любого входящего трафика из CIDR, указанных в [`publicNetworkAllowList`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-publicnetworkallowlist);
-  - разрешение любого исходящего трафика к группе `<CLUSTER_PREFIX>-node`.
-- `<CLUSTER_PREFIX>-ssh-accessible` — создаётся, если задан [`sshAllowList`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-sshallowlist), и разрешает входящий трафик по протоколу TCP и порту `22` из указанных CIDR (по умолчанию `0.0.0.0/0`). Назначается [master-узлам](../../../../glossary.html#master-node) или [bastion-хосту](../../../../glossary.html#bastion-host) в схеме WithNAT.
-
-Помимо групп по умолчанию, к узлам можно подключить собственные группы безопасности, созданные в облаке заранее.
-
-Дополнительные группы безопасности можно назначить в следующих случаях:
-
-| Тип узлов              | Где указывать                                                                 |
-|------------------------|-------------------------------------------------------------------------------|
-| Master-узлы            | В [поле `masterNodeGroup.instanceClass.additionalSecurityGroups`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-masternodegroup-instanceclass-additionalsecuritygroups) ресурса AWSClusterConfiguration |
-| Статические [worker-узлы](../../../../glossary.html#worker-node)| В [поле `nodeGroups[].instanceClass.additionalSecurityGroups`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-nodegroups-instanceclass-additionalsecuritygroups) того же ресурса |
-| Эфемерные узлы         | В объекте AWSInstanceClass, в [поле `spec.additionalSecurityGroups`](/modules/cloud-provider-aws/cr.html#awsinstanceclass-v1-spec-additionalsecuritygroups)         |
-
-Во всех случаях параметр `additionalSecurityGroups` принимает массив строк — имен (ID) групп безопасности в AWS.
-
-Если установлено значение `disableDefaultSecurityGroup: true`, то группы по умолчанию создаваться не будут.
-
-При использовании `disableDefaultSecurityGroup: true` необходимо самостоятельно создать все необходимые группы безопасности для доступа к узлам кластера. Кроме того, необходимо явно указать их в следующих параметрах:
-
-- [`additionalSecurityGroups`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-masternodegroup-instanceclass-additionalsecuritygroups) в секции `masterNodeGroup` ресурса AWSClusterConfiguration;
-- [`additionalSecurityGroups`](/modules/cloud-provider-aws/cr.html#awsinstanceclass-v1-spec-additionalsecuritygroups) в ресурсе AWSInstanceClass;
-- [`additionalSecurityGroups`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-nodegroups-instanceclass-additionalsecuritygroups) в секции `nodeGroups.instanceClass`.
-
-Для настройки групп, используемых балансировщиками нагрузки, укажите их через аннотацию `service.beta.kubernetes.io/aws-load-balancer-security-groups`.
-
-## Настройка пирингового соединения между VPC
-
-Для примера рассмотрим настройку пирингового соединения между двумя условными VPC — `vpc-a` и `vpc-b`.
-
-{% alert level="warning" %}
-IPv4 CIDR у обоих VPC должен различаться.
-{% endalert %}
-
-Для настройки выполните следующие шаги:
-
-1. Перейдите в регион, где работает `vpc-a`.
-1. Нажмите «VPC» → «VPC Peering Connections» → «Create Peering Connection» и настройте пиринговое соединение:
-   - Name: `vpc-a-vpc-b`.
-   - Заполните «Local» и «Another VPC».
-1. Перейдите в регион, где работает `vpc-b`.
-1. Нажмите «VPC» → «VPC Peering Connections».
-1. Выделите созданное соединение и выберите «Action Accept Request».
-1. Для `vpc-a` добавьте во все таблицы маршрутизации маршруты до CIDR `vpc-b` через пиринговое соединение.
-1. Для `vpc-b` добавьте во все таблицы маршрутизации маршруты до CIDR `vpc-a` через пиринговое соединение.
-
-## Настройка доступа через bastion-хост
-
-Для подключения к узлам в приватных подсетях используйте [параметр `withNAT.bastionInstance`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-withnat-bastioninstance) в AWSClusterConfiguration. Bastion-хост заказывается вместе с инфраструктурой по заданным параметрам `instanceClass`.
-
-Поддерживаются сценарии:
-
-- bastion-хост уже создан во внешней VPC:
-  1. Создайте базовую инфраструктуру кластера — `dhctl bootstrap-phase base-infra`.
-  1. Настройте пиринговое соединение между внешней и свежесозданной VPC.
-  1. Продолжите установку с указанием bastion-хоста — `dhctl bootstrap --ssh-bastion...`.
-
-- bastion-хост требуется поставить в свежесозданной VPC:
-  1. Создайте базовую инфраструктуру кластера — `dhctl bootstrap-phase base-infra`.
-  1. Запустите вручную bastion-хост в подсети `<CLUSTER_PREFIX>-public-0`.
-  1. Продолжите установку с указанием bastion-хоста — `dhctl bootstrap --ssh-bastion...`.
-
-### Создание кластера в новом VPC с доступом через имеющийся bastion-хост
-
-1. Выполните bootstrap базовой инфраструктуры кластера:
-
-   ```shell
-   dhctl bootstrap-phase base-infra --config config
-   ```
-
-1. Настройте пиринговое соединение [по инструкции](#настройка-пирингового-соединения-между-vpc) выше.
-
-1. Продолжите установку кластера. На вопрос про кеш Terraform ответьте `y`:
-
-   ```shell
-   dhctl bootstrap --config config --ssh-...
-   ```
-
-### Создание кластера в новом VPC и развертывание bastion-хоста для доступа к узлам
-
-1. Выполните bootstrap базовой инфраструктуры кластера:
-
-   ```shell
-   dhctl bootstrap-phase base-infra --config config
-   ```
-
-1. Запустите вручную [bastion-хост](../../../../glossary.html#bastion-host) в подсети `<CLUSTER_PREFIX>-public-0`.
-
-1. Продолжите установку кластера. На вопрос про кеш Terraform ответьте `y`:
-
-   ```shell
-   dhctl bootstrap --config config --ssh-...
-   ```
-
-## Использование существующего VPC (existingVPCID)
-
-[Параметр `existingVPCID`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-existingvpcid) в ресурсе AWSClusterConfiguration позволяет использовать уже существующий VPC для развертывания кластера DP, вместо создания нового VPC автоматически.
-
-Этот параметр может быть полезен в случаях, когда:
-
-- инфраструктура AWS уже частично развернута;
-- необходимо интегрироваться с другими сервисами или ресурсами, размещёнными в этом VPC;
-- политика безопасности или архитектурные требования запрещают автоматическое создание VPC.
-
-{% alert level="warning" %}
-Если в существующем VPC уже есть Internet Gateway, попытка развертывания базовой инфраструктуры завершится ошибкой. В текущей версии DP не поддерживается повторное использование уже существующего Internet Gateway.
-{% endalert %}
-
-Совместимость с другими параметрами:
-
-- Если указан `existingVPCID`, не указывайте [`vpcNetworkCIDR`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-vpcnetworkcidr) — это взаимоисключающие параметры.
-- [Параметр `nodeNetworkCIDR`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-nodenetworkcidr) можно (и желательно) указывать — он будет вложен в существующий VPC.
-
-## Прерываемые узлы
-
-Прерываемые виртуальные машины в AWS называются spot-инстансами. Чтобы [группа узлов](../../../../glossary.html#node-group) заказывала их, установите параметр [`spot`](/modules/cloud-provider-aws/cr.html#awsinstanceclass-v1-spec-spot) ресурса AWSInstanceClass в `true`.
-
-При получении [рекомендации о повышенном риске прерывания spot-инстанса](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/rebalance-recommendations.html) (EC2 Instance Rebalance Recommendation) компонент `node-termination-handler` автоматически устанавливает на CloudEphemeral-узел taint `aws-node-termination-handler/rebalance-recommendation` с параметром `effect: NoSchedule`. Такой taint запрещает планировщику размещать на узле новую нагрузку без соответствующего toleration.
-
-Taint `aws-node-termination-handler/spot-itn` обозначает уведомление о предстоящем [прерывании spot-инстанса](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/spot-interruptions.html).
-
-При наличии любого из этих taints модуль [`node-manager`](/modules/node-manager/) выполняет cordon и drain узла, затем удаляет его. Если количество узлов в зоне становится меньше значения параметра [`minPerZone`](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-minperzone), группа заказывает новые узлы.
-
-Рекомендация позволяет начать вывод узла из эксплуатации до получения уведомления о прерывании. AWS может отправить оба уведомления одновременно.
-
-Порядок создания таких узлов и ограничения их использования описаны в разделе [«Как создать прерываемые узлы в AWS?»](/modules/cloud-provider-aws/faq.html#как-создать-прерываемые-узлы-в-aws).
-
-## Замена образа ОС
-
-Образ ОС узлов задаётся параметром [`ami`](/modules/cloud-provider-aws/cr.html#awsinstanceclass-v1-spec-ami) ресурса AWSInstanceClass для узлов типа `CloudEphemeral` и в секции `instanceClass` ресурса AWSClusterConfiguration для узлов типа `CloudPermanent` и master-узлов. Чтобы перевести узлы кластера на новый образ, выполните шаги из раздела [«Как заменить образ ОС в облачном кластере?»](../../../../faq.html#как-заменить-образ-ос-в-облачном-кластере).
+[Настройка интеграции](configuration.html).
+[Настройка сети](network.html).

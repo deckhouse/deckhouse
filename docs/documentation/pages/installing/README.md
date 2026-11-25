@@ -69,7 +69,7 @@ Required and optional objects/resources that may be needed in the installation c
 1. `<PROVIDER>ClusterConfiguration`: Parameters for integration with a [cloud provider](../glossary.html#cloud-provider). **Required** when integrating Deckhouse Platform with a [supported cloud infrastructure](../admin/integrations/public/overview.html).
 
    {% alert level="info" %}
-   The DVPClusterConfiguration, YandexClusterConfiguration, and ZvirtClusterConfiguration resources are deprecated. The parameters for integration with built-in virtualization, Yandex Cloud, and zVirt are set in the ModuleConfig of the [`cloud-provider-dvp`](/modules/cloud-provider-dvp/configuration.html), [`cloud-provider-yandex`](/modules/cloud-provider-yandex/configuration.html), and [`cloud-provider-zvirt`](/modules/cloud-provider-zvirt/configuration.html) modules and in the related resources. These resources are described in [Layouts and configuration in built-in virtualization](../admin/integrations/virtualization/dvp/configuration-and-layout-scheme.html), [Layouts and configuration in Yandex Cloud](../admin/integrations/public/yandex/layout.html), and [Layouts and configuration in zVirt](../admin/integrations/virtualization/zvirt/layout.html).
+   The DVPClusterConfiguration, YandexClusterConfiguration, and ZvirtClusterConfiguration resources are deprecated. The parameters for integration with built-in virtualization, Yandex Cloud, and zVirt are set in the ModuleConfig of the [`cloud-provider-dvp`](/modules/cloud-provider-dvp/configuration.html), [`cloud-provider-yandex`](/modules/cloud-provider-yandex/configuration.html), and [`cloud-provider-zvirt`](/modules/cloud-provider-zvirt/configuration.html) modules and in the related resources. These resources are described in [Layouts and configuration in built-in virtualization](../admin/integrations/virtualization/dvp/layout.html), [Layouts and configuration in Yandex Cloud](../admin/integrations/public/yandex/layout.html), and [Layouts and configuration in zVirt](../admin/integrations/virtualization/zvirt/layout.html).
    {% endalert %}
 
    Examples of resources configuring integration with a cloud provider:
@@ -485,7 +485,7 @@ lb_ip=""
 # Get the load balancer IP address.
 for i in {0..100}
 do
-  if lb_ip="$(kubectl -n d8-ingress-nginx get svc "${INGRESS_NAME}-load-balancer" -o jsonpath='{.status.loadBalancer.ingress[0].ip}')"; then
+  if lb_ip="$(d8 k -n d8-ingress-nginx get svc "${INGRESS_NAME}-load-balancer" -o jsonpath='{.status.loadBalancer.ingress[0].ip}')"; then
     if [ -n "$lb_ip" ]; then
       break
     fi

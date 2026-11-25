@@ -3,19 +3,6 @@ title: Connection and authorization in Basis Dynamix
 permalink: en/admin/integrations/private/dynamix/authorization.html
 ---
 
-{% alert level="info" %}
-The Basis Dynamix integration is experimental. Compatibility with future versions isn't guaranteed and the behavior may change.
-{% endalert %}
-
-The integration provides the following capabilities:
-
-- Ordering and removing virtual machines via the Basis Dynamix API
-- Using prepared cloud images to deploy nodes
-- Configuring virtual machine parameters (CPU, RAM, disk, network)
-- Support for external and internal networks, including CIDR and DNS settings
-- Support for multiple [layouts](../../../../glossary.html#layout) with an external or a combined network
-- Disk placement by a storage policy
-
 ## Requirements
 
 {% alert level="warning" %}
@@ -33,6 +20,8 @@ To integrate Deckhouse Platform with Basis Dynamix, you need the following:
 - The name of a storage policy available to the account ([`storagePolicy`](/modules/cloud-provider-dynamix/cluster_configuration.html#dynamixclusterconfiguration-storagepolicy))
 - A public SSH key for accessing the cluster nodes
 
+Verify that virtual machines have access to the internet and to DNS servers.
+
 ## Preparing a cloud image
 
 To deploy virtual machines, Deckhouse Platform uses OS cloud images prepared by vendors for virtual environments. Such images usually include:
@@ -47,6 +36,8 @@ To add an image to Basis Dynamix:
 
 1. Go to "Images" → "Template images".
 1. Upload the prepared cloud image.
+
+Use image names that exactly match the `imageName` values in DynamixInstanceClass.
 
 ## Configuring access to the portal
 

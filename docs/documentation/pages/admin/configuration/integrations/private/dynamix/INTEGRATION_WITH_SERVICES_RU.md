@@ -1,18 +1,10 @@
 ---
-title: Интеграция с облаком Basis Dynamix
-permalink: ru/admin/integrations/private/dynamix/services.html
+title: Управление узлами в Basis Dynamix
+permalink: ru/admin/integrations/private/dynamix/node-management.html
 lang: ru
 ---
 
-Deckhouse Platform интегрируется с облачной платформой Basis Dynamix и использует [ресурсы DynamixInstanceClass](/modules/cloud-provider-dynamix/cr.html#dynamixinstanceclass) для описания характеристик виртуальных машин, разворачиваемых в кластере.
-
-## Основные возможности
-
-- Заказ и удаление виртуальных машин через API Basis Dynamix;
-- Настройка параметров виртуальных машин, включая количество CPU, объём памяти, размер корневого диска;
-- Указание шаблона ОС (имя образа) и политики хранения (storage policy) для размещения дисков;
-- Подключение к внешним сетям;
-- Использование нескольких [групп узлов](../../../../glossary.html#node-group) с индивидуальными параметрами.
+## Настройка параметров узлов
 
 Пример описания DynamixInstanceClass:
 
@@ -31,12 +23,3 @@ spec:
 ```
 
  На него ссылается [параметр cloudInstances.classReference](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-classreference) NodeGroup.
-
-## Рекомендации
-
-- Размещайте образы ОС в разделе «Образы» → «Шаблонные образы» на портале Basis Dynamix.
-- Используйте имена образов, точно соответствующие значениям imageName в DynamixInstanceClass.
-- Убедитесь, что выбранная политика хранения доступна аккаунту и находится в статусе `ENABLED`.
-- Проверьте, что виртуальные машины имеют доступ в интернет и DNS-серверы.
-
-Интеграция с облаком обеспечивает автоматическое масштабирование, настройку и управление узлами в соответствии с параметрами, заданными в DynamixInstanceClass и конфигурации кластера.

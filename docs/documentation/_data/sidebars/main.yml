@@ -34,16 +34,16 @@ entries:
                 ru: Описание
               url: /admin/configuration/
             - title:
-                en: DP components registry
-                ru: Хранилище образов компонентов DP
+                en: Deckhouse Platform components registry
+                ru: Хранилище образов компонентов Deckhouse Platform
               folders:
                 - title:
                     en: Overview
                     ru: Обзор
                   url: /admin/configuration/registry/
                 - title:
-                    en: DP-managed clusters
-                    ru: Кластеры, полностью управляемые DP
+                    en: Clusters managed by Deckhouse Platform
+                    ru: Кластеры, полностью управляемые Deckhouse Platform
                   url: /admin/configuration/registry/managing-interaction.html
                 - title:
                     en: Managed Kubernetes clusters
@@ -139,17 +139,33 @@ entries:
                         ru: Интеграция с Yandex Cloud
                       folders:
                         - title:
+                            en: Overview
+                            ru: Обзор
+                          url: /admin/integrations/public/yandex/overview.html
+                        - title:
                             en: Connection and authorization
                             ru: Подключение и авторизация
                           url: /admin/integrations/public/yandex/authorization.html
                         - title:
-                            en: Layouts and configuration
-                            ru: Схемы размещения и настройка
+                            en: Layouts
+                            ru: Схемы размещения
                           url: /admin/integrations/public/yandex/layout.html
                         - title:
+                            en: Configuration
+                            ru: Настройка
+                          url: /admin/integrations/public/yandex/configuration.html
+                        - title:
+                            en: Network configuration
+                            ru: Настройка сети
+                          url: /admin/integrations/public/yandex/network.html
+                        - title:
+                            en: Node management
+                            ru: Управление узлами
+                          url: /admin/integrations/public/yandex/node-management.html
+                        - title:
                             en: Storage and load balancing
-                            ru: Хранилище и балансировка
-                          url: /admin/integrations/public/yandex/storage.html
+                            ru: Хранилище и балансировка нагрузки
+                          url: /admin/integrations/public/yandex/load-balancing-and-storage.html
                         - title:
                             en: Integration with Yandex Cloud services
                             ru: Интеграция со службами Yandex Cloud
@@ -159,65 +175,161 @@ entries:
                         ru: Интеграция с VK Cloud
                       folders:
                         - title:
+                            en: Overview
+                            ru: Обзор
+                          url: /admin/integrations/public/vk/overview.html
+                        - title:
                             en: Connection and authorization
                             ru: Подключение и авторизация
                           url: /admin/integrations/public/vk/connection-and-authorization.html
                         - title:
-                            en: Layouts and configuration
-                            ru: Схемы размещения и настройка
-                          url: /admin/integrations/public/vk/configuration-and-layout-scheme.html
+                            en: Layouts
+                            ru: Схемы размещения
+                          url: /admin/integrations/public/vk/layout.html
+                        - title:
+                            en: Configuration
+                            ru: Настройка
+                          url: /admin/integrations/public/vk/configuration.html
+                        - title:
+                            en: Network configuration
+                            ru: Настройка сети
+                          url: /admin/integrations/public/vk/network.html
+                        - title:
+                            en: Node management
+                            ru: Управление узлами
+                          url: /admin/integrations/public/vk/node-management.html
+                        - title:
+                            en: Storage and load balancing
+                            ru: Хранилище и балансировка нагрузки
+                          url: /admin/integrations/public/vk/load-balancing-and-storage.html
                     - title:
                         en: Integration with Selectel Cloud
                         ru: Интеграция с Selectel Cloud
                       folders:
                         - title:
+                            en: Overview
+                            ru: Обзор
+                          url: /admin/integrations/public/selectel/overview.html
+                        - title:
                             en: Connection and authorization
                             ru: Подключение и авторизация
                           url: /admin/integrations/public/selectel/connection-and-authorization.html
                         - title:
-                            en: Layouts and configuration
-                            ru: Схемы размещения и настройка
-                          url: /admin/integrations/public/selectel/configuration-and-layout-scheme.html
+                            en: Layouts
+                            ru: Схемы размещения
+                          url: /admin/integrations/public/selectel/layout.html
+                        - title:
+                            en: Configuration
+                            ru: Настройка
+                          url: /admin/integrations/public/selectel/configuration.html
+                        - title:
+                            en: Network configuration
+                            ru: Настройка сети
+                          url: /admin/integrations/public/selectel/network.html
+                        - title:
+                            en: Node management
+                            ru: Управление узлами
+                          url: /admin/integrations/public/selectel/node-management.html
+                        - title:
+                            en: Storage and load balancing
+                            ru: Хранилище и балансировка нагрузки
+                          url: /admin/integrations/public/selectel/load-balancing-and-storage.html
                     - title:
                         en: Integration with OVH Cloud
                         ru: Интеграция с OVH Cloud
                       folders:
                         - title:
+                            en: Overview
+                            ru: Обзор
+                          url: /admin/integrations/public/ovh/overview.html
+                        - title:
                             en: Connection and authorization
                             ru: Подключение и авторизация
                           url: /admin/integrations/public/ovh/connection-and-authorization.html
                         - title:
-                            en: Layouts and configuration
-                            ru: Схемы размещения и настройка
-                          url: /admin/integrations/public/ovh/configuration-and-layout-scheme.html
+                            en: Layouts
+                            ru: Схемы размещения
+                          url: /admin/integrations/public/ovh/layout.html
+                        - title:
+                            en: Configuration
+                            ru: Настройка
+                          url: /admin/integrations/public/ovh/configuration.html
+                        - title:
+                            en: Network configuration
+                            ru: Настройка сети
+                          url: /admin/integrations/public/ovh/network.html
+                        - title:
+                            en: Node management
+                            ru: Управление узлами
+                          url: /admin/integrations/public/ovh/node-management.html
+                        - title:
+                            en: Storage and load balancing
+                            ru: Хранилище и балансировка нагрузки
+                          url: /admin/integrations/public/ovh/load-balancing-and-storage.html
                     - title:
                         en: Integration with OpenStack-based clouds
                         ru: Интеграция с облаками на базе OpenStack
                       folders:
                         - title:
+                            en: Overview
+                            ru: Обзор
+                          url: /admin/integrations/public/openstack/overview.html
+                        - title:
                             en: Connection and authorization
                             ru: Подключение и авторизация
                           url: /admin/integrations/public/openstack/connection-and-authorization.html
                         - title:
-                            en: Layouts and configuration
-                            ru: Схемы размещения и настройка
-                          url: /admin/integrations/public/openstack/configuration-and-layout-scheme.html
+                            en: Layouts
+                            ru: Схемы размещения
+                          url: /admin/integrations/public/openstack/layout.html
+                        - title:
+                            en: Configuration
+                            ru: Настройка
+                          url: /admin/integrations/public/openstack/configuration.html
+                        - title:
+                            en: Network configuration
+                            ru: Настройка сети
+                          url: /admin/integrations/public/openstack/network.html
+                        - title:
+                            en: Node management
+                            ru: Управление узлами
+                          url: /admin/integrations/public/openstack/node-management.html
+                        - title:
+                            en: Storage and load balancing
+                            ru: Хранилище и балансировка нагрузки
+                          url: /admin/integrations/public/openstack/load-balancing-and-storage.html
                     - title:
                         en: Integration with Amazon Web Services (AWS)
                         ru: Интеграция с Amazon Web Services (AWS)
                       folders:
                         - title:
+                            en: Overview
+                            ru: Обзор
+                          url: /admin/integrations/public/amazon/overview.html
+                        - title:
                             en: Connection and authorization
                             ru: Подключение и авторизация
                           url: /admin/integrations/public/amazon/authorization.html
                         - title:
-                            en: Layouts and configuration
-                            ru: Схемы размещения и настройка
+                            en: Layouts
+                            ru: Схемы размещения
                           url: /admin/integrations/public/amazon/layout.html
                         - title:
+                            en: Configuration
+                            ru: Настройка
+                          url: /admin/integrations/public/amazon/configuration.html
+                        - title:
+                            en: Network configuration
+                            ru: Настройка сети
+                          url: /admin/integrations/public/amazon/network.html
+                        - title:
+                            en: Node management
+                            ru: Управление узлами
+                          url: /admin/integrations/public/amazon/node-management.html
+                        - title:
                             en: Storage and load balancing
-                            ru: Хранилище и балансировка
-                          url: /admin/integrations/public/amazon/storage.html
+                            ru: Хранилище и балансировка нагрузки
+                          url: /admin/integrations/public/amazon/load-balancing-and-storage.html
                         - title:
                             en: Integration with Amazon Web Services
                             ru: Интеграция со службами Amazon Web Services
@@ -227,17 +339,25 @@ entries:
                         ru: Интеграция с Microsoft Azure
                       folders:
                         - title:
+                            en: Overview
+                            ru: Обзор
+                          url: /admin/integrations/public/azure/overview.html
+                        - title:
                             en: Connection and authorization
                             ru: Подключение и авторизация
                           url: /admin/integrations/public/azure/authorization.html
                         - title:
-                            en: Layouts and configuration
-                            ru: Схемы размещения и настройка
+                            en: Layouts
+                            ru: Схемы размещения
                           url: /admin/integrations/public/azure/layout.html
                         - title:
+                            en: Network configuration
+                            ru: Настройка сети
+                          url: /admin/integrations/public/azure/network.html
+                        - title:
                             en: Storage and load balancing
-                            ru: Хранилище и балансировка
-                          url: /admin/integrations/public/azure/storage.html
+                            ru: Хранилище и балансировка нагрузки
+                          url: /admin/integrations/public/azure/load-balancing-and-storage.html
                         - title:
                             en: Integration with Microsoft Azure services
                             ru: Интеграция со службами Microsoft Azure
@@ -247,13 +367,33 @@ entries:
                         ru: Интеграция с Google Cloud Platform (GCP)
                       folders:
                         - title:
+                            en: Overview
+                            ru: Обзор
+                          url: /admin/integrations/public/gcp/overview.html
+                        - title:
                             en: Connection and authorization
                             ru: Подключение и авторизация
                           url: /admin/integrations/public/gcp/connection-and-authorization.html
                         - title:
-                            en: Layouts and configuration
-                            ru: Схемы размещения и настройка
-                          url: /admin/integrations/public/gcp/configuration-and-layout-scheme.html
+                            en: Layouts
+                            ru: Схемы размещения
+                          url: /admin/integrations/public/gcp/layout.html
+                        - title:
+                            en: Configuration
+                            ru: Настройка
+                          url: /admin/integrations/public/gcp/configuration.html
+                        - title:
+                            en: Network configuration
+                            ru: Настройка сети
+                          url: /admin/integrations/public/gcp/network.html
+                        - title:
+                            en: Node management
+                            ru: Управление узлами
+                          url: /admin/integrations/public/gcp/node-management.html
+                        - title:
+                            en: Storage
+                            ru: Хранилище
+                          url: /admin/integrations/public/gcp/load-balancing-and-storage.html
                 - title:
                     en: Private cloud providers
                     ru: Частные облака
@@ -267,65 +407,121 @@ entries:
                         ru: Интеграция с VK Cloud
                       folders:
                         - title:
+                            en: Overview
+                            ru: Обзор
+                          url: /admin/integrations/private/vk/overview.html
+                        - title:
                             en: Connection and authorization
                             ru: Подключение и авторизация
                           url: /admin/integrations/private/vk/connection-and-authorization.html
                         - title:
-                            en: Layouts and configuration
-                            ru: Схемы размещения и настройка
-                          url: /admin/integrations/private/vk/configuration-and-layout-scheme.html
+                            en: Layouts
+                            ru: Схемы размещения
+                          url: /admin/integrations/private/vk/layout.html
+                        - title:
+                            en: Configuration
+                            ru: Настройка
+                          url: /admin/integrations/private/vk/configuration.html
+                        - title:
+                            en: Network configuration
+                            ru: Настройка сети
+                          url: /admin/integrations/private/vk/network.html
+                        - title:
+                            en: Node management
+                            ru: Управление узлами
+                          url: /admin/integrations/private/vk/node-management.html
+                        - title:
+                            en: Storage and load balancing
+                            ru: Хранилище и балансировка нагрузки
+                          url: /admin/integrations/private/vk/load-balancing-and-storage.html
                     - title:
                         en: Integration with OpenStack
                         ru: Интеграция с OpenStack
                       folders:
                         - title:
+                            en: Overview
+                            ru: Обзор
+                          url: /admin/integrations/private/openstack/overview.html
+                        - title:
                             en: Connection and authorization
                             ru: Подключение и авторизация
                           url: /admin/integrations/private/openstack/connection-and-authorization.html
                         - title:
-                            en: Layouts and configuration
-                            ru: Схемы размещения и настройка
-                          url: /admin/integrations/private/openstack/configuration-and-layout-scheme.html
+                            en: Layouts
+                            ru: Схемы размещения
+                          url: /admin/integrations/private/openstack/layout.html
+                        - title:
+                            en: Configuration
+                            ru: Настройка
+                          url: /admin/integrations/private/openstack/configuration.html
+                        - title:
+                            en: Network configuration
+                            ru: Настройка сети
+                          url: /admin/integrations/private/openstack/network.html
+                        - title:
+                            en: Node management
+                            ru: Управление узлами
+                          url: /admin/integrations/private/openstack/node-management.html
+                        - title:
+                            en: Storage and load balancing
+                            ru: Хранилище и балансировка нагрузки
+                          url: /admin/integrations/private/openstack/load-balancing-and-storage.html
                     - title:
                         en: Integration with Huawei Cloud
                         ru: Интеграция с Huawei Cloud
                       folders:
                         - title:
+                            en: Overview
+                            ru: Обзор
+                          url: /admin/integrations/private/huaweicloud/overview.html
+                        - title:
                             en: Connection and authorization
                             ru: Подключение и авторизация
                           url: /admin/integrations/private/huaweicloud/authorization.html
                         - title:
-                            en: Layouts and configuration
-                            ru: Схемы размещения и настройка
+                            en: Layouts
+                            ru: Схемы размещения
                           url: /admin/integrations/private/huaweicloud/layout.html
                         - title:
-                            en: Storage and load balancing
-                            ru: Хранилище и балансировка
-                          url: /admin/integrations/private/huaweicloud/storage.html
+                            en: Network configuration
+                            ru: Настройка сети
+                          url: /admin/integrations/private/huaweicloud/network.html
                         - title:
-                            en: Integration with Huawei Cloud services
-                            ru: Интеграция со службами Huawei Cloud
-                          url: /admin/integrations/private/huaweicloud/services.html
+                            en: Node management
+                            ru: Управление узлами
+                          url: /admin/integrations/private/huaweicloud/node-management.html
+                        - title:
+                            en: Storage and load balancing
+                            ru: Хранилище и балансировка нагрузки
+                          url: /admin/integrations/private/huaweicloud/load-balancing-and-storage.html
                     - title:
                         en: Integration with Basis Dynamix
-                        ru: Интеграция с Dynamix
+                        ru: Интеграция с Basis Dynamix
                       folders:
+                        - title:
+                            en: Overview
+                            ru: Обзор
+                          url: /admin/integrations/private/dynamix/overview.html
                         - title:
                             en: Connection and authorization
                             ru: Подключение и авторизация
                           url: /admin/integrations/private/dynamix/authorization.html
                         - title:
-                            en: Layouts and configuration
-                            ru: Схемы размещения и настройка
+                            en: Layouts
+                            ru: Схемы размещения
                           url: /admin/integrations/private/dynamix/layout.html
                         - title:
-                            en: Storage and load balancing
-                            ru: Хранилище и балансировка
-                          url: /admin/integrations/private/dynamix/storage.html
+                            en: Configuration
+                            ru: Настройка
+                          url: /admin/integrations/private/dynamix/configuration.html
                         - title:
-                            en: Integration with Basis Dynamix services
-                            ru: Интеграция со службами Dynamix
-                          url: /admin/integrations/private/dynamix/services.html
+                            en: Node management
+                            ru: Управление узлами
+                          url: /admin/integrations/private/dynamix/node-management.html
+                        - title:
+                            en: Storage and load balancing
+                            ru: Хранилище и балансировка нагрузки
+                          url: /admin/integrations/private/dynamix/load-balancing-and-storage.html
                 - title:
                     en: Virtualization systems
                     ru: Системы виртуализации
@@ -339,69 +535,101 @@ entries:
                         ru: Интеграция со встроенной виртуализацией
                       folders:
                         - title:
-                            en: Integration with built-in virtualization
-                            ru: Интеграция с облаком встроенной виртуализации
-                          url: /admin/integrations/virtualization/dvp/services.html
+                            en: Overview
+                            ru: Обзор
+                          url: /admin/integrations/virtualization/dvp/overview.html
                         - title:
                             en: Connection and authorization
                             ru: Подключение и авторизация
                           url: /admin/integrations/virtualization/dvp/authorization.html
                         - title:
-                            en: Layouts and configuration
-                            ru: Схемы размещения и настройка
-                          url: /admin/integrations/virtualization/dvp/configuration-and-layout-scheme.html
+                            en: Layouts
+                            ru: Схемы размещения
+                          url: /admin/integrations/virtualization/dvp/layout.html
+                        - title:
+                            en: Configuration
+                            ru: Настройка
+                          url: /admin/integrations/virtualization/dvp/configuration.html
+                        - title:
+                            en: Load balancing
+                            ru: Балансировка нагрузки
+                          url: /admin/integrations/virtualization/dvp/load-balancing.html
                     - title:
                         en: Integration with VMware Cloud Director
                         ru: Интеграция с VMware Cloud Director
                       folders:
                         - title:
+                            en: Overview
+                            ru: Обзор
+                          url: /admin/integrations/virtualization/vcd/overview.html
+                        - title:
                             en: Connection and authorization
                             ru: Подключение и авторизация
                           url: /admin/integrations/virtualization/vcd/connection-and-authorization.html
                         - title:
-                            en: Layouts and configuration
-                            ru: Схемы размещения и настройка
-                          url: /admin/integrations/virtualization/vcd/configuration-and-layout-scheme.html
+                            en: Layouts
+                            ru: Схемы размещения
+                          url: /admin/integrations/virtualization/vcd/layout.html
+                        - title:
+                            en: Configuration
+                            ru: Настройка
+                          url: /admin/integrations/virtualization/vcd/configuration.html
+                        - title:
+                            en: Network configuration
+                            ru: Настройка сети
+                          url: /admin/integrations/virtualization/vcd/network.html
+                        - title:
+                            en: Node management
+                            ru: Управление узлами
+                          url: /admin/integrations/virtualization/vcd/node-management.html
+                        - title:
+                            en: Storage and load balancing
+                            ru: Хранилище и балансировка нагрузки
+                          url: /admin/integrations/virtualization/vcd/load-balancing-and-storage.html
                     - title:
                         en: Integration with VMware vSphere
                         ru: Интеграция с VMware vSphere
                       folders:
                         - title:
+                            en: Overview
+                            ru: Обзор
+                          url: /admin/integrations/virtualization/vsphere/overview.html
+                        - title:
                             en: Connection and authorization
                             ru: Подключение и авторизация
                           url: /admin/integrations/virtualization/vsphere/authorization.html
                         - title:
-                            en: Layouts and configuration
-                            ru: Схемы размещения и настройка
+                            en: Layouts
+                            ru: Схемы размещения
                           url: /admin/integrations/virtualization/vsphere/layout.html
                         - title:
-                            en: Storage and load balancing
-                            ru: Хранилище и балансировка
-                          url: /admin/integrations/virtualization/vsphere/storage.html
+                            en: Node management
+                            ru: Управление узлами
+                          url: /admin/integrations/virtualization/vsphere/node-management.html
                         - title:
-                            en: Integration with VMware vSphere services
-                            ru: Интеграция со службами VMware vSphere
-                          url: /admin/integrations/virtualization/vsphere/services.html
+                            en: Storage and load balancing
+                            ru: Хранилище и балансировка нагрузки
+                          url: /admin/integrations/virtualization/vsphere/load-balancing-and-storage.html
                     - title:
                         en: Integration with zVirt
                         ru: Интеграция с zVirt
                       folders:
                         - title:
+                            en: Overview
+                            ru: Обзор
+                          url: /admin/integrations/virtualization/zvirt/overview.html
+                        - title:
                             en: Connection and authorization
                             ru: Подключение и авторизация
                           url: /admin/integrations/virtualization/zvirt/authorization.html
                         - title:
-                            en: Layouts and configuration
-                            ru: Схемы размещения и настройка
+                            en: Layouts
+                            ru: Схемы размещения
                           url: /admin/integrations/virtualization/zvirt/layout.html
                         - title:
                             en: Storage and load balancing
-                            ru: Хранилище и балансировка
-                          url: /admin/integrations/virtualization/zvirt/storage.html
-                        - title:
-                            en: Integration with zVirt services
-                            ru: Интеграция со службами zVirt
-                          url: /admin/integrations/virtualization/zvirt/services.html
+                            ru: Хранилище и балансировка нагрузки
+                          url: /admin/integrations/virtualization/zvirt/load-balancing-and-storage.html
                 - title:
                     en: Hybrid clusters
                     ru: Гибридные кластеры
@@ -671,8 +899,8 @@ entries:
                         ru: Обзор
                       url: /admin/configuration/network/sdn/
                     - title:
-                        en: Configuring SDN in a DP cluster
-                        ru: Настройка SDN в кластере DP
+                        en: Configuring SDN in a Deckhouse Platform cluster
+                        ru: Настройка SDN в кластере Deckhouse Platform
                       url: /admin/configuration/network/sdn/configure.html
                 - title:
                     en: Virtual machine networking
@@ -1510,16 +1738,16 @@ entries:
             ru: Требования к кластеру на bare metal
           url: /guides/hardware-requirements.html
         - title:
-            en: Updating DP in air-gapped environment
-            ru: Обновление DP в закрытом окружении
+            en: Updating Deckhouse Platform in air-gapped environment
+            ru: Обновление Deckhouse Platform в закрытом окружении
           url: /guides/airgapped-update.html
         - title:
             en: Disk layout and size
             ru: Разметка и объём дисков
           url: /guides/fs-requirements.html
         - title:
-            en: Installing DP in a private environment
-            ru: Установка DP в закрытом окружении
+            en: Installing Deckhouse Platform in a private environment
+            ru: Установка Deckhouse Platform в закрытом окружении
           url: /guides/private-environment.html
         - title:
             en: Switching CNI in the cluster
@@ -1530,12 +1758,12 @@ entries:
             ru: Планирование большого количества подов на узле
           url: /guides/high-pod-density.html
         - title:
-            en: Installing DP in an existing Talos cluster
-            ru: Установка DP в существующий Talos-кластер
+            en: Installing Deckhouse Platform in an existing Talos cluster
+            ru: Установка Deckhouse Platform в существующий Talos-кластер
           url: /guides/talos-existing-cluster.html
         - title:
-            en: Migrating VMs from VMware to DP
-            ru: Перенос ВМ из VMware в DP
+            en: Migrating VMs from VMware to Deckhouse Platform
+            ru: Перенос ВМ из VMware в Deckhouse Platform
           url: /guides/virt-migrating-from-vmware.html
 # ------------- Architecture -------------
     - title:
@@ -1547,8 +1775,8 @@ entries:
             ru: Обзор
           url: /architecture/
         - title:
-            en: DP architecture (C4 model)
-            ru: Архитектура DP (модель C4)
+            en: Deckhouse Platform architecture (C4 model)
+            ru: Архитектура Deckhouse Platform (модель C4)
           url: /architecture/c4-model.html
         - title:
             en: Modules
@@ -1667,8 +1895,8 @@ entries:
                 ru: Модуль registry
               url: /architecture/deckhouse/registry.html
             - title:
-                en: DP cluster management
-                ru: Управление кластерами DP
+                en: Deckhouse Platform cluster management
+                ru: Управление кластерами Deckhouse Platform
               url: /architecture/deckhouse/commander.html
         - title:
             en: Delivery subsystem
