@@ -103,7 +103,8 @@ spec:
         itself in code (nodeconfig.Reconciler.MaxConcurrentReconciles) rather than depending on
         this string, where one typo in any segment discards the whole per-controller map. */}}
         - --max-concurrent-reconciles=10,bashible-context=1
-        - --leader-elect={{ include "helm_lib_is_ha_to_value" (list . "true" "false") }}
+        # One replica also takes the Lease so switching to HA at master 1 -> 2 does not roll the pod mid-bootstrap.
+        - --leader-elect=true
         - -v=2
         livenessProbe:
           httpGet:

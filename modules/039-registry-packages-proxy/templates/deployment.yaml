@@ -75,7 +75,14 @@ spec:
       {{- include "registry_packages_proxy_master_tolerations" . | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
       {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
-      {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "registry-packages-proxy")) | nindent 6 }}
+      # Always rendered so adding a second master does not change the pod template and roll the proxy mid-bootstrap.
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchLabels:
+                app: registry-packages-proxy
+            topologyKey: kubernetes.io/hostname
       serviceAccountName: registry-packages-proxy
       containers:
       - name: registry-packages-proxy

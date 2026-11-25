@@ -28,9 +28,8 @@ import (
 )
 
 const (
-	stayOnUnreachable   = `{"key":"node.kubernetes.io/unreachable"}`
-	leaveUnreachable    = `{"key":"node.kubernetes.io/unreachable","operator":"Exists","effect":"NoExecute","tolerationSeconds":60}`
-	stayOnUnschedulable = `{"key":"node.kubernetes.io/unschedulable","operator":"Exists","effect":"NoSchedule"}`
+	stayOnUnreachable = `{"key":"node.kubernetes.io/unreachable"}`
+	leaveUnreachable  = `{"key":"node.kubernetes.io/unreachable","operator":"Exists","effect":"NoExecute","tolerationSeconds":60}`
 )
 
 type masterWorkload struct {
@@ -39,11 +38,13 @@ type masterWorkload struct {
 	// A Terminating registry-storage replica counts as absent, and the storage update
 	// controller then refuses to replace any other one, so it stays on an unreachable master.
 	staysOnUnreachableMaster bool
+	hasPDB                   bool
 }
 
 var masterWorkloads = []masterWorkload{
-	{"Deployment", "registry-controller", false},
-	{"StatefulSet", "registry-storage", true},
+	{"Deployment", "registry-controller", false, true},
+	{"StatefulSet", "registry-storage", true, true},
+	{"DaemonSet", "registry-storage-image-holder", true, false},
 }
 
 func tolerationsByKey(workload object_store.KubeObject) map[string][]string {
@@ -55,8 +56,9 @@ func tolerationsByKey(workload object_store.KubeObject) map[string][]string {
 	return byKey
 }
 
-// What decides is the number of masters, not the high-availability flag: on a single master
-// there is nowhere else to run, so a cordon must not drain these workloads off it.
+// What decides PDB eviction is the number of masters, not the high-availability flag: on a single master
+// there is nowhere else to run, so a drain cannot evict these workloads. Pod tolerations stay fixed
+// across master counts so joining masters do not roll registry workloads mid-bootstrap.
 var _ = Describe("Module :: registry :: helm template :: placement on masters", func() {
 	f := SetupHelmConfig(``)
 
@@ -75,15 +77,18 @@ var _ = Describe("Module :: registry :: helm template :: placement on masters", 
 		}
 
 		for _, w := range masterWorkloads {
-			budget := maxUnavailable
-			// The storage budget follows its replica count, which is one until the master count is
-			// known, and the only replica is kept.
-			if w.name == "registry-storage" && f.ValuesGet("global.discovery.clusterMasterCount").Int() == 0 {
-				budget = 0
+			if w.hasPDB {
+				budget := maxUnavailable
+				// The storage budget follows its replica count, which is one until the master count is
+				// known, and the only replica is kept.
+				if w.name == "registry-storage" && f.ValuesGet("global.discovery.clusterMasterCount").Int() == 0 {
+					budget = 0
+				}
+
+				pdb := f.KubernetesResource("PodDisruptionBudget", "d8-system", w.name)
+				Expect(pdb.Exists()).To(BeTrue(), w.name)
+				Expect(pdb.Field("spec.maxUnavailable").Int()).To(Equal(budget), w.name)
 			}
-			pdb := f.KubernetesResource("PodDisruptionBudget", "d8-system", w.name)
-			Expect(pdb.Exists()).To(BeTrue(), w.name)
-			Expect(pdb.Field("spec.maxUnavailable").Int()).To(Equal(budget), w.name)
 
 			workload := f.KubernetesResource(w.kind, "d8-system", w.name)
 			Expect(workload.Exists()).To(BeTrue(), w.name)
@@ -99,12 +104,6 @@ var _ = Describe("Module :: registry :: helm template :: placement on masters", 
 			}
 			for _, key := range []string{"", "node.deckhouse.io/etcd-arbiter", "node.kubernetes.io/out-of-disk", "ToBeDeletedTaint", "ToBeDeletedByClusterAutoscaler"} {
 				Expect(tolerations).NotTo(HaveKey(key), w.name)
-			}
-
-			if singleMaster {
-				Expect(tolerations["node.kubernetes.io/unreachable"]).To(ConsistOf(MatchJSON(stayOnUnreachable)), w.name)
-				Expect(tolerations["node.kubernetes.io/unschedulable"]).To(ConsistOf(MatchJSON(stayOnUnschedulable)), w.name)
-				continue
 			}
 
 			Expect(tolerations).NotTo(HaveKey("node.kubernetes.io/unschedulable"), w.name)
@@ -133,7 +132,7 @@ var _ = Describe("Module :: registry :: helm template :: placement on masters", 
 			f.HelmRender()
 		})
 
-		It("never evicts the workloads and lets them back onto the cordoned master", func() {
+		It("keeps the single-master PDB while leaving pod tolerations invariant", func() {
 			assertPlacement(true)
 		})
 	})
@@ -148,6 +147,50 @@ var _ = Describe("Module :: registry :: helm template :: placement on masters", 
 		It("goes by the master count, not the HA flag", func() {
 			assertPlacement(true)
 		})
+	})
+
+	Context("When additional masters join during bootstrap", func() {
+		renderTemplates := func(masters int, disableHA bool) map[string]string {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSet("global.discovery.clusterMasterCount", masters)
+			f.ValuesSet("global.discovery.clusterControlPlaneIsHighlyAvailable", masters > 1)
+
+			if disableHA {
+				f.ValuesSet("global.highAvailability", false)
+			}
+
+			f.ValuesSetFromYaml("registry", v2Enabled)
+			f.HelmRender()
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			templates := make(map[string]string, len(masterWorkloads))
+			for _, w := range masterWorkloads {
+				workload := f.KubernetesResource(w.kind, "d8-system", w.name)
+				Expect(workload.Exists()).To(BeTrue(), w.name)
+				templates[w.name] = workload.Field("spec.template").Raw
+			}
+
+			return templates
+		}
+
+		for _, tc := range []struct {
+			name      string
+			disableHA bool
+		}{
+			{"when HA is disabled", true},
+			{"when HA is unset", false},
+		} {
+			It("keeps spec.template identical across 1, 2, and 3 masters "+tc.name, func() {
+				one := renderTemplates(1, tc.disableHA)
+				for _, masters := range []int{2, 3} {
+					got := renderTemplates(masters, tc.disableHA)
+					for _, w := range masterWorkloads {
+						Expect(got[w.name]).To(MatchJSON(one[w.name]), w.name)
+					}
+				}
+			})
+		}
 	})
 
 	Context("With three masters", func() {

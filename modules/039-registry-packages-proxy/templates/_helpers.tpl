@@ -9,7 +9,7 @@
 
 {{- /* Copy of node_manager_master_controller_tolerations in modules/040-node-manager/templates/_helpers.yaml. */ -}}
 {{- /* Explicit list, not helm_lib any-node (helm_lib/charts/deckhouse_lib_helm/templates/_node_affinity.tpl): masters-only pods need no arbiter, autoscaler or custom taints. */ -}}
-{{- /* Several masters: unreachable is NoExecute for 60s. A single master keeps the pod and tolerates unschedulable. */ -}}
+{{- /* Independent of clusterMasterCount so adding a second master does not change the pod template and roll the proxy mid-bootstrap; single-master voluntary-disruption protection lives in the PDB. */ -}}
 {{- define "registry_packages_proxy_master_tolerations" }}
 tolerations:
 - key: node-role.kubernetes.io/master
@@ -32,17 +32,10 @@ tolerations:
 - key: node.kubernetes.io/disk-pressure
 - key: node.kubernetes.io/pid-pressure
 - key: node.kubernetes.io/network-unavailable
-  {{- if include "registry_packages_proxy_single_master" . }}
-- key: node.kubernetes.io/unreachable
-- key: node.kubernetes.io/unschedulable
-  operator: Exists
-  effect: NoSchedule
-  {{- else }}
 - key: node.kubernetes.io/unreachable
   operator: Exists
   effect: NoExecute
   tolerationSeconds: 60
-  {{- end }}
 {{- end }}
 
 {{- /* Copy of node_manager_master_controller_strategy_and_replicas in modules/040-node-manager/templates/_helpers.yaml. */ -}}

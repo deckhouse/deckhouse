@@ -222,7 +222,7 @@ spec:
       {{- include "helm_lib_node_selector" (tuple $ "master") | nindent 6 }}
       # Stays bound to an unreachable master: a Terminating replica counts as absent, and the
       # storage update controller then refuses to replace any other one.
-      {{- include "registry_master_tolerations" (dict "context" $ "leaveUnreachableNode" false) | nindent 6 }}
+      {{- include "registry_master_tolerations" (dict "leaveUnreachableNode" false) | nindent 6 }}
       # Root, explicitly, and the same choice the previous implementation made for the same
       # component.
       #
