@@ -38,7 +38,11 @@ metadata:
   namespace: d8-cloud-instance-manager
   {{- include "helm_lib_module_labels" (list . (dict "app" "registry-packages-proxy")) | nindent 2 }}
 spec:
-  maxUnavailable: {{ if include "registry_packages_proxy_single_master" . }}0{{ else }}1{{ end }}
+  {{- if gt (int .Values.global.discovery.clusterMasterCount) 0 }}
+  minAvailable: 1
+  {{- else }}
+  maxUnavailable: 1
+  {{- end }}
   selector:
     matchLabels:
       app: "registry-packages-proxy"
