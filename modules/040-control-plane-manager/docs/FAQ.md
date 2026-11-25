@@ -155,6 +155,7 @@ If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure 
 1. Create a [backup of etcd](/products/kubernetes-platform/documentation/v1/admin/configuration/backup/backup-and-restore.html#backing-up-etcd) and the `/etc/kubernetes` directory.
 1. Copy the resulting archive outside the cluster (e.g., to a local machine).
 1. Ensure there are no alerts in the cluster that may interfere with the master node update process.
+1. If the master nodes store volume data of `sds-local-volume`, `sds-replicated-volume` or `local-path-provisioner`, move the data off the master nodes that will be removed, as described in [How do I take a node with volume data out of the cluster?](/modules/node-manager/faq.html#how-do-i-take-a-node-with-volume-data-out-of-the-cluster).
 1. Make sure the DP queue is empty:
 
    ```shell
@@ -280,6 +281,7 @@ If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure 
 1. Make a [backup of `etcd`](faq.html#etcd-backup-and-restore) and the `/etc/kubernetes` directory.
 1. Transfer the archive to a server outside the cluster (e.g., on a local machine).
 1. Ensure there are no [alerts](/modules/prometheus/faq.html#how-to-get-information-about-alerts-in-a-cluster) in the cluster that can prevent the update of the master nodes.
+1. If the master nodes store volume data of `sds-local-volume`, `sds-replicated-volume` or `local-path-provisioner`, move the data off them: the master nodes are replaced by new ones. Refer to [How do I take a node with volume data out of the cluster?](/modules/node-manager/faq.html#how-do-i-take-a-node-with-volume-data-out-of-the-cluster).
 1. Make sure that Deckhouse queue is empty:
 
    ```shell
@@ -382,6 +384,8 @@ To change the OS of a manually added master node, follow these steps:
    ```shell
    d8 status
    ```
+
+1. If the master node stores volume data of `sds-local-volume`, `sds-replicated-volume` or `local-path-provisioner`, move the data off it, as described in [How do I take a node with volume data out of the cluster?](/modules/node-manager/faq.html#how-do-i-take-a-node-with-volume-data-out-of-the-cluster).
 
 1. Remove the master node labels from the node:
 
@@ -535,6 +539,7 @@ If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure 
 1. Create a [backup of etcd](/products/kubernetes-platform/documentation/v1/admin/configuration/backup/backup-and-restore.html#backing-up-etcd) and the `/etc/kubernetes` directory.
 1. Copy the resulting archive outside the cluster (for example, to a local machine).
 1. Ensure there are no alerts in the cluster that may interfere with the master node update process.
+1. If the master nodes store volume data of `sds-local-volume`, `sds-replicated-volume` or `local-path-provisioner`, move the data off the master nodes that will be removed, as described in [How do I take a node with volume data out of the cluster?](/modules/node-manager/faq.html#how-do-i-take-a-node-with-volume-data-out-of-the-cluster).
 1. Make sure the DP queue is empty:
 
    ```shell

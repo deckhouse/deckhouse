@@ -240,6 +240,10 @@ The workflow for dealing with static nodes when using Cluster API Provider Stati
 
 Using the data in the [staticInstances](cr.html#nodegroup-v1-spec-staticinstances) parameter section, CAPS attempts to maintain the specified number of nodes in the group ([count](cr.html#nodegroup-v1-spec-staticinstances-count) parameter). If a node needs to be added to the group, CAPS selects the resource [StaticInstance](cr.html#nodegroup-v1-spec-staticinstances-labelselector) that matches the [filter](cr.html#staticinstance) and is in the `Pending` state, configures the server (VM), and joins the node to the cluster. If a node needs to be removed from the group, CAPS selects the [StaticInstance](cr.html#staticinstance) that is in the `Running` state, cleans up the server (VM) and disconnects the node from the cluster (the corresponding `StaticInstance` then goes to the `Pending` state and can be reused).
 
+{% alert level="danger" %}
+When [count](cr.html#nodegroup-v1-spec-staticinstances-count) is decreased, CAPS selects the node to remove by itself. If nodes of the group store volume data of `sds-local-volume`, `sds-replicated-volume` or `local-path-provisioner`, move the data off them before you decrease the parameter, as described in [How do I take a node with volume data out of the cluster?](faq.html#how-do-i-take-a-node-with-volume-data-out-of-the-cluster).
+{% endalert %}
+
 ## Deckhouse Engine nodes
 
 [Deckhouse Engine](/products/kubernetes-platform/documentation/v1/reference/deckhouse-engine.html) is a type-1 hypervisor for Deckhouse Platform nodes with a read-only root file system. Deckhouse Engine nodes run without bashible or SSH. To use Deckhouse Engine for a node group, set [`spec.systemType: DeckhouseEngine`](cr.html#nodegroup-v1-spec-systemtype) in its NodeGroup. Bashible configures nodes in groups with `systemType: GenericOS` or with the field unset.

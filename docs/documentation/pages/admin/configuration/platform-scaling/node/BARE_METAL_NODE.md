@@ -159,6 +159,10 @@ d8 system edit static-cluster-configuration
 During the migration of [static nodes](../../../../glossary.html#static-node) between [NodeGroups](/modules/node-manager/cr.html#nodegroup), the node is cleaned up and bootstrapped again, and the `Node` object is recreated.
 {% endalert %}
 
+{% alert level="danger" %}
+If the node stores volume data of `sds-local-volume`, `sds-replicated-volume` or `local-path-provisioner`, move the data off the node before the migration, as described in [How do I take a node with volume data out of the cluster?](/modules/node-manager/faq.html#how-do-i-take-a-node-with-volume-data-out-of-the-cluster).
+{% endalert %}
+
 1. Create a new NodeGroup resource, for example named `front`, which will manage the static node labeled `role: front`:
 
    ```yaml
@@ -192,6 +196,10 @@ During the migration of [static nodes](../../../../glossary.html#static-node) be
 ### Manual cleanup of a static node
 
 To remove a node from the cluster and clean the server, run the `/var/lib/bashible/cleanup_static_node.sh` script, which is already present on every static node.
+
+{% alert level="danger" %}
+If the node stores volume data of `sds-local-volume`, `sds-replicated-volume` or `local-path-provisioner`, move the data off the node first, as described in [How do I take a node with volume data out of the cluster?](/modules/node-manager/faq.html#how-do-i-take-a-node-with-volume-data-out-of-the-cluster).
+{% endalert %}
 
 Example of disconnecting a node from the cluster and cleaning the server:
 
@@ -288,6 +296,10 @@ If an incorrect address is specified in a StaticInstance, you need to [delete th
 ## Deleting a StaticInstance
 
 A [StaticInstance](/modules/node-manager/cr.html#staticinstance) in the `Pending` state can be safely deleted without any issues.
+
+{% alert level="danger" %}
+Once the `node.deckhouse.io/allow-bootstrap: "false"` label is set, CAPS drains the node, cleans up the server and removes the node from the cluster. If the node stores volume data of `sds-local-volume`, `sds-replicated-volume` or `local-path-provisioner`, move the data off the node before you set the label, as described in [How do I take a node with volume data out of the cluster?](/modules/node-manager/faq.html#how-do-i-take-a-node-with-volume-data-out-of-the-cluster).
+{% endalert %}
 
 To delete a StaticInstance that is in any state other than `Pending` (`Running`, `Cleaning`, `Bootstrapping`), follow these steps:
 

@@ -16,6 +16,45 @@ search: добавить ноду в кластер, добавить узел �
 
 Порядок конвертирования мультимастерного кластера в кластер с одним master-узлом описан в [FAQ модуля `control-plane-manager`](/modules/control-plane-manager/faq.html#как-уменьшить-число-master-узлов-в-облачном-кластере).
 
+## Как вывести из кластера узел с данными томов?
+
+Модули [`sds-local-volume`](/modules/sds-local-volume/), [`sds-replicated-volume`](/modules/sds-replicated-volume/) и [`local-path-provisioner`](/modules/local-path-provisioner/) хранят данные томов на дисках узлов кластера. Когда узел выводится из кластера, его тома не переносятся на другие узлы. Данные теряются при переустановке ОС на сервере, при очистке или повторном использовании его дисков, а также при удалении виртуальной машины узла вместе с дисками.
+
+Вытеснение подов с узла (drain) и перезагрузка узла данные сохраняют. Под с томом `sds-local-volume` или `local-path-provisioner` может работать только на узле этого тома, поэтому после drain он остаётся в статусе `Pending`, пока с узла не снят запрет на размещение подов (uncordon).
+
+Узел выводится из кластера при следующих операциях:
+
+- `d8 k delete node` в процедурах [очистки статического узла](#как-вручную-очистить-статический-узел), [очистки узла для последующего ввода в кластер](#как-очистить-узел-для-последующего-ввода-в-кластер) и удаления master-узлов;
+- установка лейбла `node.deckhouse.io/allow-bootstrap: "false"` на StaticInstance: Cluster API Provider Static (CAPS) очищает сервер и удаляет узел;
+- уменьшение [`staticInstances.count`](cr.html#nodegroup-v1-spec-staticinstances-count) в NodeGroup: удаляемый узел CAPS выбирает сам;
+- уменьшение числа узлов в NodeGroup типа CloudPermanent с помощью `dhctl converge`;
+- в NodeGroup типа CloudEphemeral — уменьшение числа узлов, в том числе при автомасштабировании (cluster-autoscaler), пересоздание машин после изменения InstanceClass или аннотации `manual-rollout-id` и замена машины, узел которой остаётся в статусе `NotReady`;
+- уменьшение числа master-узлов и смена образа ОС на master-узлах, описанные [в FAQ модуля `control-plane-manager`](/modules/control-plane-manager/faq.html).
+
+Перед выводом узла из кластера найдите данные, которые на нём хранятся, и перенесите их с узла:
+
+1. Найдите LVMVolumeGroup узла. В этих группах томов хранятся данные модулей `sds-local-volume` и `sds-replicated-volume`:
+
+   ```shell
+   d8 k get lvg -o json | jq -r '.items[] | select(.spec.local.nodeName == "<node>") | .metadata.name'
+   ```
+
+1. Найдите PersistentVolume модуля `local-path-provisioner` на узле. Его тома — директории на диске узла, LVMVolumeGroup у них нет:
+
+   ```shell
+   d8 k get pv -o json | jq -r '.items[] | select(.metadata.annotations["local.path.provisioner/selected-node"] == "<node>") | .metadata.name'
+   ```
+
+1. Перенесите данные с узла, как описано в документации модуля:
+
+   - `sds-replicated-volume` — [«Как вывести из кластера узел с репликами DRBD?»](/modules/sds-replicated-volume/faq.html#как-вывести-из-кластера-узел-с-репликами-drbd);
+   - `sds-local-volume` — [«Как вывести из кластера узел с томами?»](/modules/sds-local-volume/faq.html#как-вывести-из-кластера-узел-с-томами);
+   - `local-path-provisioner` — [«Как вывести из кластера узел с томами?»](/modules/local-path-provisioner/faq.html#как-вывести-из-кластера-узел-с-томами).
+
+1. Выведите узел из кластера по процедуре для его типа.
+
+Что происходит с ресурсами модуля `sds-node-configurator` после удаления узла и как их очистить, описано [в FAQ модуля `sds-node-configurator`](/modules/sds-node-configurator/faq.html#узел-удалён-из-кластера-что-будет-с-его-ресурсами-и-как-их-убрать).
+
 ## Статические узлы
 
 <span id='как-добавить-статический-узел-в-кластер'></span>
@@ -175,6 +214,10 @@ search: добавить ноду в кластер, добавить узел �
 Инструкция справедлива как для узла, настроенного вручную (с помощью бутстрап-скрипта), так и для узла, настроенного с помощью CAPS.
 {% endalert %}
 
+{% alert level="danger" %}
+Если на узле хранятся данные томов `sds-local-volume`, `sds-replicated-volume` или `local-path-provisioner`, сначала перенесите их с узла, как описано в разделе [«Как вывести из кластера узел с данными томов?»](#как-вывести-из-кластера-узел-с-данными-томов).
+{% endalert %}
+
 Чтобы вывести из кластера узел и очистить сервер (ВМ), выполните следующую команду на узле:
 
 ```shell
@@ -184,6 +227,10 @@ bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-w
 ### Можно ли удалить StaticInstance?
 
 StaticInstance, находящийся в состоянии `Pending` можно удалять без каких-либо проблем.
+
+{% alert level="danger" %}
+После установки лейбла `node.deckhouse.io/allow-bootstrap: "false"` CAPS вытесняет поды с узла, очищает сервер и удаляет узел из кластера. Если на узле хранятся данные томов `sds-local-volume`, `sds-replicated-volume` или `local-path-provisioner`, перенесите их с узла до установки лейбла, как описано в разделе [«Как вывести из кластера узел с данными томов?»](#как-вывести-из-кластера-узел-с-данными-томов).
+{% endalert %}
 
 Чтобы удалить StaticInstance находящийся в любом состоянии, отличном от `Pending` (`Running`, `Cleaning`, `Bootstrapping`), выполните следующие шаги:
 
@@ -505,6 +552,10 @@ spec:
 При изменении конфигурации Deckhouse (как в модуле `node-manager`, так и в любом из облачных провайдеров) виртуальные машины не будут перезаказаны. Пересоздание происходит только после изменения ресурсов `InstanceClass` или `NodeGroup`.
 
 Чтобы принудительно пересоздать все узлы, связанные с ресурсом `Machines`, следует добавить/изменить аннотацию `manual-rollout-id` в `NodeGroup`: `d8 k annotate NodeGroup имя_ng "manual-rollout-id=$(uuidgen)" --overwrite`.
+
+{% alert level="danger" %}
+При пересоздании каждая виртуальная машина NodeGroup заменяется новой. Если на узлах группы хранятся данные томов `sds-local-volume`, `sds-replicated-volume` или `local-path-provisioner`, сначала перенесите их с узлов, как описано в разделе [«Как вывести из кластера узел с данными томов?»](#как-вывести-из-кластера-узел-с-данными-томов).
+{% endalert %}
 
 ## Как выделить узлы под специфические нагрузки?
 

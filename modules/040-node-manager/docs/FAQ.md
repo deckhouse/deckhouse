@@ -12,6 +12,45 @@ For the procedure of converting a cluster with a single master node to a multi-m
 
 For the procedure of converting a multi-master cluster to a cluster with a single master node, refer to the [FAQ](/modules/control-plane-manager/faq.html#how-do-i-reduce-the-number-of-master-nodes-in-a-cloud-cluster) of the `control-plane-manager` module.
 
+## How do I take a node with volume data out of the cluster?
+
+The [`sds-local-volume`](/modules/sds-local-volume/), [`sds-replicated-volume`](/modules/sds-replicated-volume/) and [`local-path-provisioner`](/modules/local-path-provisioner/) modules keep volume data on the disks of the cluster nodes. When a node leaves the cluster, its volumes are not moved to other nodes. The data is lost when the server is reinstalled, when its disks are wiped or reused, and when the virtual machine of the node is deleted with its disks.
+
+Draining and rebooting a node keep the data. A Pod with a volume of `sds-local-volume` or `local-path-provisioner` can run only on the node of the volume, so after a drain it stays `Pending` until the node is uncordoned.
+
+A node leaves the cluster in the following operations:
+
+- `d8 k delete node` in the procedures for [cleaning up a static node](#how-do-i-clean-up-a-static-node-manually), [cleaning up a node for adding to the cluster](#how-to-clean-up-a-node-for-adding-to-the-cluster) and removing master nodes.
+- Setting the `node.deckhouse.io/allow-bootstrap: "false"` label on a StaticInstance: Cluster API Provider Static (CAPS) cleans up the server and removes the node.
+- Decreasing [`staticInstances.count`](cr.html#nodegroup-v1-spec-staticinstances-count) of a NodeGroup: CAPS selects the node to remove by itself.
+- Decreasing the number of nodes of a CloudPermanent NodeGroup with `dhctl converge`.
+- In a CloudEphemeral NodeGroup: decreasing the number of nodes, including scale-down by cluster-autoscaler; replacing the machines after a change of the InstanceClass or of the `manual-rollout-id` annotation; replacing a machine whose node stays `NotReady`.
+- Reducing the number of master nodes and changing the OS image of master nodes, as described in the [`control-plane-manager` FAQ](/modules/control-plane-manager/faq.html).
+
+Before you take a node out of the cluster, find the data it stores and move the data off it:
+
+1. Find the LVMVolumeGroups of the node. These Volume Groups hold the data of the `sds-local-volume` and `sds-replicated-volume` modules:
+
+   ```shell
+   d8 k get lvg -o json | jq -r '.items[] | select(.spec.local.nodeName == "<node>") | .metadata.name'
+   ```
+
+1. Find the PersistentVolumes of the `local-path-provisioner` module on the node. Its volumes are directories on the node's disk and have no LVMVolumeGroup:
+
+   ```shell
+   d8 k get pv -o json | jq -r '.items[] | select(.metadata.annotations["local.path.provisioner/selected-node"] == "<node>") | .metadata.name'
+   ```
+
+1. Move the data off the node as described in the documentation of the module:
+
+   - `sds-replicated-volume`: [How do I take a node with DRBD replicas out of the cluster?](/modules/sds-replicated-volume/faq.html#how-do-i-take-a-node-with-drbd-replicas-out-of-the-cluster)
+   - `sds-local-volume`: [How do I take a node with volumes out of the cluster?](/modules/sds-local-volume/faq.html#how-do-i-take-a-node-with-volumes-out-of-the-cluster)
+   - `local-path-provisioner`: [How do I take a node with volumes out of the cluster?](/modules/local-path-provisioner/faq.html#how-do-i-take-a-node-with-volumes-out-of-the-cluster)
+
+1. Take the node out of the cluster with the procedure for its type.
+
+What happens to the resources of the `sds-node-configurator` module after the node is gone, and how to clean them up, is described in the [`sds-node-configurator` FAQ](/modules/sds-node-configurator/faq.html#a-node-was-deleted-from-the-cluster-what-happens-to-its-resources-and-how-do-i-clean-them-up).
+
 ## Static nodes
 
 <span id="how-do-i-add-a-static-node-to-a-cluster"></span>
@@ -168,6 +207,10 @@ You can automate the bootstrap process with any automation platform you prefer. 
 This method is valid for both manually configured nodes (using the bootstrap script) and nodes configured using CAPS.
 {% endalert %}
 
+{% alert level="danger" %}
+If the node stores volume data of `sds-local-volume`, `sds-replicated-volume` or `local-path-provisioner`, move the data off the node first, as described in [How do I take a node with volume data out of the cluster?](#how-do-i-take-a-node-with-volume-data-out-of-the-cluster).
+{% endalert %}
+
 To decommission a node from the cluster and clean up the server (VM), run the following command on the node:
 
 ### For all nodes except the control-plane
@@ -229,6 +272,10 @@ To decommission a node from the cluster and clean up the server (VM), run the fo
 ### Can I delete a StaticInstance?
 
 A StaticInstance that is in the `Pending` state can be deleted with no adverse effects.
+
+{% alert level="danger" %}
+Once the `node.deckhouse.io/allow-bootstrap: "false"` label is set, CAPS drains the node, cleans up the server and removes the node from the cluster. If the node stores volume data of `sds-local-volume`, `sds-replicated-volume` or `local-path-provisioner`, move the data off the node before you set the label, as described in [How do I take a node with volume data out of the cluster?](#how-do-i-take-a-node-with-volume-data-out-of-the-cluster).
+{% endalert %}
 
 To delete a StaticInstance in any state other than `Pending` (`Running`, `Cleaning`, `Bootstrapping`), you need to:
 
@@ -507,6 +554,10 @@ During the disruption update, an evict of the pods from the node is performed. I
 If the Deckhouse configuration is changed (both in the node-manager module and in any of the cloud providers), the VMs will not be redeployed. The redeployment is performed only in response to changing `InstanceClass` or `NodeGroup` objects.
 
 To force the redeployment of all Machines, you need to add/modify the `manual-rollout-id` annotation to the `NodeGroup`: `d8 k annotate NodeGroup name_ng "manual-rollout-id=$(uuidgen)" --overwrite`.
+
+{% alert level="danger" %}
+The redeployment replaces every virtual machine of the NodeGroup with a new one. If the nodes of the group store volume data of `sds-local-volume`, `sds-replicated-volume` or `local-path-provisioner`, move the data off them first, as described in [How do I take a node with volume data out of the cluster?](#how-do-i-take-a-node-with-volume-data-out-of-the-cluster).
+{% endalert %}
 
 ## How do I allocate nodes to specific loads?
 

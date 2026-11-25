@@ -160,6 +160,10 @@ d8 system edit static-cluster-configuration
 В процессе переноса [статических узлов](../../../../glossary.html#static-node) между [NodeGroup](/modules/node-manager/cr.html#nodegroup) выполняется очистка и повторный bootstrap узла, объект `Node` пересоздаётся.
 {% endalert %}
 
+{% alert level="danger" %}
+Если на узле хранятся данные томов `sds-local-volume`, `sds-replicated-volume` или `local-path-provisioner`, перенесите их с узла до переноса узла в другую NodeGroup, как описано в разделе [«Как вывести из кластера узел с данными томов?»](/modules/node-manager/faq.html#как-вывести-из-кластера-узел-с-данными-томов).
+{% endalert %}
+
 1. Создайте новый ресурс NodeGroup, например, с именем `front`, который будет управлять статическим узлом с лейблом `role: front`:
 
    ```yaml
@@ -192,6 +196,10 @@ d8 system edit static-cluster-configuration
 ### Ручная очистка статического узла
 
 Для отключения узла из кластера и очистки сервера используйте скрипт `/var/lib/bashible/cleanup_static_node.sh`, который заранее размещён на каждом статическом узле.
+
+{% alert level="danger" %}
+Если на узле хранятся данные томов `sds-local-volume`, `sds-replicated-volume` или `local-path-provisioner`, сначала перенесите их с узла, как описано в разделе [«Как вывести из кластера узел с данными томов?»](/modules/node-manager/faq.html#как-вывести-из-кластера-узел-с-данными-томов).
+{% endalert %}
 
 Пример отключения узла кластера и очистки сервера:
 
@@ -285,6 +293,10 @@ d8 k label node <node_name> node-role.kubernetes.io/<old_node_group_name>-
 ## Удаление StaticInstance
 
 [StaticInstance](/modules/node-manager/cr.html#staticinstance), находящийся в состоянии `Pending` можно удалять без ограничений.
+
+{% alert level="danger" %}
+После установки лейбла `node.deckhouse.io/allow-bootstrap: "false"` CAPS вытесняет поды с узла, очищает сервер и удаляет узел из кластера. Если на узле хранятся данные томов `sds-local-volume`, `sds-replicated-volume` или `local-path-provisioner`, перенесите их с узла до установки лейбла, как описано в разделе [«Как вывести из кластера узел с данными томов?»](/modules/node-manager/faq.html#как-вывести-из-кластера-узел-с-данными-томов).
+{% endalert %}
 
 Чтобы удалить StaticInstance находящийся в любом состоянии, отличном от `Pending` (`Running`, `Cleaning`, `Bootstrapping`), выполните следующие шаги:
 

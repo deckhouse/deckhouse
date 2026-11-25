@@ -240,6 +240,10 @@ CAPS включается автоматически, если в NodeGroup за
 
 В соответствии с данными секции параметров [staticInstances](cr.html#nodegroup-v1-spec-staticinstances), CAPS будет пытаться поддерживать указанное (параметр [count](cr.html#nodegroup-v1-spec-staticinstances-count)) количество узлов в группе. При необходимости добавить узел в группу, CAPS выбирает соответствующий [фильтру](cr.html#nodegroup-v1-spec-staticinstances-labelselector) ресурс [StaticInstance](cr.html#staticinstance) находящийся в статусе `Pending`, настраивает сервер (ВМ) и добавляет узел в кластер. При необходимости удалить узел из группы, CAPS выбирает [StaticInstance](cr.html#staticinstance) находящийся в статусе `Running`, очищает сервер (ВМ) и удаляет узел из кластера (после чего, соответствующий `StaticInstance` переходит в состояние `Pending` и снова может быть использован).
 
+{% alert level="danger" %}
+При уменьшении [count](cr.html#nodegroup-v1-spec-staticinstances-count) удаляемый узел CAPS выбирает сам. Если на узлах группы хранятся данные томов `sds-local-volume`, `sds-replicated-volume` или `local-path-provisioner`, перенесите данные с узлов до уменьшения параметра, как описано в разделе [«Как вывести из кластера узел с данными томов?»](faq.html#как-вывести-из-кластера-узел-с-данными-томов).
+{% endalert %}
+
 ## Узлы Deckhouse Engine
 
 [Deckhouse Engine](/products/kubernetes-platform/documentation/v1/reference/deckhouse-engine.html) — гипервизор первого типа для узлов Deckhouse Platform: корень только для чтения, без bashible и без SSH. Группа узлов на Deckhouse Engine задаётся параметром [`spec.systemType: DeckhouseEngine`](cr.html#nodegroup-v1-spec-systemtype) ресурса NodeGroup. Без этого параметра или со значением `GenericOS` узлы группы настраивает bashible.

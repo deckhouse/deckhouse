@@ -46,6 +46,10 @@ Transitioning from 2 to 1 master node requires manual etcd adjustment. All other
 For cluster stability, it is necessary to maintain an odd number of nodes with etcd to ensure [quorum](../../../../glossary.html#quorum).
 {% endalert %}
 
+{% alert level="danger" %}
+If the master nodes store volume data of `sds-local-volume`, `sds-replicated-volume` or `local-path-provisioner`, move the data off a master node before you remove it, as described in [How do I take a node with volume data out of the cluster?](/modules/node-manager/faq.html#how-do-i-take-a-node-with-volume-data-out-of-the-cluster).
+{% endalert %}
+
 DP supports both automatic and manual scaling of master nodes in cloud and bare-metal clusters:
 
 1. **Single-master → Multi-master**:
@@ -147,6 +151,7 @@ If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure 
 1. Create a [backup of etcd](../../backup/backup-and-restore.html#backing-up-etcd) and the `/etc/kubernetes` directory.
 1. Copy the resulting archive outside the cluster (e.g., to a local machine).
 1. Make sure there are no alerts in the cluster that could interfere with updating master nodes.
+1. If the master nodes store volume data of `sds-local-volume`, `sds-replicated-volume` or `local-path-provisioner`, move the data off them: the master nodes are replaced by new ones. Refer to [How do I take a node with volume data out of the cluster?](/modules/node-manager/faq.html#how-do-i-take-a-node-with-volume-data-out-of-the-cluster).
 1. Ensure the DP queue is empty:
 
    ```shell
@@ -257,6 +262,8 @@ To change the OS of a manually added master node, follow these steps:
    ```shell
    d8 status
    ```
+
+1. If the master node stores volume data of `sds-local-volume`, `sds-replicated-volume` or `local-path-provisioner`, move the data off it, as described in [How do I take a node with volume data out of the cluster?](/modules/node-manager/faq.html#how-do-i-take-a-node-with-volume-data-out-of-the-cluster).
 
 1. Remove the master node labels from the node:
 
@@ -526,6 +533,7 @@ If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure 
 1. Create a [backup of etcd](../../backup/backup-and-restore.html#backing-up-etcd) and the `/etc/kubernetes` directory.
 1. Copy the resulting archive outside the cluster (e.g., to a local machine).
 1. Ensure there are no alerts in the cluster that may interfere with the master node update process.
+1. If the master nodes store volume data of `sds-local-volume`, `sds-replicated-volume` or `local-path-provisioner`, move the data off the master nodes that will be removed, as described in [How do I take a node with volume data out of the cluster?](/modules/node-manager/faq.html#how-do-i-take-a-node-with-volume-data-out-of-the-cluster).
 1. Make sure the DP queue is empty:
 
    ```shell
