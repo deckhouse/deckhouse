@@ -17,6 +17,7 @@ limitations under the License.
 package validation
 
 import (
+	"cmp"
 	"context"
 	"fmt"
 
@@ -26,6 +27,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -142,6 +144,7 @@ func (v *moduleConfigValidator) readRawClusterConfigurationNetwork(ctx context.C
 	return map[string]string{
 		"podSubnetCIDR":           cc.PodSubnetCIDR,
 		"serviceSubnetCIDR":       cc.ServiceSubnetCIDR,
-		"podSubnetNodeCIDRPrefix": cc.PodSubnetNodeCIDRPrefix,
+		// Unset prefix still means /24 on a running cluster.
+		"podSubnetNodeCIDRPrefix": cmp.Or(cc.PodSubnetNodeCIDRPrefix, config.DefaultPodSubnetNodeCIDRPrefix),
 	}, true
 }

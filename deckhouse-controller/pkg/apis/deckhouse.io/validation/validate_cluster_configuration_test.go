@@ -19,8 +19,70 @@ package validation
 import (
 	"testing"
 
+	"github.com/stretchr/testify/require"
 	v1 "k8s.io/api/core/v1"
 )
+
+func TestValidateUnsafeConfigChanges_NetworkDefaults(t *testing.T) {
+	tests := []struct {
+		name     string
+		old, new clusterConfig
+		allowed  bool
+	}{
+		{
+			name:    "Commander drops defaults written by an older dhctl",
+			old:     clusterConfig{PodSubnetNodeCIDRPrefix: "24", ClusterDomain: "cluster.local"},
+			allowed: true,
+		},
+		{
+			name:    "pin the default prefix",
+			new:     clusterConfig{PodSubnetNodeCIDRPrefix: "24"},
+			allowed: true,
+		},
+		{
+			name: "dropping a custom prefix changes the node subnet size",
+			old:  clusterConfig{PodSubnetNodeCIDRPrefix: "25"},
+		},
+		{
+			name: "setting a custom prefix changes the node subnet size",
+			new:  clusterConfig{PodSubnetNodeCIDRPrefix: "25"},
+		},
+		{
+			name: "dropping a custom domain changes the cluster domain",
+			old:  clusterConfig{ClusterDomain: "old.internal"},
+		},
+		{
+			name:    "explicit domain changes are supported",
+			old:     clusterConfig{ClusterDomain: "old.internal"},
+			new:     clusterConfig{ClusterDomain: "new.internal"},
+			allowed: true,
+		},
+		{
+			name: "dropping the default prefix still validates the service subnet",
+			old:  clusterConfig{PodSubnetNodeCIDRPrefix: "24", ServiceSubnetCIDR: "10.96.0.0/16"},
+		},
+	}
+
+	cli := newFakeClient(t)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := validateUnsafeConfigChanges(t.Context(), cli, &tt.old, &tt.new, false)
+			require.NoError(t, err)
+			require.Equal(t, tt.allowed, result.Valid)
+		})
+	}
+
+	t.Run("remove custom values after migration to ModuleConfig", func(t *testing.T) {
+		old := clusterConfig{PodSubnetNodeCIDRPrefix: "25", ClusterDomain: "corp.internal"}
+		mc := newControlPlaneManagerNetworkConfig(map[string]string{
+			"podSubnetNodeCIDRPrefix": old.PodSubnetNodeCIDRPrefix,
+			"clusterDomain":           old.ClusterDomain,
+		})
+		result, err := validateUnsafeConfigChanges(t.Context(), newFakeClient(t, mc), &old, &clusterConfig{}, false)
+		require.NoError(t, err)
+		require.True(t, result.Valid)
+	})
+}
 
 func TestParseVersion(t *testing.T) {
 	tests := []struct {
