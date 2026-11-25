@@ -260,10 +260,11 @@ func statusToken() (string, error) {
 }
 
 // machineOwnedConfig reports whether this group's nodes bring their own
-// configuration. A static immutable node is provisioned by hand — the operator
-// writes its network and disks on the machine — and the cluster knows neither.
+// configuration. A manually provisioned immutable node is installed by hand —
+// the operator writes its network and disks on the machine — and the cluster knows neither.
 func machineOwnedConfig(ng *v1.NodeGroup) bool {
-	return ng.Spec.NodeType == v1.NodeTypeStatic && v1.IsDeckhouseEngine(ng.Spec.SystemType)
+	return (ng.Spec.NodeType == v1.NodeTypeStatic || ng.Spec.NodeType == v1.NodeTypeCloudStatic) &&
+		v1.IsDeckhouseEngine(ng.Spec.SystemType)
 }
 
 func templateGroupResource() schema.GroupResource {

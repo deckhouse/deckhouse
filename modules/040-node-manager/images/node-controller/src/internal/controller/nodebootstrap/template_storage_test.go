@@ -155,28 +155,34 @@ func TestNodeConfigTemplateCarriesABootstrapToken(t *testing.T) {
 	require.NotEmpty(t, template.Spec.Kubelet.BootstrapToken)
 }
 
-func TestNodeConfigTemplateServesAStaticEngineGroupOfEitherSpelling(t *testing.T) {
-	for _, systemType := range []deckhousev1.SystemType{deckhousev1.SystemTypeDeckhouseEngine, deckhousev1.SystemTypeLegacyImmutable} {
-		t.Run(string(systemType), func(t *testing.T) {
-			ng := immutableStaticNodeGroup(testTemplateNodeGroup).(*deckhousev1.NodeGroup)
-			ng.Spec.SystemType = systemType
-			storage := NewTemplateStorage(templateCluster(t, ng, bootstrapTokenSecret(testTemplateNodeGroup)))
+func TestNodeConfigTemplateServesAManuallyProvisionedEngineGroup(t *testing.T) {
+	for _, nodeType := range []deckhousev1.NodeType{deckhousev1.NodeTypeStatic, deckhousev1.NodeTypeCloudStatic} {
+		for _, systemType := range []deckhousev1.SystemType{deckhousev1.SystemTypeDeckhouseEngine, deckhousev1.SystemTypeLegacyImmutable} {
+			t.Run(string(nodeType)+"/"+string(systemType), func(t *testing.T) {
+				ng := immutableStaticNodeGroup(testTemplateNodeGroup).(*deckhousev1.NodeGroup)
+				ng.Spec.NodeType = nodeType
+				ng.Spec.SystemType = systemType
+				storage := NewTemplateStorage(templateCluster(t, ng, bootstrapTokenSecret(testTemplateNodeGroup)))
 
-			require.Equal(t, internalv1alpha1.SystemTypeLegacyImmutable, templateOf(t, storage).Spec.SystemType)
+				template := templateOf(t, storage)
+				require.Equal(t, internalv1alpha1.SystemTypeLegacyImmutable, template.Spec.SystemType)
+				require.Equal(t, nodeType == deckhousev1.NodeTypeCloudStatic, template.Spec.Kubelet.ExternalCloudProvider)
+				require.Equal(t, internalv1alpha1.NodeLabelValue(nodeType), template.Spec.Kubelet.NodeLabels[nodecommon.NodeTypeLabel])
+				require.Equal(t, internalv1alpha1.NodeLabelValue(testTemplateNodeGroup), template.Spec.Kubelet.NodeLabels[nodecommon.NodeGroupLabel])
+				require.Equal(t, internalv1alpha1.NodeLabelValue(deckhousev1.SystemTypeDeckhouseEngine), template.Spec.Kubelet.NodeLabels[nodecommon.NodeSystemTypeLabel])
 
-			object, err := storage.List(t.Context(), &metainternalversion.ListOptions{})
-			require.NoError(t, err)
-			list, ok := object.(*templatesv1alpha1.NodeConfigTemplateList)
-			require.True(t, ok, "storage returned %T", object)
-			require.Len(t, list.Items, 1)
-		})
+				object, err := storage.List(t.Context(), &metainternalversion.ListOptions{})
+				require.NoError(t, err)
+
+				list, ok := object.(*templatesv1alpha1.NodeConfigTemplateList)
+				require.True(t, ok, "storage returned %T", object)
+				require.Len(t, list.Items, 1)
+			})
+		}
 	}
 }
 
-// Nobody installs a cloud node by hand: its config is rendered onto the machine
-// CAPI creates. Answering for such a group would put a template in an
-// operator's hands that no machine of that group will ever read.
-func TestNodeConfigTemplateIsNotServedForACloudGroup(t *testing.T) {
+func TestNodeConfigTemplateIsNotServedForACloudPermanentGroup(t *testing.T) {
 	cloud := &deckhousev1.NodeGroup{
 		ObjectMeta: metav1.ObjectMeta{Name: testTemplateNodeGroup},
 		Spec: deckhousev1.NodeGroupSpec{

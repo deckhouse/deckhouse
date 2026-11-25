@@ -165,10 +165,11 @@ func (w *NodeGroupValidator) Handle(ctx context.Context, req admission.Request) 
 	// the same name with systemType: DeckhouseEngine arrives as a CREATE and would
 	// otherwise adopt the old, still-labelled bashible nodes unchecked.
 	if becomingImmutable(req, ng, oldNG) {
-		// The CRD of v1alpha1/v1alpha2 cannot say this: Hybrid becomes CloudStatic only at conversion.
-		if ng.Spec.NodeType == v1.NodeTypeCloudStatic {
+		fromOtherVersion := req.RequestKind != nil && req.RequestKind.Version != v1.GroupVersion.Version
+		if fromOtherVersion && ng.Spec.NodeType == v1.NodeTypeCloudStatic {
 			return admission.Denied("systemType DeckhouseEngine is not supported for nodeType CloudStatic")
 		}
+
 		engineMessage, err := w.validateImmutableEngine(ctx, ng)
 		if err != nil {
 			webhookLog.Error(err, "failed to resolve the engine of a DeckhouseEngine NodeGroup")

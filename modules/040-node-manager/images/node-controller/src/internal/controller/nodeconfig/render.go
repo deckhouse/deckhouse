@@ -188,9 +188,8 @@ func renderKubelet(ng *v1.NodeGroup, node *corev1.Node, in clusterInputs) intern
 		// node that file is on tmpfs. Without the CA in the config the node
 		// cannot rewrite it after a reboot and kubelet never comes back.
 		ClusterCABundle: in.KubernetesCA,
-		// Without it the node never gets a providerID and CAPI cannot match its
-		// Machine to the Node. Both cloud node types are CAPI-backed, so both
-		// need it — not just CloudEphemeral.
+		// Without it the node never gets a providerID from the cloud-controller-manager.
+		// CAPI also cannot match a Machine to the Node without the providerID.
 		ExternalCloudProvider: isCloudNodeType(ng.Spec.NodeType),
 		// A setting the group leaves unset is left unset: the node holds the
 		// default. maxPods is a cluster decision, not a default: it follows the
@@ -391,10 +390,10 @@ func isControlPlaneNode(node *corev1.Node) bool {
 	return ok
 }
 
-// isCloudNodeType reports whether a node type is CAPI-backed (has a Machine) and
-// so needs the external cloud provider to be assigned its providerID.
+// isCloudNodeType reports whether the cloud-controller-manager initializes a
+// node, including a manually provisioned CloudStatic node.
 func isCloudNodeType(t v1.NodeType) bool {
-	return t == v1.NodeTypeCloudEphemeral || t == v1.NodeTypeCloudPermanent
+	return t == v1.NodeTypeCloudEphemeral || t == v1.NodeTypeCloudPermanent || t == v1.NodeTypeCloudStatic
 }
 
 // renderContainerRuntime carries over the only containerd knob a NodeGroup

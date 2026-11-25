@@ -717,10 +717,9 @@ spec:
                     `DeckhouseEngine` поддерживается для групп:
 
                     - `Static` — машины должны добавляться командой `d8 node add`, параметр `staticInstances` использовать нельзя;
+                    - `CloudStatic` — машины создаются вручную или любыми внешними инструментами;
                     - `CloudEphemeral` — машины должен создавать облачный провайдер через Cluster API (CAPI);
                     - `CloudPermanent` — машины создаёт dhctl.
-
-                    Группы `CloudStatic` значение `DeckhouseEngine` не поддерживают.
 
                     Значение `DeckhouseEngine` можно указать, только пока в группе нет узлов, настроенных bashible. `DeckhouseEngine` нельзя удалить или изменить на `GenericOS`.
                 nodeDrainTimeoutSecond:
