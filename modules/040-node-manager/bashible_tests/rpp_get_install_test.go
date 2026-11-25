@@ -20,15 +20,12 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
-	"encoding/pem"
 	"io"
-	"net"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"testing"
 
@@ -145,16 +142,8 @@ func rppGetStubs(t *testing.T, dir string, layerHashFails bool) string {
 
 func runRppGetInstall(t *testing.T, dir, lib, proxyAddresses string, layerHashFails bool) (string, error) {
 	t.Helper()
-	return runRppGetInstallRounds(t, dir, lib, proxyAddresses, layerHashFails, 1)
-}
-
-// The node's bashible directory, with its bootstrap token and cluster CA, is dir/bashible.
-func runRppGetInstallRounds(t *testing.T, dir, lib, proxyAddresses string, layerHashFails bool, rounds int, env ...string) (string, error) {
-	t.Helper()
 	bin := filepath.Join(dir, "rpp-get")
-	script := strings.ReplaceAll(lib, "/opt/deckhouse/bin/rpp-get", bin)
-	script = strings.ReplaceAll(script, "/var/lib/bashible/", filepath.Join(dir, "bashible")+"/")
-	script += "\nsleep() { :; }\nbb-rpp-get-install " + strconv.Itoa(rounds) + "\n"
+	script := strings.ReplaceAll(lib, "/opt/deckhouse/bin/rpp-get", bin) + "\nsleep() { :; }\nbb-rpp-get-install 1\n"
 	cmd := exec.Command("bash", "-c", "set -Eeo pipefail\n"+script)
 	cmd.Env = append(os.Environ(),
 		"PATH="+rppGetStubs(t, dir, layerHashFails)+":"+os.Getenv("PATH"),
@@ -163,7 +152,6 @@ func runRppGetInstallRounds(t *testing.T, dir, lib, proxyAddresses string, layer
 		"PACKAGES_PROXY_BOOTSTRAP_CLUSTER_UUID=cluster-uuid",
 		"RPP_GET_MARKER="+filepath.Join(dir, "marker"),
 	)
-	cmd.Env = append(cmd.Env, env...)
 	out, err := cmd.CombinedOutput()
 	return string(out), err
 }
@@ -234,103 +222,4 @@ func TestRppGetInstallMovesOnToTheNextMaster(t *testing.T) {
 	require.NoError(t, err, out)
 	require.Contains(t, out, substitutedProxy+": manifest of")
 	require.FileExists(t, filepath.Join(dir, "marker"), out)
-}
-
-const rppGetBootstrapToken = "dh-test-secret-0123456789abcdef"
-
-// kube-apiserver as a joining node asks it where registry-packages-proxy runs: the proxy's running
-// pods, for the token the node joins with. Writes the cluster CA and that token where the node
-// keeps them and returns the API endpoint.
-func serveRppPods(t *testing.T, dir, token string, podIPs ...string) string {
-	t.Helper()
-	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Header.Get("Authorization") != "Bearer "+rppGetBootstrapToken {
-			w.WriteHeader(http.StatusUnauthorized)
-			return
-		}
-		if r.URL.Path != "/api/v1/namespaces/d8-cloud-instance-manager/pods" ||
-			r.URL.Query().Get("labelSelector") != "app=registry-packages-proxy" ||
-			r.URL.Query().Get("fieldSelector") != "status.phase=Running" {
-			w.WriteHeader(http.StatusNotFound)
-			return
-		}
-		items := []map[string]any{}
-		for _, ip := range podIPs {
-			items = append(items, map[string]any{"status": map[string]any{"phase": "Running", "podIP": ip}})
-		}
-		_ = json.NewEncoder(w).Encode(map[string]any{"kind": "PodList", "items": items})
-	}))
-	t.Cleanup(srv.Close)
-
-	bashible := filepath.Join(dir, "bashible")
-	require.NoError(t, os.MkdirAll(bashible, 0o755))
-	ca := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: srv.Certificate().Raw})
-	require.NoError(t, os.WriteFile(filepath.Join(bashible, "ca.crt"), ca, 0o644))
-	require.NoError(t, os.WriteFile(filepath.Join(bashible, "bootstrap-token"), []byte(token+"\n"), 0o600))
-	return strings.TrimPrefix(srv.URL, "https://")
-}
-
-// The bootstrap addresses are taken when the node's script is rendered. registry-packages-proxy
-// rolls while masters join and can come back on a master the script does not name; the node then
-// asks the cluster where the proxy runs instead of waiting on an address nobody listens on.
-func TestRppGetInstallFindsAMovedProxyThroughTheCluster(t *testing.T) {
-	chdirToRepositoryRoot(t)
-	genuineLayer := rppGetLayer(t, genuineRppGet)
-	genuine := rppGetManifest(t, imageLayer(t, nil), genuineLayer)
-	proxy := serveRppGet(t, genuine, genuineLayer)
-	host, port, err := net.SplitHostPort(proxy)
-	require.NoError(t, err)
-	// Where the proxy ran when the script was rendered: the same port on an address nobody listens on.
-	// The test proxy listens on 127.0.0.1 only, so the connection is refused at once.
-	gone := net.JoinHostPort("::1", port)
-
-	for _, tc := range []struct {
-		name      string
-		token     string
-		pods      []string
-		installed bool
-		says      string
-	}{
-		{name: "the proxy has moved", token: rppGetBootstrapToken, pods: []string{host}, installed: true,
-			says: "the cluster reports registry-packages-proxy at " + proxy + ", trying " + proxy + " " + gone},
-		{name: "no proxy runs", token: rppGetBootstrapToken,
-			says: "lists no running registry-packages-proxy pod"},
-		{name: "the token is refused", token: "dh-test-secret-012345678", pods: []string{host},
-			says: "listed the proxy pods"},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			dir := t.TempDir()
-			api := serveRppPods(t, dir, tc.token, tc.pods...)
-			out, err := runRppGetInstallRounds(t, dir, renderRppGetLib(t, sha256Digest(genuine)), gone, false, 2,
-				"PACKAGES_PROXY_KUBE_APISERVER_ENDPOINTS="+api)
-
-			require.Contains(t, out, tc.says)
-			require.NotContains(t, out, tc.token, "the token reached the output")
-			if !tc.installed {
-				require.Error(t, err, out)
-				require.Equal(t, 1, strings.Count(out, "cannot ask the cluster"), "the reason is told once: %s", out)
-				require.NoFileExists(t, filepath.Join(dir, "marker"), out)
-				return
-			}
-			require.NoError(t, err, out)
-			require.FileExists(t, filepath.Join(dir, "marker"), out)
-		})
-	}
-}
-
-// With nowhere to ask, as on the first master, the node keeps to the rendered addresses and says nothing more.
-func TestRppGetInstallWithoutABootstrapTokenKeepsToTheRenderedAddresses(t *testing.T) {
-	chdirToRepositoryRoot(t)
-	genuineLayer := rppGetLayer(t, genuineRppGet)
-	genuine := rppGetManifest(t, imageLayer(t, nil), genuineLayer)
-	_, port, err := net.SplitHostPort(serveRppGet(t, genuine, genuineLayer))
-	require.NoError(t, err)
-
-	dir := t.TempDir()
-	out, err := runRppGetInstallRounds(t, dir, renderRppGetLib(t, sha256Digest(genuine)), net.JoinHostPort("::1", port), false, 2,
-		"PACKAGES_PROXY_KUBE_APISERVER_ENDPOINTS=127.0.0.1:1")
-
-	require.Error(t, err, out)
-	require.NotContains(t, out, "the cluster")
-	require.Equal(t, 2, strings.Count(out, "manifest download failed"), out)
 }

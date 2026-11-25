@@ -262,13 +262,18 @@ bb-discover-node-name() {
 {{- $images := .images | default (dict) -}}
 {{- $registryPackages := get $images "registrypackages" | default (dict) -}}
 {{- if and (ne .runType "Normal") .mingetB64 }}
+{{- /*
+  mingetB64 is minget gzipped, then base64-encoded: it is the largest part of the cloud-init user
+  data, which EC2 caps at 16384 bytes, and gzip takes a third off it. gzip is no new requirement:
+  bb-rpp-get-download needs it for tar -z.
+*/}}
 bb-minget-install() {
   local path="/opt/deckhouse/bin/minget"
   if [[ -s "$path" && -x "$path" ]]; then
     return 0
   fi
   mkdir -p "${path%/*}"
-  if ! echo -n '{{ .mingetB64 }}' | base64 -d > "$path"; then
+  if ! echo -n '{{ .mingetB64 }}' | base64 -d | gzip -dc > "$path"; then
     rm -f "$path"
     return 1
   fi
@@ -280,9 +285,11 @@ bb-minget-install() {
 }
 {{- end }}
 bb-rpp-get-binary-ready() { "$1" version &>/dev/null; }
-# Both branches must turn a non-2xx response into a non-zero exit code: d8-curl needs -f and
-# minget needs --fail. Without them the error body is written out as if it were the binary,
-# the caller only ever sees a file that does not run, and the reason is lost.
+{{- /*
+  Both branches must turn a non-2xx response into a non-zero exit code: d8-curl needs -f and
+  minget needs --fail. Without them the error body is written out as if it were the binary,
+  the caller only ever sees a file that does not run, and the reason is lost.
+*/}}
 bb-rpp-get-fetch() {
   if command -v d8-curl >/dev/null 2>&1; then
     d8-curl -sS -f -x "" --connect-timeout 10 --max-time 300 "http://$1"
@@ -295,9 +302,11 @@ bb-rpp-get-sha256() {
   sum="$(sha256sum "$1")" || return 1
   echo "sha256:${sum%% *}"
 }
-# bb-rpp-get-download <url> <digest> <dir> puts a verified rpp-get into <dir> or prints why not:
-# the manifest has to hash to the digest from the bundle and list the hash of the layer. A refusal
-# names how many bytes arrived, to compare with the size in the proxy log.
+{{- /*
+  bb-rpp-get-download <url> <digest> <dir> puts a verified rpp-get into <dir> or prints why not:
+  the manifest has to hash to the digest from the bundle and list the hash of the layer. A refusal
+  names how many bytes arrived, to compare with the size in the proxy log.
+*/}}
 bb-rpp-get-download() {
   local url="$1" digest="$2" dir="$3" layer_digest
   bb-rpp-get-fetch "${url}/manifest?digest=${digest}" > "$dir/manifest" || { echo "manifest download failed"; return 1; }
@@ -309,8 +318,10 @@ bb-rpp-get-download() {
   chmod +x "$dir/rpp-get"
   bb-rpp-get-binary-ready "$dir/rpp-get" || { echo "verified rpp-get does not run on this node"; return 1; }
 }
-# One line per failed source, so a node that cannot reach the bootstrap proxy says why instead
-# of repeating the same anonymous retry thirty times.
+{{- /*
+  One line per failed source, so a node that cannot reach the bootstrap proxy says why instead
+  of repeating the same anonymous retry thirty times.
+*/}}
 bb-rpp-get-report() {
   local attempt="$1" attempts="$2" address="$3" reason="$4" details_file="${5:-}"
   local details=""
@@ -321,90 +332,15 @@ bb-rpp-get-report() {
   [[ "$attempts" == 0 ]] && of=""
   >&2 echo "rpp-get: attempt ${attempt}${of}: ${address}: ${reason}${details}"
 }
-# bb-rpp-get-kube-get <url> <token file> <CA file> prints the body of a GET to kube-apiserver.
-#
-# minget, the one client a fresh node is given, speaks plain HTTP only, so this borrows what the
-# image ships: curl, GNU wget, or python3, which is there wherever cloud-init runs. Returns 2 when
-# there is none of them. The token never goes on a command line, where any process on the node
-# could read it.
-bb-rpp-get-kube-get() {
-  local url="$1" token_file="$2" ca_file="$3" rc status
-  if command -v curl >/dev/null 2>&1; then
-    printf 'header = "Authorization: Bearer %s"\n' "$(<"$token_file")" |
-      curl -s -f --noproxy '*' --connect-timeout 5 --max-time 10 --cacert "$ca_file" -K - "$url" 2>/dev/null && return 0
-    return 1
-  fi
-  if command -v wget >/dev/null 2>&1 && [[ "$(wget --version 2>/dev/null)" == *"GNU Wget"* ]]; then
-    rc="$(mktemp)" || return 1
-    printf 'header = Authorization: Bearer %s\n' "$(<"$token_file")" > "$rc"
-    WGETRC="$rc" wget -q -O - --no-proxy --timeout=10 --tries=1 --ca-certificate="$ca_file" "$url" 2>/dev/null
-    status=$?
-    rm -f "$rc"
-    (( status == 0 )) || return 1
-    return 0
-  fi
-  if command -v python3 >/dev/null 2>&1; then
-    python3 -c '
-import ssl, sys, urllib.request
-url, token_file, ca_file = sys.argv[1:4]
-with open(token_file) as f:
-    token = f.read().strip()
-opener = urllib.request.build_opener(
-    urllib.request.ProxyHandler({}),
-    urllib.request.HTTPSHandler(context=ssl.create_default_context(cafile=ca_file)),
-)
-request = urllib.request.Request(url, headers={"Authorization": "Bearer " + token})
-sys.stdout.write(opener.open(request, timeout=10).read().decode())
-' "$url" "$token_file" "$ca_file" 2>/dev/null && return 0
-    return 1
-  fi
-  return 2
-}
-# bb-rpp-get-discover prints where registry-packages-proxy runs now, as bootstrap addresses
-# separated by spaces.
-#
-# The bootstrap addresses come from the moment the node's script was rendered. The proxy rolls
-# while masters join (maxSurge 0, host ports) and can come back on a master that was not even a
-# Node then, so a node can wait forever on an address nobody listens on. This asks the cluster what
-# rpp-get asks it (images/platform/registrypackages/rpp-get/src/kube/client.go), with the token the
-# node joins with: the proxy's running pods. One that is not ready yet fails a round and is asked
-# about again. Without API endpoints or a bootstrap token, as on the first master, there is nothing
-# to ask and it fails quietly.
-bb-rpp-get-discover() {
-  local token_file="/var/lib/bashible/bootstrap-token" ca_file="/var/lib/bashible/ca.crt"
-  local port="${PACKAGES_PROXY_BOOTSTRAP_ADDRESSES%% *}"
-  local path="/api/v1/namespaces/d8-cloud-instance-manager/pods?labelSelector=app%3Dregistry-packages-proxy&fieldSelector=status.phase%3DRunning"
-  local endpoint body ip found
-  port="${port##*:}"
-  [[ -n "${PACKAGES_PROXY_KUBE_APISERVER_ENDPOINTS:-}" && -s "$token_file" && -s "$ca_file" ]] || return 1
-  for endpoint in ${PACKAGES_PROXY_KUBE_APISERVER_ENDPOINTS//,/ }; do
-    body="$(bb-rpp-get-kube-get "https://${endpoint}${path}" "$token_file" "$ca_file")"
-    case $? in
-      0) ;;
-      2) >&2 echo "no curl, GNU wget or python3 on this node"; return 1 ;;
-      *) continue ;;
-    esac
-    found=""
-    for ip in $(grep -o '"podIP": *"[^"]*"' <<< "$body" | sed -e 's/.*"\([^"]*\)"$/\1/'); do
-      found+="${found:+ }${ip}:${port}"
-    done
-    if [[ -z "$found" ]]; then
-      >&2 echo "kube-apiserver at ${endpoint} lists no running registry-packages-proxy pod"
-      return 1
-    fi
-    echo "$found"
-    return 0
-  done
-  >&2 echo "no kube-apiserver at ${PACKAGES_PROXY_KUBE_APISERVER_ENDPOINTS} listed the proxy pods"
-  return 1
-}
-# bb-rpp-get-install [attempts]
-#
-# attempts is how many rounds over the bootstrap addresses to make, 30 by default; 0 is until it
-# is installed. A caller that is run again when it fails can afford a bound. A node's first boot
-# cannot: cloud-init runs bootstrap.sh once, and a bound shorter than one roll of
-# registry-packages-proxy — whose host port is closed from the moment the old pod stops until the
-# new one starts — leaves the node with no kubelet and nothing that will ever retry.
+{{- /*
+  bb-rpp-get-install [attempts]
+
+  attempts is how many rounds over the bootstrap addresses to make, 30 by default; 0 is until it
+  is installed. A caller that is run again when it fails can afford a bound. A node's first boot
+  cannot: cloud-init runs bootstrap.sh once, and a bound shorter than one roll of
+  registry-packages-proxy — whose host port is closed from the moment the old pod stops until the
+  new one starts — leaves the node with no kubelet and nothing that will ever retry.
+*/}}
 bb-rpp-get-install() {
   local bin="/opt/deckhouse/bin/rpp-get"
   local digest="{{ get $registryPackages "rppGet" }}"
@@ -412,8 +348,7 @@ bb-rpp-get-install() {
   local dir="${bin}.download"
   local prefix="${PACKAGES_PROXY_BOOTSTRAP_CLUSTER_UUID:+/${PACKAGES_PROXY_BOOTSTRAP_CLUSTER_UUID}}"
   local attempts="${1:-30}"
-  local addresses="${PACKAGES_PROXY_BOOTSTRAP_ADDRESSES:-}"
-  local attempt address reason discovered merged note reported=""
+  local attempt address reason
   if [[ -f "$digest_file" &&
         "$(<"$digest_file")" == "$digest" ]] &&
      bb-rpp-get-binary-ready "$bin"; then
@@ -425,7 +360,7 @@ bb-rpp-get-install() {
   fi
   mkdir -p "$dir" "${digest_file%/*}"
   for ((attempt = 1; attempts == 0 || attempt <= attempts; attempt++)); do
-    for address in ${addresses}; do
+    for address in ${PACKAGES_PROXY_BOOTSTRAP_ADDRESSES}; do
       if reason="$(bb-rpp-get-download "${address}${prefix}/rpp-get" "$digest" "$dir" 2> "$dir/log")"; then
         mv -f "$dir/rpp-get" "$bin"
         echo "$digest" > "$digest_file"
@@ -434,23 +369,6 @@ bb-rpp-get-install() {
       fi
       bb-rpp-get-report "$attempt" "$attempts" "$address" "$reason" "$dir/log"
     done
-    # Where the proxy runs now goes first; the rendered addresses stay, for a proxy that comes back.
-    if discovered="$(bb-rpp-get-discover 2> "$dir/discover")"; then
-      merged=""
-      for address in ${discovered} ${PACKAGES_PROXY_BOOTSTRAP_ADDRESSES}; do
-        [[ " ${merged} " == *" ${address} "* ]] || merged+="${merged:+ }${address}"
-      done
-      if [[ "$merged" != "$addresses" ]]; then
-        >&2 echo "rpp-get: the cluster reports registry-packages-proxy at ${discovered}, trying ${merged}"
-        addresses="$merged"
-      fi
-    else
-      note="$(<"$dir/discover")"
-      if [[ -n "$note" && "$note" != "$reported" ]]; then
-        >&2 echo "rpp-get: cannot ask the cluster where registry-packages-proxy runs: ${note}"
-        reported="$note"
-      fi
-    fi
     if (( attempts == 0 )); then
       >&2 echo "Failed to install rpp-get (attempt ${attempt}), retrying in 5 seconds"
     else
@@ -459,7 +377,7 @@ bb-rpp-get-install() {
     sleep 5
   done
   >&2 echo "Failed to install rpp-get after ${attempts} attempts"
-  >&2 echo "rpp-get is served by registry-packages-proxy on the master nodes (${addresses}); check that the port is reachable from this node and that the module is running"
+  >&2 echo "rpp-get is served by registry-packages-proxy on the master nodes (${PACKAGES_PROXY_BOOTSTRAP_ADDRESSES}); check that the port is reachable from this node and that the module is running"
   rm -rf "$dir"
   return 1
 }

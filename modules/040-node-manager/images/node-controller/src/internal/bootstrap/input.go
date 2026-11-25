@@ -16,7 +16,12 @@ limitations under the License.
 
 package bootstrap
 
-import "fmt"
+import (
+	"bytes"
+	"compress/gzip"
+	"encoding/base64"
+	"fmt"
+)
 
 // Input is everything the bashible bootstrap templates read. It mirrors the
 // context helm builds in templates/node-group/_bootstrap.tpl:1-40 — templates
@@ -74,4 +79,23 @@ func endpointList(endpoints []map[string]any, portKey string) []string {
 		out = append(out, fmt.Sprintf("%v:%v", endpoint["address"], port))
 	}
 	return out
+}
+
+// EncodeMinget gzips minget and base64-encodes the result, the form
+// bb-minget-install in lib.sh.tpl takes. minget is inlined into the cloud-init
+// user data, which EC2 caps at 16384 bytes, and gzip takes a third off it. The
+// output is stable for a given binary: no name or time goes into the header.
+func EncodeMinget(binary []byte) (string, error) {
+	var buf bytes.Buffer
+	zw, err := gzip.NewWriterLevel(&buf, gzip.BestCompression)
+	if err != nil {
+		return "", fmt.Errorf("gzip minget: %w", err)
+	}
+	if _, err := zw.Write(binary); err != nil {
+		return "", fmt.Errorf("gzip minget: %w", err)
+	}
+	if err := zw.Close(); err != nil {
+		return "", fmt.Errorf("gzip minget: %w", err)
+	}
+	return base64.StdEncoding.EncodeToString(buf.Bytes()), nil
 }

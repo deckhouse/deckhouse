@@ -16,9 +16,11 @@ package config
 
 import (
 	"bytes"
+	"compress/gzip"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -849,7 +851,12 @@ func TestConfigForBashibleBundleTemplateDefaultClusterMasterEndpoints(t *testing
 	require.True(t, ok)
 	require.NotEmpty(t, mingetB64)
 
-	mingetBytes, err := base64.StdEncoding.DecodeString(mingetB64)
+	// Gzipped: the script it goes into is the cloud-init user data of cloud nodes, which EC2 caps.
+	gzipped, err := base64.StdEncoding.DecodeString(mingetB64)
+	require.NoError(t, err)
+	zr, err := gzip.NewReader(bytes.NewReader(gzipped))
+	require.NoError(t, err)
+	mingetBytes, err := io.ReadAll(zr)
 	require.NoError(t, err)
 	require.Equal(t, expectedMingetBytes, mingetBytes)
 }

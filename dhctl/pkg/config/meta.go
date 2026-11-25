@@ -16,7 +16,6 @@ package config
 
 import (
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -1127,11 +1126,11 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(ctx context.Context, nodeIP
 	configForBashibleBundleTemplate["clusterMasterRPPAddresses"] = clusterMasterHTTPAddresses(clusterMasterEndpoints, "rppServerPort")
 	configForBashibleBundleTemplate["clusterMasterRPPBootstrapAddresses"] = clusterMasterEndpointAddresses(clusterMasterEndpoints, "rppBootstrapServerPort")
 
-	mingetBytes, err := minget.Bytes(ctx)
+	mingetB64, err := minget.GzipBase64(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("get minget bytes: %w", err)
 	}
-	configForBashibleBundleTemplate["mingetB64"] = base64.StdEncoding.EncodeToString(mingetBytes)
+	configForBashibleBundleTemplate["mingetB64"] = mingetB64
 
 	return configForBashibleBundleTemplate, nil
 }
