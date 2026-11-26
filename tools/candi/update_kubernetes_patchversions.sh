@@ -16,24 +16,26 @@
 
 set -Eeo pipefail
 
-. functions.sh
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+VERSION_MAP="${SCRIPT_DIR}/../../candi/version_map.yml"
+
+. "${SCRIPT_DIR}/requirements.sh"
 
 function check_requirements() {
     check_jq
-    check_crane
     check_yq
 }
 
 # Updates version map with new patchversion
 # update_version_map VERSION PATCH
 function update_version_map() {
-  yq -i e ".k8s.\"${1}\".patch = ${2}" ../version_map.yml
+  yq -i e ".k8s.\"${1}\".patch = ${2}" "${VERSION_MAP}"
 }
 
 check_requirements
 
-for VERSION in $(yq e ../version_map.yml -o json | jq -r '.k8s | keys[]'); do
-  for PATCH in $(yq e ../version_map.yml -o json | jq -r --arg version "${VERSION}" '.k8s."\($version)".patch'); do
+for VERSION in $(yq e "${VERSION_MAP}" -o json | jq -r '.k8s | keys[]'); do
+  for PATCH in $(yq e "${VERSION_MAP}" -o json | jq -r --arg version "${VERSION}" '.k8s."\($version)".patch'); do
     # Get last patch version from github CHANGELOG.md
     NEW_FULL_VERSION="$(curl -s "https://raw.githubusercontent.com/kubernetes/kubernetes/master/CHANGELOG/CHANGELOG-${VERSION}.md" | grep '## Downloads for v' | head -n 1 | grep -Eo "${VERSION}.[0-9]+")"
     NEW_PATCH="$(awk -F "." '{print $3}' <<< "${NEW_FULL_VERSION}")"

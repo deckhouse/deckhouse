@@ -416,7 +416,7 @@ endif
 
 .PHONY: update-k8s-patch-versions
 update-k8s-patch-versions: ## Run update-patchversion script to generate new version_map.yml.
-	cd candi/tools; bash update_kubernetes_patchversions.sh
+	bash tools/candi/update_kubernetes_patchversions.sh
 
 ##@ Lib helm
 .PHONY: update-lib-helm
