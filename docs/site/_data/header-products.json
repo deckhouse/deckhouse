@@ -29,6 +29,12 @@
       "url": "/products/development-portal/",
       "description": "Управление процессами всех команд разработки в&nbsp;одном окне",
       "icon": "/images/header/products/development-portal.svg"
+    },
+    {
+      "title": "Deckhouse Airlock",
+      "url": "/products/airlock/",
+      "description": "Управление доступом к&nbsp;ресурсам инфраструктуры",
+      "icon": "/images/header/products/airlock.svg"
     }
   ],
   "en": [
