@@ -165,11 +165,80 @@ func TestOpenStackClusterTemplateToleratesMissingEndpoint(t *testing.T) {
 	_, found, err = unstructured.NestedMap(object.Object, "spec", "controlPlaneEndpoint")
 	require.NoError(t, err)
 	require.False(t, found)
-	// The Standard-like layout keeps the floating IP, and the field must be absent rather than
-	// false: CAPO rejects disableAPIServerFloatingIP=false together with disableExternalNetwork.
+	// A cluster that uses an API floating IP must keep external networking enabled.
 	_, found, err = unstructured.NestedBool(object.Object, "spec", "disableAPIServerFloatingIP")
 	require.NoError(t, err)
 	require.False(t, found)
+}
+
+func TestOpenStackClusterTemplateOptionalNetworks(t *testing.T) {
+	template, err := newClusterTemplate(
+		readFixtureFile(t, "ee/modules/030-cloud-provider-openstack", "capi/cluster.yaml"),
+		Registration{
+			CAPIClusterName:       "openstack",
+			CAPIClusterKind:       "OpenStackCluster",
+			CAPIClusterAPIVersion: "infrastructure.cluster.x-k8s.io/v1beta1",
+		},
+	)
+	require.NoError(t, err)
+
+	networks := []struct {
+		name    string
+		present bool
+		value   any
+		want    string
+	}{
+		{name: "omitted"},
+		{name: "null", present: true},
+		{name: "empty", present: true, value: []any{}},
+		{name: "configured", present: true, value: []any{"network-1", "network-2"}, want: "network-1"},
+	}
+	floatingIPs := []struct {
+		name    string
+		present bool
+		value   bool
+	}{
+		{name: "default", value: true},
+		{name: "enabled", present: true, value: true},
+		{name: "disabled", present: true},
+	}
+	for _, internal := range networks {
+		for _, external := range networks {
+			for _, floatingIP := range floatingIPs {
+				t.Run(internal.name+"/"+external.name+"/floatingIP_"+floatingIP.name, func(t *testing.T) {
+					provider := map[string]any{"podNetworkMode": "VXLAN"}
+					if internal.present {
+						provider["internalNetworkNames"] = internal.value
+					}
+					if external.present {
+						provider["externalNetworkNames"] = external.value
+					}
+					if floatingIP.present {
+						provider["apiServerFloatingIP"] = floatingIP.value
+					}
+					object, err := template.Render(RenderData{
+						Provider: provider,
+						Cluster:  machinetemplate.ClusterFacts{Name: "openstack", Namespace: capiNamespace},
+					})
+					require.NoError(t, err)
+					spec := object.Object["spec"].(map[string]any)
+					for field, want := range map[string]string{"network": internal.want, "externalNetwork": external.want} {
+						if want == "" {
+							require.NotContains(t, spec, field)
+						} else {
+							require.Equal(t, map[string]any{"filter": map[string]any{"name": want}}, spec[field])
+						}
+					}
+					if external.want == "" && !floatingIP.value {
+						require.Equal(t, true, spec["disableExternalNetwork"])
+						require.Equal(t, true, spec["disableAPIServerFloatingIP"])
+					} else {
+						require.NotContains(t, spec, "disableExternalNetwork")
+					}
+				})
+			}
+		}
+	}
 }
 
 // TestDynamixClusterTemplateGivesNameserversToStandardOnly: on the Standard layout a node has only
