@@ -7,7 +7,9 @@ directory.
 
 Bumps Go dependencies in the root `go.mod`/`go.sum` (and the `go` directive in `go.work` where needed) to fix known CVEs in the Kubernetes binaries, including `kube-proxy`. The build runs `GOWORK=off go mod vendor` after the patches are applied, so only the root module files are changed; staging modules pick up the new versions through MVS.
 
-Current bumps on all versions: `golang.org/x/net` v0.62.0 (with `golang.org/x/crypto` v0.58.0 and `golang.org/x/text` v0.43.0), `google.golang.org/grpc` v1.83.2, `go.opentelemetry.io/otel`, `otel/sdk`, `otel/exporters/otlp/otlptrace` and `otlptracegrpc` v1.45.0 (with `go.opentelemetry.io/proto/otlp` v1.11.0). On 1.33-1.35 this moves `otlptracegrpc` from v1.33.0/v1.34.0 to v1.45.0 and drops the no longer used `github.com/cenkalti/backoff/v4`.
+Current bumps on all versions: `golang.org/x/net` v0.62.0 (with `golang.org/x/crypto` v0.58.0 and `golang.org/x/text` v0.43.0), `google.golang.org/grpc` v1.83.2, `go.opentelemetry.io/otel/exporters/otlp/otlptrace` and `otlptracegrpc` v1.45.0 (with `go.opentelemetry.io/proto/otlp` v1.11.0). On 1.33-1.35 this moves `otlptracegrpc` from v1.33.0/v1.34.0 to v1.45.0 and drops the no longer used `github.com/cenkalti/backoff/v4`.
+
+`go.opentelemetry.io/otel`, `otel/metric`, `otel/sdk` and `otel/trace` are at v1.47.0 to fix CVE-2026-128085 (the attribute value length limit is bypassed by U+FFFD runes). The exporters stay at v1.45.0: `otlptracegrpc` v1.47.0 pulls `grpc-gateway/v2` v2.30.0 and with it `go-openapi/jsonpointer` and `jsonreference` v1.0.0, `swag` v0.28.0 and the contrib instrumentation v0.70.0.
 
 `github.com/klauspost/compress` is pinned to v1.20.2 for the apiserver's etcd decoder to fix CVE-2026-116591.
 
