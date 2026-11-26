@@ -1,10 +1,10 @@
-{{- $commit := "02bc7137aafbc66e84a8bb4e1c34f6df7e0792db" }}
+{{- $tag := "v0.21" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 final: false
 from: {{ index $.Images "builder/src" }}
 git:
-- url: {{ .SOURCE_REPO }}/python-modules/wheels
-  commit: {{ $commit }}
+- url: https://gitlab-ci-token:{{ env "CI_JOB_TOKEN" }}@{{ env "CI_SERVER_HOST" }}/deckhouse/container-base/dist/python-modules/wheels
+  tag: {{ $tag }}
   add: /
   to: /wheels
