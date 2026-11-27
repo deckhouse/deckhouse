@@ -1,0 +1,1081 @@
+diff --git a/server/config.go b/server/config.go
+index d41a865..0803b51 100644
+--- a/server/config.go
++++ b/server/config.go
+@@ -120,6 +120,11 @@ type Config struct {
+ 	// This allows the server to operate with a subset of connectors if some are misconfigured.
+ 	ContinueOnConnectorFailure bool
+ 
++	// ConnectorRetryInterval is how often, with ContinueOnConnectorFailure, the
++	// connectors whose last opening attempt failed are opened again (Deckhouse).
++	// Defaults to 30 seconds.
++	ConnectorRetryInterval time.Duration
++
+ 	// SessionConfig holds session settings. Nil when sessions are disabled.
+ 	SessionConfig *session.Config
+ 
+diff --git a/server/connector_open_test.go b/server/connector_open_test.go
+index f96f34b..39a712b 100644
+--- a/server/connector_open_test.go
++++ b/server/connector_open_test.go
+@@ -16,6 +16,7 @@ import (
+ 
+ 	gosundheit "github.com/AppsFlyer/go-sundheit"
+ 	"github.com/prometheus/client_golang/prometheus"
++	"github.com/prometheus/client_golang/prometheus/testutil"
+ 	"github.com/stretchr/testify/require"
+ 
+ 	"github.com/dexidp/dex/server/signer"
+@@ -117,14 +118,21 @@ func TestServerStartsWithoutOpenConnectors(t *testing.T) {
+ 		Config: []byte(`{"issuer": "` + issuer + `", "clientID": "dex", "clientSecret": "dh-test-secret-0123456789abcdef", "redirectURI": "http://localhost/callback", "discoveryTimeout": "2s"}`),
+ 	}
+ 	var store storage.Storage
++	registry := prometheus.NewRegistry()
+ 	httpServer, server := newTestServerWith(t, []storage.Connector{conn}, func(c *Config) {
+ 		c.ContinueOnConnectorFailure = true
++		c.PrometheusRegistry = registry
+ 		store = c.Storage
+ 	})
+ 	t.Cleanup(httpServer.Close)
+ 
+ 	_, ok := server.connectors.Cached("upstream")
+ 	require.False(t, ok, "the connector of the provider that is down must not be open")
++	require.NoError(t, testutil.GatherAndCompare(registry, strings.NewReader(`
++# HELP dex_connector_open Last completed opening attempt for the current stored connector version (1 for success, 0 for failure).
++# TYPE dex_connector_open gauge
++dex_connector_open{connector_id="upstream",connector_type="oidc"} 0
++`), "dex_connector_open"))
+ 
+ 	for _, path := range []string{"/.well-known/openid-configuration", "/keys"} {
+ 		resp, err := http.Get(httpServer.URL + path)
+@@ -176,9 +184,107 @@ func TestServerStartsWithoutOpenConnectors(t *testing.T) {
+ 	require.NoError(t, err)
+ 	_, ok = server.connectors.Cached("upstream")
+ 	require.True(t, ok, "the connector must open once the provider answers")
++	require.NoError(t, testutil.GatherAndCompare(registry, strings.NewReader(`
++# HELP dex_connector_open Last completed opening attempt for the current stored connector version (1 for success, 0 for failure).
++# TYPE dex_connector_open gauge
++dex_connector_open{connector_id="upstream",connector_type="oidc"} 1
++`), "dex_connector_open"))
+ 
+ 	resp, err = http.Get(login)
+ 	require.NoError(t, err)
+ 	resp.Body.Close()
+ 	require.NotEqual(t, http.StatusBadRequest, resp.StatusCode, "the login must go on to the provider")
+ }
++
++func TestConnectorMetricsRestartUpdateIdle(t *testing.T) {
++	for _, tc := range []struct {
++		name          string
++		connectorType string
++		value         string
++	}{
++		{name: "opened", connectorType: "mockCallback", value: "1"},
++		{name: "failed", connectorType: "unknown", value: "0"},
++	} {
++		t.Run(tc.name, func(t *testing.T) {
++			conn := mockConnector("upstream")
++			conn.Type = tc.connectorType
++			conn.ResourceVersion = "1"
++			registry := prometheus.NewRegistry()
++			var store storage.Storage
++			running, _ := newTestServerWith(t, []storage.Connector{conn}, func(c *Config) {
++				c.ContinueOnConnectorFailure = true
++				// No background pass during the test: TestServerRetriesFailedConnectors
++				// covers it.
++				c.ConnectorRetryInterval = time.Hour
++				c.PrometheusRegistry = registry
++				store = c.Storage
++			})
++			defer running.Close()
++			require.NoError(t, testutil.GatherAndCompare(registry, strings.NewReader(`
++# HELP dex_connector_open Last completed opening attempt for the current stored connector version (1 for success, 0 for failure).
++# TYPE dex_connector_open gauge
++dex_connector_open{connector_id="upstream",connector_type="`+tc.connectorType+`"} `+tc.value+"\n"), "dex_connector_open"))
++
++			require.NoError(t, store.UpdateConnector(t.Context(), conn.ID, func(c storage.Connector) (storage.Connector, error) {
++				c.ResourceVersion = "2"
++				c.Type = "mockCallback"
++				return c, nil
++			}))
++			// Repeated scrapes while idle must not report an opening failure for an untried version.
++			for range 3 {
++				require.NoError(t, testutil.GatherAndCompare(registry, strings.NewReader(""), "dex_connector_open"))
++			}
++
++			// A restart eagerly opens the stored version, without a sign-in request.
++			restartedRegistry := prometheus.NewRegistry()
++			restarted, _ := newTestServerWith(t, nil, func(c *Config) {
++				c.Storage = store
++				c.PrometheusRegistry = restartedRegistry
++			})
++			defer restarted.Close()
++			require.NoError(t, testutil.GatherAndCompare(restartedRegistry, strings.NewReader(`
++# HELP dex_connector_open Last completed opening attempt for the current stored connector version (1 for success, 0 for failure).
++# TYPE dex_connector_open gauge
++dex_connector_open{connector_id="upstream",connector_type="mockCallback"} 1
++`), "dex_connector_open"))
++		})
++	}
++}
++
++// TestServerRetriesFailedConnectors: with DEX_CONTINUE_ON_CONNECTOR_FAILURE a
++// connector that failed to open is opened again in the background, without a
++// request, so every replica reports the connector open once it can be.
++func TestServerRetriesFailedConnectors(t *testing.T) {
++	conn := mockConnector("upstream")
++	conn.Type = "unknown"
++	conn.ResourceVersion = "1"
++	registry := prometheus.NewRegistry()
++	var store storage.Storage
++	httpServer, server := newTestServerWith(t, []storage.Connector{conn}, func(c *Config) {
++		c.ContinueOnConnectorFailure = true
++		c.ConnectorRetryInterval = 10 * time.Millisecond
++		c.PrometheusRegistry = registry
++		store = c.Storage
++	})
++	t.Cleanup(httpServer.Close)
++	require.NoError(t, testutil.GatherAndCompare(registry, strings.NewReader(`
++# HELP dex_connector_open Last completed opening attempt for the current stored connector version (1 for success, 0 for failure).
++# TYPE dex_connector_open gauge
++dex_connector_open{connector_id="upstream",connector_type="unknown"} 0
++`), "dex_connector_open"))
++
++	require.NoError(t, store.UpdateConnector(t.Context(), conn.ID, func(c storage.Connector) (storage.Connector, error) {
++		c.ResourceVersion = "2"
++		c.Type = "mockCallback"
++		return c, nil
++	}))
++	require.Eventually(t, func() bool {
++		_, ok := server.connectors.Cached("upstream")
++		return ok
++	}, 5*time.Second, 10*time.Millisecond, "the connector must open without a request")
++	require.NoError(t, testutil.GatherAndCompare(registry, strings.NewReader(`
++# HELP dex_connector_open Last completed opening attempt for the current stored connector version (1 for success, 0 for failure).
++# TYPE dex_connector_open gauge
++dex_connector_open{connector_id="upstream",connector_type="mockCallback"} 1
++`), "dex_connector_open"))
++}
+diff --git a/server/connectors/connectors.go b/server/connectors/connectors.go
+index 020d73d..6d633f8 100644
+--- a/server/connectors/connectors.go
++++ b/server/connectors/connectors.go
+@@ -4,7 +4,14 @@ import (
+ 	"context"
+ 	"errors"
+ 	"fmt"
++	"log/slog"
++	"maps"
++	"slices"
+ 	"sync"
++	"time"
++
++	"github.com/prometheus/client_golang/prometheus"
++	"golang.org/x/sync/singleflight"
+ 
+ 	"github.com/dexidp/dex/connector"
+ 	"github.com/dexidp/dex/storage"
+@@ -25,6 +32,9 @@ type Connector struct {
+ // does not exist, which a client takes for a refusal.
+ var ErrStorageUnavailable = errors.New("connector storage unavailable")
+ 
++// ErrConnectorUnavailable reports that a stored connector failed to open.
++var ErrConnectorUnavailable = errors.New("connector unavailable")
++
+ // ResolveFunc builds the underlying connector implementation for a stored
+ // connector. The server injects it so that connector construction (the local
+ // password DB and the connector-config registry) stays in the server package.
+@@ -36,14 +46,72 @@ type ResolveFunc func(storage.Connector) (connector.Connector, error)
+ type Cache struct {
+ 	mu      sync.Mutex
+ 	conns   map[string]Connector
++	failed  map[string]string
+ 	storage storage.Storage
+ 	resolve ResolveFunc
++	opening singleflight.Group
++	listing singleflight.Group
++}
++
++var connectorOpenDesc = prometheus.NewDesc(
++	"dex_connector_open",
++	"Last completed opening attempt for the current stored connector version (1 for success, 0 for failure).",
++	[]string{"connector_id", "connector_type"},
++	nil,
++)
++
++var connectorCollectionDesc = prometheus.NewDesc(
++	"dex_connector_metrics_collection_success",
++	"Whether the configured connectors were successfully listed for this scrape.",
++	nil,
++	nil,
++)
++
++// Describe implements prometheus.Collector.
++func (c *Cache) Describe(ch chan<- *prometheus.Desc) {
++	ch <- connectorOpenDesc
++	ch <- connectorCollectionDesc
++}
++
++// Collect reports completed opening attempts for the current stored versions.
++// Untried versions and deleted connectors have no initialization result.
++func (c *Cache) Collect(ch chan<- prometheus.Metric) {
++	// Collect has no caller context. Concurrent scrapes share one bounded list.
++	result, err, _ := c.listing.Do("connectors", func() (any, error) {
++		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
++		defer cancel()
++		// Not behind the requests of the users: a list failed for want of a slot
++		// would report a failed collection exactly while Dex throttles itself.
++		return c.storage.ListConnectors(storage.WithoutRequestLimit(ctx))
++	})
++	if err != nil {
++		ch <- prometheus.MustNewConstMetric(connectorCollectionDesc, prometheus.GaugeValue, 0)
++		return
++	}
++	configured := result.([]storage.Connector)
++	ch <- prometheus.MustNewConstMetric(connectorCollectionDesc, prometheus.GaugeValue, 1)
++	for _, conn := range configured {
++		c.mu.Lock()
++		cached, ok := c.conns[conn.ID]
++		failedVersion, failed := c.failed[conn.ID]
++		c.mu.Unlock()
++		opened := 0.0
++		switch {
++		case failed && failedVersion == conn.ResourceVersion:
++		case ok && cached.ResourceVersion == conn.ResourceVersion:
++			opened = 1
++		default:
++			continue
++		}
++		ch <- prometheus.MustNewConstMetric(connectorOpenDesc, prometheus.GaugeValue, opened, conn.ID, conn.Type)
++	}
+ }
+ 
+ // NewCache returns an empty cache backed by the given storage and resolver.
+ func NewCache(storage storage.Storage, resolve ResolveFunc) *Cache {
+ 	return &Cache{
+ 		conns:   make(map[string]Connector),
++		failed:  make(map[string]string),
+ 		storage: storage,
+ 		resolve: resolve,
+ 	}
+@@ -53,7 +121,10 @@ func NewCache(storage storage.Storage, resolve ResolveFunc) *Cache {
+ // cache, replacing any existing entry for the same ID.
+ func (c *Cache) Open(conn storage.Connector) (Connector, error) {
+ 	impl, err := c.resolve(conn)
++	c.mu.Lock()
++	defer c.mu.Unlock()
+ 	if err != nil {
++		c.failed[conn.ID] = conn.ResourceVersion
+ 		return Connector{}, fmt.Errorf("failed to open connector: %v", err)
+ 	}
+ 
+@@ -64,9 +135,10 @@ func (c *Cache) Open(conn storage.Connector) (Connector, error) {
+ 		GrantTypes:      conn.GrantTypes,
+ 	}
+ 
+-	c.mu.Lock()
+ 	c.conns[conn.ID] = opened
+-	c.mu.Unlock()
++	if c.failed[conn.ID] == conn.ResourceVersion {
++		delete(c.failed, conn.ID)
++	}
+ 
+ 	return opened, nil
+ }
+@@ -77,6 +149,7 @@ func (c *Cache) Open(conn storage.Connector) (Connector, error) {
+ func (c *Cache) Set(id string, conn Connector) {
+ 	c.mu.Lock()
+ 	c.conns[id] = conn
++	delete(c.failed, id)
+ 	c.mu.Unlock()
+ }
+ 
+@@ -99,6 +172,7 @@ func (c *Cache) Len() int {
+ func (c *Cache) Close(id string) {
+ 	c.mu.Lock()
+ 	delete(c.conns, id)
++	delete(c.failed, id)
+ 	c.mu.Unlock()
+ }
+ 
+@@ -118,9 +192,93 @@ func (c *Cache) Get(ctx context.Context, id string) (Connector, error) {
+ 	c.mu.Unlock()
+ 
+ 	if !ok || storageConnector.ResourceVersion != conn.ResourceVersion {
+-		// Not cached, or updated in storage since we last opened it.
+-		return c.Open(storageConnector)
++		// Share one open attempt for this stored version. Discovery runs outside
++		// the cache mutex, so other connectors remain available while it waits.
++		key := id + "\x00" + storageConnector.ResourceVersion
++		result := c.opening.DoChan(key, func() (any, error) {
++			if cached, ok := c.Cached(id); ok && cached.ResourceVersion == storageConnector.ResourceVersion {
++				return cached, nil
++			}
++			opened, err := c.Open(storageConnector)
++			if err != nil {
++				return Connector{}, fmt.Errorf("%w: %w", ErrConnectorUnavailable, err)
++			}
++			return opened, nil
++		})
++		select {
++		case <-ctx.Done():
++			// The attempt goes on for the other waiters. This request no longer
++			// waits for it: the connector is not known to be missing, so the
++			// caller answers that it is unavailable, not that it does not exist.
++			return Connector{}, fmt.Errorf("%w: waiting for the connector to open: %w", ErrConnectorUnavailable, ctx.Err())
++		case res := <-result:
++			if res.Err != nil {
++				return Connector{}, res.Err
++			}
++			return res.Val.(Connector), nil
++		}
+ 	}
+ 
+ 	return conn, nil
+ }
++
++// RetryFailed opens again, every interval until ctx ends, the connectors whose
++// last opening attempt failed (Deckhouse). Without it a connector is opened
++// again only when a request uses it, on the pod that serves the request, so
++// the other pods report the failure until they serve such a request or
++// restart. It reuses Get: an attempt is shared with the requests that wait for
++// the same version, and a changed version is opened as it is now stored.
++func (c *Cache) RetryFailed(ctx context.Context, interval time.Duration, logger *slog.Logger) {
++	// A pass can take a while (an OIDC issuer that does not answer holds an
++	// attempt for its discoveryTimeout), so the next one waits a full interval
++	// after it.
++	timer := time.NewTimer(interval)
++	defer timer.Stop()
++	for {
++		select {
++		case <-ctx.Done():
++			return
++		case <-timer.C:
++		}
++		c.retryFailed(ctx, logger)
++		timer.Reset(interval)
++	}
++}
++
++func (c *Cache) retryFailed(ctx context.Context, logger *slog.Logger) {
++	c.mu.Lock()
++	failed := maps.Clone(c.failed)
++	c.mu.Unlock()
++
++	for _, id := range slices.Sorted(maps.Keys(failed)) {
++		if ctx.Err() != nil {
++			return
++		}
++		conn, err := c.Get(ctx, id)
++		switch {
++		case err == nil:
++			// Get opened the stored version or found it opened by a request. A
++			// failure of an earlier version stays recorded when a newer one
++			// opens; it says nothing any more.
++			c.forgetFailure(id, failed[id])
++			logger.InfoContext(ctx, "opened connector after a failed attempt", "connector_id", id, "connector_type", conn.Type)
++		case errors.Is(err, storage.ErrNotFound):
++			// The connector is gone from storage: nothing to open, and nothing
++			// to report.
++			c.Close(id)
++		default:
++			// The startup or the request that failed first has logged the reason.
++			logger.DebugContext(ctx, "connector still fails to open", "connector_id", id, "err", err)
++		}
++	}
++}
++
++// forgetFailure drops the failure of version, unless a later attempt has
++// recorded another one meanwhile.
++func (c *Cache) forgetFailure(id, version string) {
++	c.mu.Lock()
++	defer c.mu.Unlock()
++	if failedVersion, ok := c.failed[id]; ok && failedVersion == version {
++		delete(c.failed, id)
++	}
++}
+diff --git a/server/connectors/connectors_test.go b/server/connectors/connectors_test.go
+index c035684..fa29f30 100644
+--- a/server/connectors/connectors_test.go
++++ b/server/connectors/connectors_test.go
+@@ -4,8 +4,18 @@ import (
+ 	"context"
+ 	"errors"
+ 	"log/slog"
++	"net/http"
++	"net/http/httptest"
++	"strings"
++	"sync"
++	"sync/atomic"
+ 	"testing"
++	"testing/synctest"
++	"time"
+ 
++	"github.com/prometheus/client_golang/prometheus"
++	"github.com/prometheus/client_golang/prometheus/promhttp"
++	"github.com/prometheus/client_golang/prometheus/testutil"
+ 	"github.com/stretchr/testify/require"
+ 
+ 	"github.com/dexidp/dex/connector"
+@@ -17,6 +27,290 @@ import (
+ // the version it was resolved from, so tests can tell reopens apart.
+ type stubConn struct{ version string }
+ 
++func TestConnectorOpenMetric(t *testing.T) {
++	ctx := t.Context()
++	cache, store, _ := newTestCache(t)
++	registry := prometheus.NewRegistry()
++	registry.MustRegister(cache)
++	check := func(value string) {
++		t.Helper()
++		require.NoError(t, testutil.GatherAndCompare(registry, strings.NewReader(`
++# HELP dex_connector_open Last completed opening attempt for the current stored connector version (1 for success, 0 for failure).
++# TYPE dex_connector_open gauge
++dex_connector_open{connector_id="c1",connector_type="mock"} `+value+"\n"), "dex_connector_open"))
++	}
++	require.NoError(t, store.CreateConnector(ctx, storage.Connector{ID: "c1", Type: "mock", ResourceVersion: "1"}))
++	require.NoError(t, testutil.GatherAndCompare(registry, strings.NewReader(""), "dex_connector_open"))
++	_, err := cache.Get(ctx, "c1")
++	require.NoError(t, err)
++	check("1")
++	require.NoError(t, store.UpdateConnector(ctx, "c1", func(c storage.Connector) (storage.Connector, error) {
++		c.ResourceVersion = "2"
++		return c, nil
++	}))
++	require.NoError(t, testutil.GatherAndCompare(registry, strings.NewReader(""), "dex_connector_open"))
++	resolve := cache.resolve
++	cache.resolve = func(storage.Connector) (connector.Connector, error) {
++		return nil, errors.New("provider unavailable")
++	}
++	_, err = cache.Get(ctx, "c1")
++	require.ErrorIs(t, err, ErrConnectorUnavailable)
++	check("0")
++	cache.resolve = resolve
++	_, err = cache.Get(ctx, "c1")
++	require.NoError(t, err)
++	check("1")
++	cache.Close("c1")
++	require.NoError(t, testutil.GatherAndCompare(registry, strings.NewReader(""), "dex_connector_open"))
++	require.NoError(t, store.DeleteConnector(ctx, "c1"))
++	require.NoError(t, testutil.GatherAndCompare(registry, strings.NewReader(""), "dex_connector_open"))
++}
++
++type connectorListFailure struct{ storage.Storage }
++
++func TestConnectorMetricsHARecoveryRetriesEveryReplica(t *testing.T) {
++	synctest.Test(t, func(t *testing.T) {
++		ctx := t.Context()
++		store := memory.New(slog.New(slog.DiscardHandler))
++		stored := storage.Connector{ID: "c1", Type: "mock", ResourceVersion: "1"}
++		require.NoError(t, store.CreateConnector(ctx, stored))
++		var available atomic.Bool
++		resolve := func(conn storage.Connector) (connector.Connector, error) {
++			if !available.Load() {
++				return nil, errors.New("provider unavailable")
++			}
++			return stubConn{version: conn.ResourceVersion}, nil
++		}
++		one, two := NewCache(store, resolve), NewCache(store, resolve)
++		check := func(cache *Cache, value string) {
++			t.Helper()
++			require.NoError(t, testutil.CollectAndCompare(cache, strings.NewReader(`
++# HELP dex_connector_open Last completed opening attempt for the current stored connector version (1 for success, 0 for failure).
++# TYPE dex_connector_open gauge
++dex_connector_open{connector_id="c1",connector_type="mock"} `+value+"\n"), "dex_connector_open"))
++		}
++		retryCtx, cancel := context.WithCancel(ctx)
++		var retries sync.WaitGroup
++		for _, cache := range []*Cache{one, two} {
++			// Both replicas fail to open the connector at startup.
++			_, err := cache.Open(stored)
++			require.Error(t, err)
++			check(cache, "0")
++			retries.Go(func() { cache.RetryFailed(retryCtx, 30*time.Second, slog.New(slog.DiscardHandler)) })
++		}
++
++		// A pass while the provider is still down keeps the failure.
++		time.Sleep(30 * time.Second)
++		synctest.Wait()
++		check(one, "0")
++		check(two, "0")
++
++		// The provider recovers. One replica serves a login through the connector;
++		// the idle one opens it on its next pass, without a request or a restart.
++		available.Store(true)
++		_, err := one.Get(ctx, "c1")
++		require.NoError(t, err)
++		check(one, "1")
++		check(two, "0")
++		time.Sleep(30 * time.Second)
++		synctest.Wait()
++		check(one, "1")
++		check(two, "1")
++
++		cancel()
++		retries.Wait()
++	})
++}
++
++func TestRetryFailed(t *testing.T) {
++	for _, tc := range []struct {
++		name string
++		// change is applied to the storage after the failed attempt.
++		change      func(t *testing.T, store storage.Storage)
++		wantCached  string
++		wantFailure bool
++	}{
++		{
++			name:        "still failing",
++			change:      func(*testing.T, storage.Storage) {},
++			wantFailure: true,
++		},
++		{
++			name: "deleted from storage",
++			change: func(t *testing.T, store storage.Storage) {
++				require.NoError(t, store.DeleteConnector(t.Context(), "c1"))
++			},
++		},
++		{
++			name: "a new version opens",
++			change: func(t *testing.T, store storage.Storage) {
++				require.NoError(t, store.UpdateConnector(t.Context(), "c1", func(c storage.Connector) (storage.Connector, error) {
++					c.ResourceVersion = "2"
++					return c, nil
++				}))
++			},
++			wantCached: "2",
++		},
++	} {
++		t.Run(tc.name, func(t *testing.T) {
++			synctest.Test(t, func(t *testing.T) {
++				ctx := t.Context()
++				store := memory.New(slog.New(slog.DiscardHandler))
++				stored := storage.Connector{ID: "c1", Type: "mock", ResourceVersion: "1"}
++				require.NoError(t, store.CreateConnector(ctx, stored))
++				cache := NewCache(store, func(conn storage.Connector) (connector.Connector, error) {
++					if conn.ResourceVersion == "1" {
++						return nil, errors.New("bad configuration")
++					}
++					return stubConn{version: conn.ResourceVersion}, nil
++				})
++				_, err := cache.Open(stored)
++				require.Error(t, err)
++				tc.change(t, store)
++
++				retryCtx, cancel := context.WithCancel(ctx)
++				done := make(chan struct{})
++				go func() {
++					defer close(done)
++					cache.RetryFailed(retryCtx, time.Minute, slog.New(slog.DiscardHandler))
++				}()
++				time.Sleep(time.Minute)
++				synctest.Wait()
++				cancel()
++				<-done
++
++				cached, ok := cache.Cached("c1")
++				if tc.wantCached == "" {
++					require.False(t, ok)
++				} else {
++					require.True(t, ok)
++					require.Equal(t, tc.wantCached, cached.ResourceVersion)
++				}
++				cache.mu.Lock()
++				_, failed := cache.failed["c1"]
++				cache.mu.Unlock()
++				require.Equal(t, tc.wantFailure, failed)
++			})
++		})
++	}
++}
++
++// A failure of an earlier version is dropped once a later one is open, so the
++// background pass does not open the connector again and again.
++func TestRetryFailedForgetsStaleFailure(t *testing.T) {
++	ctx := t.Context()
++	cache, store, calls := newTestCache(t)
++	require.NoError(t, store.CreateConnector(ctx, storage.Connector{ID: "c1", Type: "mock", ResourceVersion: "2"}))
++	_, err := cache.Get(ctx, "c1")
++	require.NoError(t, err)
++	cache.mu.Lock()
++	cache.failed["c1"] = "1"
++	cache.mu.Unlock()
++
++	cache.retryFailed(ctx, slog.New(slog.DiscardHandler))
++
++	cache.mu.Lock()
++	_, failed := cache.failed["c1"]
++	cache.mu.Unlock()
++	require.False(t, failed)
++	require.Equal(t, 1, *calls)
++}
++
++func (s connectorListFailure) ListConnectors(context.Context) ([]storage.Connector, error) {
++	return nil, errors.New("storage unavailable")
++}
++
++func TestConnectorMetricStorageFailure(t *testing.T) {
++	cache, store, _ := newTestCache(t)
++	cache.storage = connectorListFailure{Storage: store}
++	registry := prometheus.NewRegistry()
++	registry.MustRegister(cache)
++	other := prometheus.NewGauge(prometheus.GaugeOpts{Name: "other_metric", Help: "Other metrics stay available."})
++	other.Set(7)
++	registry.MustRegister(other)
++	response := httptest.NewRecorder()
++	promhttp.HandlerFor(registry, promhttp.HandlerOpts{}).ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/metrics", nil))
++	require.Equal(t, http.StatusOK, response.Code, response.Body.String())
++	require.Contains(t, response.Body.String(), "other_metric 7")
++	require.Contains(t, response.Body.String(), "dex_connector_metrics_collection_success 0")
++}
++
++// unlimitedConnectorList refuses a list that would wait for the limit of
++// requests in flight of the storage.
++type unlimitedConnectorList struct{ storage.Storage }
++
++func (s unlimitedConnectorList) ListConnectors(ctx context.Context) ([]storage.Connector, error) {
++	if !storage.RequestLimitSkipped(ctx) {
++		return nil, errors.New("would wait for a slot")
++	}
++	return s.Storage.ListConnectors(ctx)
++}
++
++// The scrape does not wait behind the requests of the users (Deckhouse): a
++// list failed for want of a slot would report a failed collection exactly
++// while Dex throttles its requests.
++func TestConnectorMetricsSkipTheRequestLimit(t *testing.T) {
++	cache, store, _ := newTestCache(t)
++	cache.storage = unlimitedConnectorList{Storage: store}
++	registry := prometheus.NewRegistry()
++	registry.MustRegister(cache)
++	response := httptest.NewRecorder()
++	promhttp.HandlerFor(registry, promhttp.HandlerOpts{}).ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/metrics", nil))
++	require.Equal(t, http.StatusOK, response.Code, response.Body.String())
++	require.Contains(t, response.Body.String(), "dex_connector_metrics_collection_success 1")
++}
++
++type blockingConnectorList struct {
++	storage.Storage
++	active atomic.Int32
++	calls  atomic.Int32
++}
++
++func (s *blockingConnectorList) ListConnectors(ctx context.Context) ([]storage.Connector, error) {
++	s.calls.Add(1)
++	s.active.Add(1)
++	defer s.active.Add(-1)
++	<-ctx.Done()
++	return nil, ctx.Err()
++}
++
++func TestConnectorMetricsBoundConcurrentScrapes(t *testing.T) {
++	synctest.Test(t, func(t *testing.T) {
++		cache, store, _ := newTestCache(t)
++		blocked := &blockingConnectorList{Storage: store}
++		cache.storage = blocked
++		registry := prometheus.NewRegistry()
++		registry.MustRegister(cache)
++		handler := promhttp.HandlerFor(registry, promhttp.HandlerOpts{})
++		var scrapes sync.WaitGroup
++		const requests = 20
++		responses := make(chan *httptest.ResponseRecorder, requests)
++		ctx, cancel := context.WithCancel(t.Context())
++		defer cancel()
++		start := time.Now()
++		for range requests {
++			scrapes.Go(func() {
++				response := httptest.NewRecorder()
++				req := httptest.NewRequestWithContext(ctx, http.MethodGet, "/metrics", nil)
++				handler.ServeHTTP(response, req)
++				responses <- response
++			})
++		}
++		synctest.Wait()
++		require.EqualValues(t, 1, blocked.active.Load())
++		cancel()
++		scrapes.Wait()
++		require.Equal(t, 5*time.Second, time.Since(start))
++		require.EqualValues(t, 1, blocked.calls.Load())
++		require.Zero(t, blocked.active.Load())
++		for range requests {
++			response := <-responses
++			require.Equal(t, http.StatusOK, response.Code)
++			require.Contains(t, response.Body.String(), "dex_connector_metrics_collection_success 0")
++		}
++	})
++}
++
+ func newTestCache(t *testing.T) (*Cache, storage.Storage, *int) {
+ 	t.Helper()
+ 	store := memory.New(slog.New(slog.DiscardHandler))
+@@ -82,6 +376,176 @@ func TestGetNotFound(t *testing.T) {
+ 	require.Equal(t, 0, *calls)
+ }
+ 
++func TestGetDeduplicatesOpen(t *testing.T) {
++	for _, tt := range []struct {
++		name          string
++		cachedVersion string
++		fails         bool
++	}{
++		{name: "missing"},
++		{name: "changed", cachedVersion: "1"},
++		{name: "missing unavailable", fails: true},
++		{name: "changed unavailable", cachedVersion: "1", fails: true},
++	} {
++		t.Run(tt.name, func(t *testing.T) {
++			synctest.Test(t, func(t *testing.T) {
++				ctx := t.Context()
++				store := memory.New(slog.New(slog.DiscardHandler))
++				require.NoError(t, store.CreateConnector(ctx, storage.Connector{ID: "c1", ResourceVersion: "2"}))
++				release := make(chan struct{})
++				var calls atomic.Int32
++				var openErr error
++				if tt.fails {
++					openErr = errors.New("issuer unavailable")
++				}
++				cache := NewCache(store, func(c storage.Connector) (connector.Connector, error) {
++					calls.Add(1)
++					<-release
++					return stubConn{version: c.ResourceVersion}, openErr
++				})
++				if tt.cachedVersion != "" {
++					cache.Set("c1", Connector{ResourceVersion: tt.cachedVersion})
++				}
++
++				type result struct {
++					conn Connector
++					err  error
++				}
++				const requests = 16
++				results := make(chan result, requests)
++				for range requests {
++					go func() {
++						conn, err := cache.Get(ctx, "c1")
++						results <- result{conn: conn, err: err}
++					}()
++				}
++				synctest.Wait()
++				concurrentCalls := calls.Load()
++				close(release)
++				for range requests {
++					got := <-results
++					if tt.fails {
++						require.ErrorIs(t, got.err, ErrConnectorUnavailable)
++						continue
++					}
++					require.NoError(t, got.err)
++					require.Equal(t, "2", got.conn.ResourceVersion)
++				}
++				require.EqualValues(t, 1, concurrentCalls, "concurrent requests must share one open attempt")
++
++				// A failed attempt is retried by the next request; a successful one is cached.
++				openErr = nil
++				got, err := cache.Get(ctx, "c1")
++				require.NoError(t, err)
++				require.Equal(t, "2", got.ResourceVersion)
++				wantCalls := int32(1)
++				if tt.fails {
++					wantCalls = 2
++				}
++				require.Equal(t, wantCalls, calls.Load())
++			})
++		})
++	}
++}
++
++func TestGetOpeningDoesNotBlockOtherConnectors(t *testing.T) {
++	synctest.Test(t, func(t *testing.T) {
++		ctx := t.Context()
++		store := memory.New(slog.New(slog.DiscardHandler))
++		for _, id := range []string{"slow", "fast"} {
++			require.NoError(t, store.CreateConnector(ctx, storage.Connector{ID: id, ResourceVersion: "1"}))
++		}
++		release := make(chan struct{})
++		cache := NewCache(store, func(c storage.Connector) (connector.Connector, error) {
++			if c.ID == "slow" {
++				<-release
++			}
++			return stubConn{version: c.ResourceVersion}, nil
++		})
++		done := make(chan error, 1)
++		go func() {
++			_, err := cache.Get(ctx, "slow")
++			done <- err
++		}()
++		synctest.Wait()
++		_, err := cache.Get(ctx, "fast")
++		close(release)
++		require.NoError(t, err)
++		require.NoError(t, <-done)
++	})
++}
++
++func TestGetChangedVersionWhileOpening(t *testing.T) {
++	synctest.Test(t, func(t *testing.T) {
++		ctx := t.Context()
++		store := memory.New(slog.New(slog.DiscardHandler))
++		require.NoError(t, store.CreateConnector(ctx, storage.Connector{ID: "c1", ResourceVersion: "1"}))
++		release := make(chan struct{})
++		cache := NewCache(store, func(c storage.Connector) (connector.Connector, error) {
++			if c.ResourceVersion == "1" {
++				<-release
++				return nil, errors.New("issuer unavailable")
++			}
++			return stubConn{version: c.ResourceVersion}, nil
++		})
++		done := make(chan error, 1)
++		go func() {
++			_, err := cache.Get(ctx, "c1")
++			done <- err
++		}()
++		synctest.Wait()
++		require.NoError(t, store.UpdateConnector(ctx, "c1", func(c storage.Connector) (storage.Connector, error) {
++			c.ResourceVersion = "2"
++			return c, nil
++		}))
++		got, err := cache.Get(ctx, "c1")
++		close(release)
++		require.NoError(t, err)
++		require.Equal(t, "2", got.ResourceVersion)
++		require.ErrorIs(t, <-done, ErrConnectorUnavailable)
++	})
++}
++
++func TestGetCanceledWaiterDoesNotCancelOpen(t *testing.T) {
++	synctest.Test(t, func(t *testing.T) {
++		ctx := t.Context()
++		store := memory.New(slog.New(slog.DiscardHandler))
++		require.NoError(t, store.CreateConnector(ctx, storage.Connector{ID: "c1", ResourceVersion: "1"}))
++		release := make(chan struct{})
++		var calls atomic.Int32
++		cache := NewCache(store, func(c storage.Connector) (connector.Connector, error) {
++			calls.Add(1)
++			<-release
++			return stubConn{version: c.ResourceVersion}, nil
++		})
++		requestCtx, cancel := context.WithCancel(ctx)
++		canceled := make(chan error, 1)
++		go func() {
++			_, err := cache.Get(requestCtx, "c1")
++			canceled <- err
++		}()
++		synctest.Wait()
++		done := make(chan error, 1)
++		go func() {
++			_, err := cache.Get(ctx, "c1")
++			done <- err
++		}()
++		synctest.Wait()
++		cancel()
++		// The connector is not known to be missing: the caller answers that it is
++		// unavailable, not that it does not exist.
++		canceledErr := <-canceled
++		require.ErrorIs(t, canceledErr, context.Canceled)
++		require.ErrorIs(t, canceledErr, ErrConnectorUnavailable)
++		close(release)
++		require.NoError(t, <-done)
++		require.EqualValues(t, 1, calls.Load())
++		_, err := cache.Get(ctx, "c1")
++		require.NoError(t, err)
++		require.EqualValues(t, 1, calls.Load())
++	})
++}
++
+ func TestOpenResolveErrorNotCached(t *testing.T) {
+ 	store := memory.New(slog.New(slog.DiscardHandler))
+ 	cache := NewCache(store, func(storage.Connector) (connector.Connector, error) {
+diff --git a/server/grants/grants.go b/server/grants/grants.go
+index 89e6dd4..d587e68 100644
+--- a/server/grants/grants.go
++++ b/server/grants/grants.go
+@@ -370,6 +370,9 @@ func (h *Handler) resolveConnector(ctx context.Context, connID string, client st
+ 	conn, err := h.Connectors.Get(ctx, connID)
+ 	if err != nil {
+ 		h.Logger.ErrorContext(ctx, "failed to get connector", "connector_id", connID, "err", err)
++		if errors.Is(err, connectors.ErrConnectorUnavailable) {
++			return connectors.Connector{}, &oauth2.Error{Type: oauth2.TemporarilyUnavailable, Status: http.StatusServiceUnavailable}
++		}
+ 		if errors.Is(err, connectors.ErrStorageUnavailable) {
+ 			return connectors.Connector{}, &oauth2.Error{Type: oauth2.ServerError, Status: http.StatusInternalServerError}
+ 		}
+diff --git a/server/server.go b/server/server.go
+index b8b79ab..acb9d83 100644
+--- a/server/server.go
++++ b/server/server.go
+@@ -156,6 +156,15 @@ func newServer(ctx context.Context, c Config) (*Server, error) {
+ 	if err := s.openConnectors(ctx, c); err != nil {
+ 		return nil, err
+ 	}
++	if c.PrometheusRegistry != nil {
++		c.PrometheusRegistry.MustRegister(s.connectors)
++	}
++	// Deckhouse: a connector that failed to open is opened again on every pod,
++	// not only on the one that serves a login through it, so dex_connector_open
++	// of an idle pod recovers with the provider.
++	if c.ContinueOnConnectorFailure {
++		go s.connectors.RetryFailed(ctx, value(c.ConnectorRetryInterval, defaultConnectorRetryInterval), s.logger)
++	}
+ 
+ 	if featureflags.SessionsEnabled.Enabled() {
+ 		s.logger.InfoContext(ctx, "sessions feature flag is enabled")
+@@ -189,6 +198,10 @@ func newServer(ctx context.Context, c Config) (*Server, error) {
+ 	return s, nil
+ }
+ 
++// defaultConnectorRetryInterval is how often the connectors that failed to open
++// are opened again. The D8DexConnectorNotInitialized alert waits 5 minutes.
++const defaultConnectorRetryInterval = 30 * time.Second
++
+ // openConnectors opens every connector in storage into the cache. Nothing is
+ // served without at least one, so an empty set is an error; so is a single
+ // failure, unless the server is configured to start on a subset.
+diff --git a/server/server_grant_refresh_test.go b/server/server_grant_refresh_test.go
+index fc859c3..b1c5699 100644
+--- a/server/server_grant_refresh_test.go
++++ b/server/server_grant_refresh_test.go
+@@ -87,6 +87,37 @@ func mockRefreshTokenTestStorage(t *testing.T, s storage.Storage, useObsolete bo
+ 	require.NoError(t, err)
+ }
+ 
++func TestRefreshWithUnopenedConnector(t *testing.T) {
++	httpServer, s := newTestServer(t, nil)
++	defer httpServer.Close()
++	mockRefreshTokenTestStorage(t, s.storage, false)
++	ctx := t.Context()
++	tokenData, err := internal.Marshal(&internal.RefreshToken{RefreshId: "test", Token: "bar"})
++	require.NoError(t, err)
++
++	refresh := func() *httptest.ResponseRecorder {
++		form := url.Values{"grant_type": {"refresh_token"}, "refresh_token": {tokenData}}
++		req := httptest.NewRequest(http.MethodPost, "/token", strings.NewReader(form.Encode()))
++		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
++		req.SetBasicAuth("test", "barfoo")
++		rr := httptest.NewRecorder()
++		s.ServeHTTP(rr, req)
++		return rr
++	}
++
++	require.NoError(t, s.storage.UpdateConnector(ctx, "test", func(c storage.Connector) (storage.Connector, error) {
++		c.Type = "unknown"
++		return c, nil
++	}))
++	s.connectors.Close("test")
++	requireOAuth2Error(t, refresh(), http.StatusServiceUnavailable, "temporarily_unavailable")
++	_, err = s.storage.GetRefresh(ctx, "test")
++	require.NoError(t, err)
++
++	require.NoError(t, s.storage.DeleteConnector(ctx, "test"))
++	requireOAuth2Error(t, refresh(), http.StatusBadRequest, "invalid_request")
++}
++
+ func TestRefreshTokenExpirationScenarios(t *testing.T) {
+ 	t0 := time.Now()
+ 	tests := []struct {
+diff --git a/storage/kubernetes/client_test.go b/storage/kubernetes/client_test.go
+index 8ff790c..42bbd1f 100644
+--- a/storage/kubernetes/client_test.go
++++ b/storage/kubernetes/client_test.go
+@@ -6,10 +6,13 @@ import (
+ 	"hash/fnv"
+ 	"log/slog"
+ 	"net/http"
++	"net/http/httptest"
+ 	"os"
+ 	"path/filepath"
+ 	"sync"
++	"sync/atomic"
+ 	"testing"
++	"testing/synctest"
+ 	"time"
+ 
+ 	"github.com/stretchr/testify/assert"
+@@ -321,3 +324,75 @@ func main() {
+ 	fmt.Println(token)
+ }
+ */
++
++type connectorBlockingTransport struct{ active atomic.Int32 }
++
++func (tr *connectorBlockingTransport) RoundTrip(req *http.Request) (*http.Response, error) {
++	tr.active.Add(1)
++	defer tr.active.Add(-1)
++	<-req.Context().Done()
++	return nil, req.Context().Err()
++}
++
++func TestListConnectorsRespectsContext(t *testing.T) {
++	synctest.Test(t, func(t *testing.T) {
++		tr := &connectorBlockingTransport{}
++		cli := &client{
++			client:     &http.Client{Transport: tr, Timeout: 15 * time.Second},
++			baseURL:    "http://api.example.com",
++			namespace:  "dex",
++			apiVersion: "dex.coreos.com/v1",
++		}
++		for range 20 {
++			ctx, cancel := context.WithTimeout(t.Context(), 20*time.Millisecond)
++			start := time.Now()
++			_, err := cli.ListConnectors(ctx)
++			cancel()
++			require.Error(t, err)
++			require.LessOrEqual(t, time.Since(start), 20*time.Millisecond)
++			require.Zero(t, tr.active.Load(), "canceled requests must finish their transport calls")
++		}
++	})
++}
++
++func TestListConnectorsCancelsHTTPRequest(t *testing.T) {
++	started := make(chan struct{})
++	finished := make(chan struct{})
++	api := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, req *http.Request) {
++		close(started)
++		<-req.Context().Done()
++		close(finished)
++	}))
++	defer api.Close()
++	cli := &client{
++		client:     api.Client(),
++		baseURL:    api.URL,
++		namespace:  "dex",
++		apiVersion: "dex.coreos.com/v1",
++	}
++	cli.client.Timeout = 15 * time.Second
++	ctx, cancel := context.WithCancel(t.Context())
++	defer cancel()
++	done := make(chan error, 1)
++	go func() {
++		_, err := cli.ListConnectors(ctx)
++		done <- err
++	}()
++	select {
++	case <-started:
++	case <-time.After(5 * time.Second):
++		t.Fatal("the request did not reach the test API")
++	}
++	cancel()
++	select {
++	case err := <-done:
++		require.ErrorIs(t, err, context.Canceled)
++	case <-time.After(5 * time.Second):
++		t.Fatal("ListConnectors did not stop after cancellation")
++	}
++	select {
++	case <-finished:
++	case <-time.After(5 * time.Second):
++		t.Fatal("the HTTP handler did not observe cancellation")
++	}
++}
+diff --git a/storage/kubernetes/storage.go b/storage/kubernetes/storage.go
+index 7aabfb1..9bdc538 100644
+--- a/storage/kubernetes/storage.go
++++ b/storage/kubernetes/storage.go
+@@ -490,7 +490,7 @@ func (cli *client) ListPasswords(ctx context.Context) (passwords []storage.Passw
+ func (cli *client) ListConnectors(ctx context.Context) (connectors []storage.Connector, err error) {
+ 	var connectorList ConnectorList
+ 	if err = cli.list(ctx, resourceConnector, &connectorList); err != nil {
+-		return connectors, fmt.Errorf("failed to list connectors: %v", err)
++		return nil, fmt.Errorf("failed to list connectors: %w", err)
+ 	}
+ 
+ 	connectors = make([]storage.Connector, len(connectorList.Connectors))

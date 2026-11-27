@@ -19,12 +19,16 @@ package controller
 import (
 	"context"
 	"errors"
+	"slices"
 	"strings"
 	"testing"
 
+	"github.com/prometheus/client_golang/prometheus"
+	dto "github.com/prometheus/client_model/go"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/tools/events"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
@@ -76,7 +80,7 @@ func TestGetUnmasked(t *testing.T) {
 
 			api := &countingReader{Reader: newSensitiveClient(sensitiveUser(tt.api))}
 			obj := Object(UserGVK)
-			err := GetUnmasked(t.Context(), newSensitiveClient(sensitiveUser(tt.cached)), api, key, obj)
+			err := GetUnmasked(t.Context(), newSensitiveClient(sensitiveUser(tt.cached)), api, nil, key, obj)
 			if api.gets != tt.wantReads {
 				t.Errorf("reads past the cache = %d, want %d", api.gets, tt.wantReads)
 			}
@@ -96,7 +100,82 @@ func TestGetUnmasked(t *testing.T) {
 	}
 }
 
-func TestHasMaskedSensitiveField(t *testing.T) {
+// A value the API server masks too is retried by the reconcile without any other change, so every
+// such read is counted and recorded on the object.
+func TestGetUnmaskedReportsMaskedValue(t *testing.T) {
+	for _, tt := range []struct {
+		name   string
+		obj    *unstructured.Unstructured
+		gvk    schema.GroupVersionKind
+		events []string
+	}{
+		{
+			name:   "masked",
+			obj:    sensitiveUser(MaskedValue),
+			gvk:    UserGVK,
+			events: []string{"Warning SensitiveFieldMasked spec.password reads as <omitted>: user-authn-controller is not allowed to read the users/sensitive subresource and retries until it can"},
+		},
+		{name: "unmasked", obj: sensitiveUser("JDJ5JDEw"), gvk: UserGVK},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			counter := sensitiveMaskedTotal.WithLabelValues(tt.gvk.Kind)
+			before := counterValue(t, counter)
+			recorder := events.NewFakeRecorder(10)
+			c := newSensitiveClient(tt.obj)
+
+			_ = GetUnmasked(t.Context(), c, c, recorder, client.ObjectKeyFromObject(tt.obj), Object(tt.gvk))
+
+			if got := counterValue(t, counter) - before; got != float64(len(tt.events)) {
+				t.Errorf("%s{kind=%q} grew by %v, want %d", sensitiveMaskedMetricName, tt.gvk.Kind, got, len(tt.events))
+			}
+			close(recorder.Events)
+			var got []string
+			for event := range recorder.Events {
+				got = append(got, event)
+			}
+			if strings.Join(got, "\n") != strings.Join(tt.events, "\n") {
+				t.Errorf("events = %q, want %q", got, tt.events)
+			}
+		})
+	}
+}
+
+func TestSensitiveMaskedTotalReportsEveryKind(t *testing.T) {
+	t.Parallel()
+
+	ch := make(chan prometheus.Metric, 10)
+	newSensitiveMaskedTotal().Collect(ch)
+	close(ch)
+	var kinds []string
+	for metric := range ch {
+		var out dto.Metric
+		if err := metric.Write(&out); err != nil {
+			t.Fatal(err)
+		}
+		if out.GetCounter().GetValue() != 0 {
+			t.Errorf("a new counter is %v", out.GetCounter().GetValue())
+		}
+		for _, label := range out.GetLabel() {
+			kinds = append(kinds, label.GetName()+"="+label.GetValue())
+		}
+	}
+	slices.Sort(kinds)
+	if want := []string{"kind=DexProvider", "kind=User", "kind=UserOperation"}; !slices.Equal(kinds, want) {
+		t.Errorf("series = %v, want %v", kinds, want)
+	}
+}
+
+func counterValue(t *testing.T, counter prometheus.Counter) float64 {
+	t.Helper()
+
+	var out dto.Metric
+	if err := counter.Write(&out); err != nil {
+		t.Fatal(err)
+	}
+	return out.GetCounter().GetValue()
+}
+
+func TestMaskedSensitiveField(t *testing.T) {
 	t.Parallel()
 
 	for _, tt := range []struct {
@@ -116,19 +195,19 @@ func TestHasMaskedSensitiveField(t *testing.T) {
 			t.Parallel()
 
 			obj := Object(tt.gvk)
-			if hasMaskedSensitiveField(obj) {
+			if _, masked := maskedSensitiveField(obj); masked {
 				t.Fatal("an absent field is reported as masked")
 			}
 			if err := unstructured.SetNestedField(obj.Object, MaskedValue, tt.path...); err != nil {
 				t.Fatal(err)
 			}
-			if !hasMaskedSensitiveField(obj) {
-				t.Error("a sensitive field with <omitted> is not reported as masked")
+			if path, masked := maskedSensitiveField(obj); !masked || path != strings.Join(tt.path, ".") {
+				t.Errorf("maskedSensitiveField = %q, %v, want %q, true", path, masked, strings.Join(tt.path, "."))
 			}
 			if err := unstructured.SetNestedField(obj.Object, "dh-test-secret-0123456789abcdef", tt.path...); err != nil {
 				t.Fatal(err)
 			}
-			if hasMaskedSensitiveField(obj) {
+			if _, masked := maskedSensitiveField(obj); masked {
 				t.Error("an unmasked field is reported as masked")
 			}
 		})
@@ -153,6 +232,7 @@ func TestGetUnmaskedAcceptsOrdinaryMaskedText(t *testing.T) {
 		t.Context(),
 		newSensitiveClient(provider),
 		api,
+		nil,
 		client.ObjectKeyFromObject(provider),
 		obj,
 	)

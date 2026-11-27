@@ -164,9 +164,8 @@ The `d8:subsystem:iam:manager` role grants the following permissions for UserOpe
 | Resource or subresource | Verbs |
 |-------------------------|-------|
 | `useroperations` | `create`, `get`, `list`, `watch` |
-| `useroperations/sensitive` | `get`, `list`, `watch` |
 
-The `useroperations/sensitive` permission allows reading `spec.resetPassword.newPasswordHash` while the field is present in a UserOperation.
+The role does not grant `useroperations/sensitive`: the API returns `<omitted>` instead of `spec.resetPassword.newPasswordHash`. Creating a UserOperation does not need this permission.
 
 ### Access of system and subsystem roles to the namespaces of the modules
 

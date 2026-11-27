@@ -83,20 +83,22 @@ var _ = Describe("Module :: user-authn :: helm template :: cluster roles", func(
 
 		// The password hash of a User, the new password hash of a UserOperation and the secrets of a
 		// DexProvider are x-kubernetes-sensitive-data: without the sensitive subresource the API returns
-		// <omitted> instead of them. The IAM manager and the cluster admin read them, the other roles do not.
+		// <omitted> instead of them. The cluster admin reads all of them. The IAM manager reads the
+		// secrets of a DexProvider, but no password hash: neither of the Users nor the new one of a
+		// UserOperation, the cluster administrators' among them. The other roles read none.
 		It("Should grant the sensitive fields of user-authn resources only to the manager and the cluster admin", func() {
 			Expect(hec.RenderError).ToNot(HaveOccurred())
 
-			for _, name := range []string{
-				"d8:system-capability:user-authn:edit",
-				"d8:user-authz:user-authn:cluster-admin",
+			for name, resources := range map[string]string{
+				"d8:system-capability:user-authn:edit":   `["dexproviders/sensitive"]`,
+				"d8:user-authz:user-authn:cluster-admin": `["dexproviders/sensitive","users/sensitive","useroperations/sensitive"]`,
 			} {
 				clusterRole := hec.KubernetesGlobalResource("ClusterRole", name)
 				Expect(clusterRole.Exists()).To(BeTrue(), name)
 				rules := clusterRole.Field(`rules.#(resources.#(%"*/sensitive"))#`).Array()
 				Expect(rules).To(HaveLen(1), name)
 				Expect(rules[0].Get("apiGroups").String()).To(MatchJSON(`["deckhouse.io"]`), name)
-				Expect(rules[0].Get("resources").String()).To(MatchJSON(`["dexproviders/sensitive","users/sensitive","useroperations/sensitive"]`), name)
+				Expect(rules[0].Get("resources").String()).To(MatchJSON(resources), name)
 				Expect(rules[0].Get("verbs").String()).To(MatchJSON(`["get","list","watch"]`), name)
 			}
 

@@ -464,6 +464,46 @@ var _ = Describe("User Authn hooks :: generate basic auth proxy ::", func() {
 		})
 	})
 
+	Context("Basic authentication is turned off after a failed issue", func() {
+		BeforeEach(func() {
+			runner.err = jobErr
+			f.KubeStateSet(``)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.RunHook()
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(runner.calls).To(Equal(1))
+		})
+
+		It("Issues at once when the API is published again", func() {
+			f.ValuesSet("userAuthn.internal.publishAPI.enabled", false)
+			f.RunHook()
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(runner.calls).To(Equal(1))
+
+			f.ValuesSet("userAuthn.internal.publishAPI.enabled", true)
+			runner.err = nil
+			f.RunHook()
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(runner.calls).To(Equal(2))
+			expectValues(issuedCrt, nil)
+		})
+
+		It("Issues at once when a provider enables basic authentication again", func() {
+			providers := f.ValuesGet("userAuthn.internal.providers").String()
+			f.ValuesSetFromYaml("userAuthn.internal.providers", []byte(`[{"type": "Crowd", "crowd": {"enableBasicAuth": false}}]`))
+			f.RunHook()
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(runner.calls).To(Equal(1))
+
+			f.ValuesSetFromYaml("userAuthn.internal.providers", []byte(providers))
+			runner.err = nil
+			f.RunHook()
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(runner.calls).To(Equal(2))
+			expectValues(issuedCrt, nil)
+		})
+	})
+
 	Context("Values hold a newer cert than the Secret", func() {
 		oldCrt, oldKey := newTestProxyCert(time.Now().Add(24 * time.Hour))
 		newCrt, newKey := newTestProxyCert(time.Now().Add(71 * time.Hour))
@@ -522,6 +562,20 @@ func TestProxyCertScheduledRetry(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+// The Job must not outlive the wait of the hook by much, and a parallel run must not delete it while
+// it can still run.
+func TestGenerateJobDeadline(t *testing.T) {
+	job := generateJob("registry.example.com", "sha256:test", "")
+	if job.Spec.ActiveDeadlineSeconds == nil {
+		t.Fatal("the Job has no activeDeadlineSeconds")
+	}
+	deadline := time.Duration(*job.Spec.ActiveDeadlineSeconds) * time.Second
+	if deadline <= proxyCertJobTimeout || deadline >= 2*proxyCertJobTimeout {
+		t.Errorf("activeDeadlineSeconds = %v, want more than the wait %v and less than the keep window %v",
+			deadline, proxyCertJobTimeout, 2*proxyCertJobTimeout)
 	}
 }
 

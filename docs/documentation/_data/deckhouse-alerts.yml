@@ -1996,27 +1996,20 @@ alerts:
       module: user-authn
       edition: ce
       description: |-
-        At least one Dex pod failed to initialize connector `{{ $labels.connector_id }}` of type `{{ $labels.connector_type }}` during the last opening attempt for its current configuration. Sign-ins and token refreshes through this connector may fail on that pod.
+        At least one Dex pod failed to initialize connector `{{ $labels.connector_id }}` of type `{{ $labels.connector_type }}` during its last opening attempt for the current configuration. Sign-ins and token refreshes through this connector fail on that pod until it opens the connector.
 
-        Check the Dex pods and their logs.
+        Every Dex pod opens such a connector again every 30 seconds, and when a sign-in uses it. Once the provider is reachable again, the alert stops without a restart of Dex.
+
+        Find the reason in the Dex logs. A pod logs it when an opening attempt fails for the first time, at its startup or on a sign-in, so read the whole log of every pod:
 
         ```bash
         d8 k -n d8-user-authn get pods -l app=dex
-        d8 k -n d8-user-authn logs -l app=dex -c dex --prefix
+        d8 k -n d8-user-authn logs -l app=dex -c dex --prefix --tail=-1 | grep '{{ $labels.connector_id }}'
         ```
 
-        Check the provider address, credentials, TLS certificates, and network connectivity configured in the corresponding DexProvider. Dex retries initialization when the connector is used. A sign-in retries only on the pod handling the request. Other pods can retain a failed result until the connector is used there or they restart.
+        Check the provider address, credentials, TLS certificates, and network connectivity configured in the DexProvider `{{ $labels.connector_id }}`. A change of the DexProvider restarts Dex, and the new pods report the result of their own opening attempt.
 
-        After correcting the configuration or restoring the provider, restart Dex to retry initialization on every pod:
-
-        ```bash
-        d8 k -n d8-user-authn rollout restart deployment/dex
-        d8 k -n d8-user-authn rollout status deployment/dex
-        ```
-
-        A rolling restart can interrupt in-flight sign-ins and token refreshes on the restarting pods.
-
-        The alert stops when no pod reports a failed opening attempt for the current configuration, or the connector is removed. An updated configuration has unknown initialization status until its next opening attempt; it does not report a failure in the meantime.
+        The alert stops when no pod reports a failed opening attempt for the current configuration, or the DexProvider is deleted.
       summary: |
         Dex connector &quot;{{ $labels.connector_id }}&quot; is not initialized.
       severity: "6"

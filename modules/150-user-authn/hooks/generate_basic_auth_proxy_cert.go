@@ -56,6 +56,14 @@ const (
 	proxyJobName      = "proxy-cert-generate-job"
 	proxyJobContainer = "generator"
 
+	// The hook waits this long for the generator Job.
+	proxyCertJobTimeout = 30 * time.Second
+	// The Job stops at this deadline even if its pod has not started: the hook no longer waits for it,
+	// and its pod runs as root with the front-proxy CA key. The margin over the wait covers the Job's
+	// clock, which starts after the hook has created the Job. A parallel run keeps an unfinished Job
+	// for 2*proxyCertJobTimeout (deletePreviousJobs), longer than the deadline.
+	proxyCertJobDeadline = proxyCertJobTimeout + 10*time.Second
+
 	// The generator issues a certificate for 72 hours, the hook renews it when less than 48 hours are left.
 	proxyCertRenewBefore  = 48 * time.Hour
 	proxyCertRetryCrontab = "*/5 * * * *"
@@ -136,10 +144,12 @@ func generateProxyAuthCert(ctx context.Context, input *go_hook.HookInput, dc dep
 
 	// check proxy rollout conditions
 	if !input.Values.Get("userAuthn.internal.publishAPI.enabled").Bool() {
+		proxyCertRetries.reset()
 		return nil
 	}
 
 	if !input.Values.Exists("userAuthn.internal.providers") {
+		proxyCertRetries.reset()
 		return nil
 	}
 
@@ -176,6 +186,8 @@ func generateProxyAuthCert(ctx context.Context, input *go_hook.HookInput, dc dep
 	}
 
 	if config == nil {
+		// Basic authentication is off: when it is turned on again, the first run issues at once.
+		proxyCertRetries.reset()
 		return nil
 	}
 
@@ -269,6 +281,13 @@ func (s *proxyCertRetryState) failed() {
 }
 
 func (s *proxyCertRetryState) succeeded() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.failedAt = time.Time{}
+}
+
+// reset forgets the failure when basic authentication is off.
+func (s *proxyCertRetryState) reset() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.failedAt = time.Time{}
@@ -382,7 +401,7 @@ var newProxyCertJobRunner = func(client kubernetes.Interface) proxyCertJobRunner
 	return &proxyCertJob{
 		client:       client,
 		pollInterval: 2 * time.Second,
-		timeout:      30 * time.Second,
+		timeout:      proxyCertJobTimeout,
 		nameSuffix:   func() string { return utilrand.String(5) },
 		podLogs: func(ctx context.Context, pod string) (io.ReadCloser, error) {
 			return client.CoreV1().Pods(proxyJobNS).GetLogs(pod, &corev1.PodLogOptions{Container: proxyJobContainer}).Stream(ctx)
@@ -700,7 +719,8 @@ func generateJob(registry, digest, csrb64 string) *batchv1.Job {
 			},
 		},
 		Spec: batchv1.JobSpec{
-			BackoffLimit: ptr.To(int32(1)),
+			BackoffLimit:          ptr.To(int32(1)),
+			ActiveDeadlineSeconds: ptr.To(int64(proxyCertJobDeadline / time.Second)),
 			// A failed Job stays for inspection until the next run deletes it. This removes it
 			// when there is no next run, for example after basic authentication is turned off.
 			TTLSecondsAfterFinished: ptr.To(int32(24 * 60 * 60)),

@@ -153,15 +153,18 @@ class TestClusterRolesValidation(unittest.TestCase):
                 tests.assert_validation_deny(self, out, RESERVED_PREFIX_MSG)
 
     def test_commander_bootstrap_exception_only_applies_to_create_and_name(self):
-        for name, operation, labels, denied in [
-            ("d8:commander:workspace:reader", "CREATE", None, False),
-            ("d8:commander:reader", "UPDATE", None, True),
-            ("d8:other:reader", "CREATE", None, True),
+        # The temporary exception lets system:masters create d8:commander:* roles and nothing more:
+        # the other checks of the webhook still apply to such a role.
+        use_role_msg = 'ClusterRole "d8:commander:reader" must not carry "rbac.deckhouse.io/use-role: admin"'
+        for name, operation, labels, expected in [
+            ("d8:commander:workspace:reader", "CREATE", None, None),
+            ("d8:commander:reader", "UPDATE", None, RESERVED_PREFIX_MSG),
+            ("d8:other:reader", "CREATE", None, RESERVED_PREFIX_MSG),
             (
                 "d8:commander:reader",
                 "CREATE",
                 {"rbac.deckhouse.io/scope": "system", "rbac.deckhouse.io/use-role": "admin"},
-                True,
+                use_role_msg,
             ),
         ]:
             with self.subTest(name=name, operation=operation, labels=labels):
@@ -169,10 +172,20 @@ class TestClusterRolesValidation(unittest.TestCase):
                 ctx.review.request.operation = operation
                 ctx.review.request.userInfo.groups = ["system:masters"]
                 error = cluster_roles.validation_error(ctx)
-                if denied:
-                    self.assertIsNotNone(error)
-                else:
+                if expected is None:
                     self.assertIsNone(error)
+                else:
+                    self.assertIsNotNone(error)
+                    self.assertTrue(error.startswith(expected), error)
+
+    def test_commander_bootstrap_exception_needs_system_masters(self):
+        # The exception is granted by the group, not by the name of the bootstrap user.
+        for groups in [None, [], ["system:authenticated", "kubeadm:cluster-admins"]]:
+            with self.subTest(groups=groups):
+                ctx = binding_context("d8:commander:reader", rules=SOME_RULES, username="dhctl")
+                if groups is not None:
+                    ctx.review.request.userInfo.groups = groups
+                self.assertEqual(cluster_roles.validation_error(ctx), RESERVED_PREFIX_MSG)
 
     def test_commander_agent_gets_no_other_d8_name(self):
         for name in ["d8:project:admin", "d8:commander-agent", "d8:whatever"]:

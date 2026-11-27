@@ -169,9 +169,8 @@ Namespace-роль определяет права на доступ к namespac
 | Ресурс или подресурс | Действия |
 |----------------------|----------|
 | `useroperations` | `create`, `get`, `list`, `watch` |
-| `useroperations/sensitive` | `get`, `list`, `watch` |
 
-Права на `useroperations/sensitive` позволяют читать `spec.resetPassword.newPasswordHash`, пока поле присутствует в UserOperation.
+Права на `useroperations/sensitive` роль не даёт: вместо `spec.resetPassword.newPasswordHash` API возвращает `<omitted>`. Для создания UserOperation это право не нужно.
 
 ### Доступ системных и подсистемных ролей в неймспейсы модулей
 

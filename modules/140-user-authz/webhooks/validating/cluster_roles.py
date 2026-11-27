@@ -19,7 +19,9 @@ from dotmap import DotMap
 
 # Validates RBAC v2 framework objects (ClusterRoles):
 #   - the "d8:" name prefix is reserved for Deckhouse, users may only create "d8:custom:*" objects,
-#     and "d8:commander:*" is left to the Commander agent alone;
+#     and "d8:commander:*" is left to the Commander agent, except that members of system:masters may
+#     create (not update) such roles, so that the bootstrap can create them before the agent runs;
+#     the exception is temporary, until the Commander agent creates these roles itself;
 #   - the built-in framework kinds (role/capability) cannot be created by users,
 #     they must use custom-role/custom-capability;
 #   - the rbac.deckhouse.io/capability values of the built-in capabilities cannot be claimed by users,
@@ -95,9 +97,11 @@ LEGACY_SYSTEM_LINEAGES = {
 # Commander keeps the roles its users define on a managed cluster as d8:commander:<role> and
 # d8:commander:workspace:<role>. Their names and rules are whatever those users chose, so no list of
 # names describes them; their writer does: commander-agent applies them with server-side apply under
-# its own ServiceAccount, without impersonation. The prefix is open to that account only. For anyone
-# else it is reserved like the rest of d8:, or whoever may create ClusterRoles would get past the
-# checks of this webhook and of role_escalation.py by naming a role d8:commander:<anything>.
+# its own ServiceAccount, without impersonation. The prefix is open to that account, and for a CREATE
+# to the members of system:masters too: the roles are created at bootstrap, before the agent runs,
+# which is a temporary exception until the agent creates them itself. For anyone else it is reserved
+# like the rest of d8:, or whoever may create ClusterRoles would get past the checks of this webhook
+# and of role_escalation.py by naming a role d8:commander:<anything>.
 COMMANDER_PREFIX = "d8:commander:"
 COMMANDER_AGENT = "system:serviceaccount:d8-commander-agent:commander-agent"
 
@@ -280,8 +284,9 @@ def validation_error(ctx: DotMap) -> Optional[str]:
     selectors = (obj.get("aggregationRule") or {}).get("clusterRoleSelectors") or []
     system_lineages = _system_lineages(ctx)
     commander_role = _is_commander_role(request, name)
-    # Bootstrap administrators can create Commander roles before the agent starts.
-    # Only the name check grants this exception.
+    # Bootstrap administrators (system:masters) can create Commander roles before the agent starts.
+    # The exception is temporary, until the Commander agent creates these roles itself. It covers the
+    # name check only: an UPDATE is still refused, and the other checks below still apply.
     commander_bootstrap_create = (
         request.operation == "CREATE"
         and name.startswith(COMMANDER_PREFIX)
@@ -289,7 +294,8 @@ def validation_error(ctx: DotMap) -> Optional[str]:
     )
 
     # The d8: name prefix is reserved; users may only create objects under d8:custom:, and the
-    # Commander agent its roles under d8:commander: (COMMANDER_PREFIX). The same holds for an UPDATE:
+    # Commander agent its roles under d8:commander: (COMMANDER_PREFIX), which system:masters may also
+    # create at bootstrap (commander_bootstrap_create). The same holds for an UPDATE:
     # a d8:commander: role somebody else changes, with kubectl or a GitOps tool, is refused as a
     # built-in one would be. The roles already in the cluster keep working; only writes are refused.
     if (

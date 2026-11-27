@@ -200,16 +200,22 @@ spec:
               bash ../common/scripts/expect.sh denied \
                 'ClusterRole names with the "d8:" prefix are reserved for Deckhouse. Use the "d8:custom:" prefix for custom roles and capabilities.' \
                 -- kubectl create clusterrole d8:e2e-authz-wh-reserved --dry-run=server --verb=get --resource=pods
-        - description: A ClusterRole under the Commander prefix is rejected for anyone but the Commander agent
+        - description: >-
+            A ClusterRole under the Commander prefix is rejected for anyone but the Commander agent. The
+            request impersonates a SuperAdmin outside system:masters: that group may create such roles
+            (the temporary bootstrap exception), so the kubeconfig of the runner must not decide the result.
           script:
             content: |
               bash ../common/scripts/expect.sh denied \
                 'ClusterRole names with the "d8:" prefix are reserved for Deckhouse. Use the "d8:custom:" prefix for custom roles and capabilities.' \
-                -- kubectl create clusterrole d8:commander:e2e-authz-wh-planted --dry-run=server --verb=get --resource=pods
+                -- kubectl --as e2e-authz-wh-superadmin \
+                  create clusterrole d8:commander:e2e-authz-wh-planted --dry-run=server --verb=get --resource=pods
         - description: >-
             The Commander agent may write under its prefix. The agent is not installed here, so the
-            request impersonates its ServiceAccount with system:masters to get past authorization;
-            that group does not exempt it from rbacv2-cluster-roles.
+            request impersonates its ServiceAccount with system:masters to get past authorization.
+            That group also lets a CREATE under the prefix through on its own (the temporary bootstrap
+            exception of rbacv2-cluster-roles), so this step no longer tells the agent apart from any
+            member of system:masters.
           script:
             content: |
               bash ../common/scripts/expect.sh allowed \

@@ -84,6 +84,9 @@ func New(c client.Client, apiReader client.Reader, log logr.Logger, now func() t
 
 // Register wires the User/Password reconciler onto the manager.
 func Register(mgr manager.Manager) error {
+	if err := controller.RegisterSensitiveMetrics(); err != nil {
+		return err
+	}
 	r := New(mgr.GetClient(), mgr.GetAPIReader(), mgr.GetLogger().WithName("user"), nil)
 	r.recorder = mgr.GetEventRecorder(recorderName)
 	if err := r.SetupWithManager(mgr); err != nil {
@@ -208,7 +211,7 @@ func (r *Reconciler) emailTooLong(user userView, email string) {
 func (r *Reconciler) getUser(ctx context.Context, name string) (userView, bool, error) {
 	obj := controller.Object(controller.UserGVK)
 	// spec.password is sensitive data: the Dex password is built from it.
-	err := controller.GetUnmasked(ctx, r.client, r.apiReader, types.NamespacedName{Name: name}, obj)
+	err := controller.GetUnmasked(ctx, r.client, r.apiReader, r.recorder, types.NamespacedName{Name: name}, obj)
 	if apierrors.IsNotFound(err) {
 		return userView{}, false, nil
 	}

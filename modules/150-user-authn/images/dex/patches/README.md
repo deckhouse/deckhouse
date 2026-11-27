@@ -197,7 +197,7 @@ sent again.
   `dex_kubernetes_requests_refused_creates_total{outcome}` (creates refused
   with 409 Conflict, the same outcomes). `cmd/dex/serve.go`
   registers a storage that is a `prometheus.Collector`.
-- The scrape of the connector metrics (450) lists the connectors in a context
+- The scrape of the connector metrics (440) lists the connectors in a context
   of `storage.WithoutRequestLimit`, past the slots: one list per scrape, and
   `dex_connector_metrics_collection_success` does not fall to 0 because Dex
   throttles its own requests. No alert uses that metric.
@@ -214,7 +214,7 @@ level (`templates/dex/flowcontrol.yaml`).
 
 **Depends on:** 100 (the test API server and `generationAnnotation` in
 `types_test.go`). The later patches that add storage requests (150, 250, 300,
-320, 330, 450) pass the context to them.
+320, 330, 440) pass the context to them.
 
 ### 140-storage-health-throttling.patch
 
@@ -1741,9 +1741,10 @@ Upstream also refuses to start when none of them opens.
   without a `User` and with a single `DexProvider` Dex has one connector (the
   local password database is off), so a provider that was down at the start
   sent Dex into a crash loop. The connector cache opens a connector again when
-  a login uses it; until it opens, the login answers 400 `Connector failed to
-  initialize` on the error page. The discovery document and the signing keys
-  do not depend on the connectors and are served as usual.
+  a login uses it, and 440 also opens it in the background; until it opens,
+  the login answers 400 `Connector failed to initialize` on the error page.
+  The discovery document and the signing keys do not depend on the connectors
+  and are served as usual.
 
 **Consumer in Deckhouse:** every `DexProvider` of type OIDC, and a single
 `DexProvider` of any type without a `User`;
@@ -2011,63 +2012,62 @@ connector alone and before its own filters.
 connector fields of the config file). 420 adds the reserved prefix check to
 `Apply`, which compares the groups with the prefix as well.
 
-### 440-connector-unavailable.patch
+### 440-connector-reopen.patch
 
-This patch handles token requests through a connector that failed to open.
-`Cache.Get` wraps an opening error with `ErrConnectorUnavailable`, and the
-OAuth token endpoint returns HTTP `503` with `temporarily_unavailable`.
-Requests for a deleted connector return HTTP `400` with `invalid_request`.
-A refresh token remains available for a later retry after an opening error.
+**Zone:** a connector that failed to open, after the startup of 400: what a
+request through it gets, how it is opened again and how the failure is
+reported. Opening results are kept per pod in the connector cache
+(`server/connectors`).
 
-The token clients of the `user-authn` module consume these responses. This
-patch is maintained in Deckhouse and depends on 400 for startup with unopened
-connectors and 250 for the temporary errors of the refresh grant.
+- `Cache.Get` wraps a failed opening with `ErrConnectorUnavailable`, and the
+  token endpoint answers 503 `temporarily_unavailable`: the refresh grant
+  keeps the refresh token for a later retry, as for the temporary errors of
+  250. A connector deleted from the storage answers 400 `invalid_request`
+  (`Requested connector does not exist.`), a failed read of the storage 500
+  `server_error`. A connector that cannot open because of its configuration
+  (an unknown type, a bad `discoveryTimeout` or `rootCAs`) also answers 503:
+  the error of `Open` does not tell it from a provider that is down, and
+  dex-authenticator handles 500 and 503 alike (it keeps the session for one
+  refresh period), while a 400 would end the sessions of the users.
+- Requests for the same connector ID and stored version share one opening
+  attempt (`singleflight`), and the cache is checked again before opening.
+  Other connectors and other versions open on their own. A request whose
+  context ends stops waiting with `ErrConnectorUnavailable` wrapping the
+  context error, so it is not answered as a missing connector; the attempt
+  goes on for the others with the timeouts of the connector.
+- With `DEX_CONTINUE_ON_CONNECTOR_FAILURE` every pod opens again, every 30 s
+  (`Config.ConnectorRetryInterval`) and a full interval after the end of the
+  previous pass, the connectors whose last attempt failed. The pass goes
+  through `Get`, so it shares the attempt with the requests and opens the
+  version stored now; a connector deleted from the storage is closed, a
+  failure of an earlier version is dropped once a later one is open. Success
+  is logged at INFO (`opened connector after a failed attempt`), a repeated
+  failure at DEBUG: the startup or the request that failed first logged the
+  reason. Without the pass only the pod that served a login through the
+  connector opened it, and the others reported the failure until they served
+  one or restarted.
+- `dex_connector_open{connector_id, connector_type}` in the Prometheus
+  registry of Dex reports the last completed opening attempt of the stored
+  version on this pod: 1 for success, 0 for failure. A version without a
+  completed attempt (an idle connector whose configuration changed) has no
+  series, and neither has a deleted connector. Each scrape lists the
+  connectors; concurrent scrapes share one list with a five-second deadline,
+  which the Kubernetes storage passes on to its HTTP request, and the list
+  does not wait for a free slot of the requests of Dex (130).
+  `dex_connector_metrics_collection_success` is 0 after a failed list, and the
+  scrape then serves the other metrics without `dex_connector_open`.
 
-### 445-connector-open-singleflight.patch
+**Consumer in Deckhouse:** the token clients of the module (dex-authenticator,
+the kubeconfig generator, kubelogin) on the refresh grant;
+`DEX_CONTINUE_ON_CONNECTOR_FAILURE` in `templates/dex/deployment.yaml`; the
+`D8DexConnectorNotInitialized` alert in
+`monitoring/prometheus-rules/dex.yaml`, on `dex_connector_open`.
 
-This patch handles concurrent connector initialization. Requests for the same
-connector ID and stored resource version share one opening attempt through
-`singleflight`. The cache is checked again before opening. Other connectors
-and new stored versions can open independently. A canceled request stops
-waiting while the shared attempt continues with the connector's existing
-timeouts. A later request retries a failed attempt.
+**Upstream status:** Deckhouse only.
 
-Sign-in, callback and token requests of the `user-authn` module use this cache.
-This patch is maintained in Deckhouse and depends on 440 for the opening-error
-sentinel shared by concurrent requests.
-
-### 450-connector-open-metrics.patch
-
-This patch adds `dex_connector_open{connector_id, connector_type}` to the
-existing Prometheus registry. It reports the last completed opening attempt
-for the current stored version, with `1` for success and `0` for failure.
-A version with no completed opening attempt has `unknown` initialization
-status, and its series is omitted. Dex opens configured connectors at startup
-and retries initialization on use. An idle update therefore produces no
-initialization-failure alert.
-
-Opening results are local to each Dex pod. A sign-in retries initialization
-only on the pod handling it; idle pods retain a previous failure after the
-provider recovers. After correcting the configuration or restoring the provider,
-a rolling restart of Dex retries initialization on every pod. The restart can
-interrupt in-flight authentication requests on the restarting pods.
-
-Each scrape lists configured connectors and compares their versions with
-completed attempts. A deleted connector disappears from the metric. Concurrent
-scrapes share one list request. Its context has a five-second deadline, which
-is propagated to the Kubernetes storage HTTP request, and does not wait for a
-free slot of the requests of Dex (130).
-
-`dex_connector_metrics_collection_success` is `1` after a successful list and
-`0` after a listing error or timeout. On error, the scrape still serves this
-collection result and the other metrics. Connector initialization samples are
-omitted until the list succeeds again.
-
-The `D8DexConnectorNotInitialized` alert in
-`monitoring/prometheus-rules/dex.yaml` uses the initialization result.
-`dex_connector_metrics_collection_success` reports collection health for
-observation. This patch is maintained in Deckhouse and depends on 445 for the
-cache it instruments, and on 130 for the context of its storage request.
+**Depends on:** 400 (startup with unopened connectors), 250 (the temporary
+errors of the refresh grant), 130 (the context of the storage request of the
+scrape and the slot of the requests of Dex it does not wait for).
 
 ### 998-fix-cve.patch
 

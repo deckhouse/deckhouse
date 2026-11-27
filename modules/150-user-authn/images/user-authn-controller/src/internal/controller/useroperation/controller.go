@@ -27,6 +27,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/events"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -45,6 +46,9 @@ import (
 // maxConcurrentReconciles is 4: UserOperations are rare and list Dex objects.
 const maxConcurrentReconciles = 4
 
+// recorderName is the controller in the events it records.
+const recorderName = "useroperation-controller"
+
 // Reconciler executes UserOperation objects against Dex Password, OfflineSessions, and
 // UserIdentity CRs, and revokes credentials through revoke.Revoker.
 type Reconciler struct {
@@ -52,8 +56,10 @@ type Reconciler struct {
 	apiReader client.Reader
 	copier    *identitymigration.Copier
 	revoker   *revoke.Revoker
-	log       logr.Logger
-	now       func() time.Time
+	// recorder records the events of the UserOperations; nil records none.
+	recorder events.EventRecorder
+	log      logr.Logger
+	now      func() time.Time
 	// retention is how long a UserOperation is kept after its creation.
 	retention time.Duration
 	// passwordHistoryLimit is how many replaced hashes the password policy of Dex keeps; a
@@ -86,7 +92,11 @@ func New(c client.Client, apiReader client.Reader, log logr.Logger, now func() t
 // is kept after its creation; passwordHistoryLimit is passwordHistoryLimit of the password policy
 // of Dex, 0 without a history.
 func Register(mgr manager.Manager, retention time.Duration, passwordHistoryLimit uint64) error {
+	if err := controller.RegisterSensitiveMetrics(); err != nil {
+		return err
+	}
 	r := New(mgr.GetClient(), mgr.GetAPIReader(), mgr.GetLogger().WithName("useroperation"), nil)
+	r.recorder = mgr.GetEventRecorder(recorderName)
 	r.retention = retention
 	r.passwordHistoryLimit = passwordHistoryLimit
 	if err := r.SetupWithManager(mgr); err != nil {
@@ -127,7 +137,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	obj := controller.Object(controller.UserOperationGVK)
 	// spec.resetPassword.newPasswordHash is sensitive data. A masked one fails the reconcile and is
 	// retried, it does not fail the operation.
-	err := controller.GetUnmasked(ctx, r.client, r.apiReader, req.NamespacedName, obj)
+	err := controller.GetUnmasked(ctx, r.client, r.apiReader, r.recorder, req.NamespacedName, obj)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			return reconcile.Result{}, nil

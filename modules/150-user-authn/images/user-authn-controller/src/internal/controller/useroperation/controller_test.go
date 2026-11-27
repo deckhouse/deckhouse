@@ -32,6 +32,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/events"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -305,10 +306,20 @@ func TestReconcile_ResetPasswordWithMaskedHashIsRetried(t *testing.T) {
 		"resetPassword": map[string]any{"newPasswordHash": controller.MaskedValue},
 	})
 	r := newTestReconciler(t, now, pw, op)
+	recorder := events.NewFakeRecorder(1)
+	r.recorder = recorder
 
 	_, err := r.Reconcile(t.Context(), opRequest("user-operation-01"))
 	if !errors.Is(err, controller.ErrSensitiveMasked) {
 		t.Fatalf("Reconcile: err = %v, want ErrSensitiveMasked", err)
+	}
+	select {
+	case event := <-recorder.Events:
+		if !strings.Contains(event, controller.ReasonSensitiveFieldMasked) || !strings.Contains(event, "useroperations/sensitive") {
+			t.Errorf("event = %q, want %s about useroperations/sensitive", event, controller.ReasonSensitiveFieldMasked)
+		}
+	default:
+		t.Error("no event about the masked hash")
 	}
 
 	uo := getUnstructured(t, r, controller.UserOperationGVK, "", "user-operation-01")

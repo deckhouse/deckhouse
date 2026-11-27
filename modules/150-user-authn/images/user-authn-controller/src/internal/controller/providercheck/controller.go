@@ -24,6 +24,7 @@ import (
 	"github.com/go-logr/logr"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/events"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrlcontroller "sigs.k8s.io/controller-runtime/pkg/controller"
@@ -40,14 +41,19 @@ import (
 // is not blocked by these workers.
 const maxConcurrentReconciles = 16
 
+// recorderName is the controller in the events it records.
+const recorderName = "dexprovidercheck-controller"
+
 // Reconciler runs DexProvider connectivity checks.
 type Reconciler struct {
 	client    client.Client
 	apiReader client.Reader
-	log       logr.Logger
-	http      HTTPFactory
-	ldap      LDAPDialer
-	now       func() time.Time
+	// recorder records the events of the DexProviders the checks read; nil records none.
+	recorder events.EventRecorder
+	log      logr.Logger
+	http     HTTPFactory
+	ldap     LDAPDialer
+	now      func() time.Time
 }
 
 // New constructs a Reconciler. http/ldap/now default when nil.
@@ -81,7 +87,11 @@ func Register(mgr manager.Manager) error {
 	if err := AddToScheme(mgr.GetScheme()); err != nil {
 		return fmt.Errorf("add dexprovidercheck types: %w", err)
 	}
+	if err := controller.RegisterSensitiveMetrics(); err != nil {
+		return err
+	}
 	r := New(mgr.GetClient(), mgr.GetAPIReader(), mgr.GetLogger().WithName("dexprovidercheck"), nil, nil, nil)
+	r.recorder = mgr.GetEventRecorder(recorderName)
 	if err := r.SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("setup dexprovidercheck controller: %w", err)
 	}
@@ -162,7 +172,7 @@ func (r *Reconciler) getProvider(ctx context.Context, name string) (DexProviderF
 	}
 	obj := controller.Object(controller.DexProviderGVK)
 	// The secrets of the provider are sensitive data, the check signs in with them.
-	err := controller.GetUnmasked(ctx, r.client, r.apiReader, types.NamespacedName{Name: name}, obj)
+	err := controller.GetUnmasked(ctx, r.client, r.apiReader, r.recorder, types.NamespacedName{Name: name}, obj)
 	if apierrors.IsNotFound(err) {
 		return DexProviderForCheck{}, false, nil
 	}
