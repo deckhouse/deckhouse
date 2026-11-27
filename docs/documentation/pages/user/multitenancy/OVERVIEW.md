@@ -41,6 +41,10 @@ it could lead to a data leak and a security model breach.
 
 A project is not limited to a single namespace: if an application needs several namespaces (for example, a separate one for a cache or a queue), a cluster administrator, a project administrator or a project manager (`d8:project:manager`) can add them to the project as additional namespaces. Access grants and namespaced template policies (network isolation, log shipping) automatically apply to every namespace of the project, not just the main one. For details, refer to the [Administration section](../../admin/multitenancy/project-management.html#additional-project-namespaces).
 
+{% alert level="info" %}
+In Deckhouse Platform Open/CE, a project has only its main namespace. Additional namespaces cannot be created.
+{% endalert %}
+
 ## Creating a project
 
 1. To create a project, create a [Project](/modules/multitenancy-manager/cr.html#project) custom resource

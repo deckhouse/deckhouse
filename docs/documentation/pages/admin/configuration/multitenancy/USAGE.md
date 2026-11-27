@@ -234,7 +234,13 @@ No ProjectTemplate object named `virtual` exists, and the webhook refuses to cre
 
 ## Additional project namespaces
 
-If an application needs several namespaces (for example, a separate one for a cache or a queue), add them to the project with the [ProjectNamespace](/modules/multitenancy-manager/cr.html#projectnamespace) resource. It is created **in the main namespace of the project**; the resulting namespace is named `<project name>-<spec.name>`:
+If an application needs several namespaces (for example, a separate one for a cache or a queue), add them to the project with the [ProjectNamespace](/modules/multitenancy-manager/cr.html#projectnamespace) resource. It is created **in the [main namespace of the project](../../glossary.html#main-project-namespace)**.
+
+{% alert level="info" %}
+In Deckhouse Platform Open/CE, a project has only its main namespace. Additional namespaces cannot be created.
+{% endalert %}
+
+The resulting namespace is named `<project name>-<spec.name>`:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha3
