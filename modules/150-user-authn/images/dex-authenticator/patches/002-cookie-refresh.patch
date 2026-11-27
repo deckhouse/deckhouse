@@ -489,7 +489,7 @@ index 00000000..63837511
 +	assert.False(t, strings.Contains(second.Value, "jane"))
 +}
 diff --git a/oauthproxy.go b/oauthproxy.go
-index ea5e4733..c1a6e777 100644
+index ea5e4733..78a93d08 100644
 --- a/oauthproxy.go
 +++ b/oauthproxy.go
 @@ -67,6 +67,10 @@ var (
@@ -503,7 +503,7 @@ index ea5e4733..c1a6e777 100644
  	//go:embed static/*
  	staticFiles embed.FS
  )
-@@ -561,6 +565,42 @@ func (p *OAuthProxy) SaveSession(rw http.ResponseWriter, req *http.Request, s *s
+@@ -561,6 +565,38 @@ func (p *OAuthProxy) SaveSession(rw http.ResponseWriter, req *http.Request, s *s
  	return p.sessionStore.Save(rw, req, s)
  }
  
@@ -531,22 +531,18 @@ index ea5e4733..c1a6e777 100644
 +	return clone
 +}
 +
-+// sessionUnavailableRetryAfter is the Retry-After, in seconds, of the 503 answered while the session
-+// of a request cannot be refreshed (Deckhouse patch 002).
-+const sessionUnavailableRetryAfter = "10"
-+
 +// writeSessionUnavailable answers 503 to a request whose session cannot be refreshed now: the provider
 +// is unreachable or answered a temporary error. The session and its cookie are kept, so the request
 +// works again once the provider is back (Deckhouse patch 002).
 +func writeSessionUnavailable(rw http.ResponseWriter) {
-+	rw.Header().Set("Retry-After", sessionUnavailableRetryAfter)
++	rw.Header().Set("Retry-After", middleware.SessionUnavailableRetryAfter())
 +	http.Error(rw, http.StatusText(http.StatusServiceUnavailable), http.StatusServiceUnavailable)
 +}
 +
  func (p *OAuthProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
  	p.serveMux.ServeHTTP(rw, req)
  }
-@@ -712,7 +752,7 @@ func (p *OAuthProxy) SignIn(rw http.ResponseWriter, req *http.Request) {
+@@ -712,7 +748,7 @@ func (p *OAuthProxy) SignIn(rw http.ResponseWriter, req *http.Request) {
  	user, ok, statusCode := p.ManualSignIn(req)
  	if ok {
  		session := &sessionsapi.SessionState{User: user, Groups: p.basicAuthGroups}
@@ -555,7 +551,7 @@ index ea5e4733..c1a6e777 100644
  		if err != nil {
  			logger.Printf("Error saving session: %v", err)
  			p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
-@@ -732,6 +772,10 @@ func (p *OAuthProxy) SignIn(rw http.ResponseWriter, req *http.Request) {
+@@ -732,6 +768,10 @@ func (p *OAuthProxy) SignIn(rw http.ResponseWriter, req *http.Request) {
  // UserInfo endpoint outputs session email and preferred username in JSON format
  func (p *OAuthProxy) UserInfo(rw http.ResponseWriter, req *http.Request) {
  	session, err := p.getAuthenticatedSession(rw, req)
@@ -566,7 +562,7 @@ index ea5e4733..c1a6e777 100644
  	if err != nil {
  		http.Error(rw, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
  		return
-@@ -985,7 +1029,7 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
+@@ -985,7 +1025,7 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
  	}
  	if p.Validator(session.Email) && authorized {
  		logger.PrintAuthf(session.Email, req, logger.AuthSuccess, "Authenticated via OAuth2: %s", session)
@@ -575,7 +571,7 @@ index ea5e4733..c1a6e777 100644
  		if err != nil {
  			logger.Errorf("Error saving session state for %s: %v", remoteAddr, err)
  			p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
-@@ -1039,6 +1083,12 @@ func (p *OAuthProxy) enrichSessionState(ctx context.Context, s *sessionsapi.Sess
+@@ -1039,6 +1079,12 @@ func (p *OAuthProxy) enrichSessionState(ctx context.Context, s *sessionsapi.Sess
  // and optional authorization).
  func (p *OAuthProxy) AuthOnly(rw http.ResponseWriter, req *http.Request) {
  	session, err := p.getAuthenticatedSession(rw, req)
@@ -588,12 +584,12 @@ index ea5e4733..c1a6e777 100644
  	if err != nil {
  		http.Error(rw, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
  		return
-@@ -1100,6 +1150,14 @@ func (p *OAuthProxy) Proxy(rw http.ResponseWriter, req *http.Request) {
+@@ -1100,6 +1146,14 @@ func (p *OAuthProxy) Proxy(rw http.ResponseWriter, req *http.Request) {
  			p.ErrorPage(rw, req, http.StatusForbidden, "The session failed authorization checks")
  		}
  
 +	case ErrSessionUnavailable:
-+		rw.Header().Set("Retry-After", sessionUnavailableRetryAfter)
++		rw.Header().Set("Retry-After", middleware.SessionUnavailableRetryAfter())
 +		if p.forceJSONErrors || isAjax(req) || p.isAPIPath(req) {
 +			p.errorJSON(rw, http.StatusServiceUnavailable)
 +		} else {
@@ -603,7 +599,7 @@ index ea5e4733..c1a6e777 100644
  	default:
  		// unknown error
  		logger.Errorf("Unexpected internal error: %v", err)
-@@ -1160,9 +1218,11 @@ func (p *OAuthProxy) getOAuthRedirectURI(req *http.Request) string {
+@@ -1160,9 +1214,11 @@ func (p *OAuthProxy) getOAuthRedirectURI(req *http.Request) string {
  // Returns:
  // - `nil, ErrNeedsLogin` if user needs to login.
  // - `nil, ErrAccessDenied` if the authenticated user is not authorized
@@ -616,7 +612,7 @@ index ea5e4733..c1a6e777 100644
  
  	// Check this after loading the session so that if a valid session exists, we can add headers from it
  	if p.IsAllowedRequest(req) {
-@@ -1170,6 +1230,9 @@ func (p *OAuthProxy) getAuthenticatedSession(rw http.ResponseWriter, req *http.R
+@@ -1170,6 +1226,9 @@ func (p *OAuthProxy) getAuthenticatedSession(rw http.ResponseWriter, req *http.R
  	}
  
  	if session == nil {
@@ -667,7 +663,7 @@ index 3dee9505..ce595ee0 100644
  }
  
 diff --git a/pkg/apis/sessions/session_state.go b/pkg/apis/sessions/session_state.go
-index 6c55e2c8..623fd3fd 100644
+index 6c55e2c8..c07365f7 100644
 --- a/pkg/apis/sessions/session_state.go
 +++ b/pkg/apis/sessions/session_state.go
 @@ -21,6 +21,12 @@ type SessionState struct {
@@ -683,7 +679,7 @@ index 6c55e2c8..623fd3fd 100644
  
  	Nonce []byte `msgpack:"n,omitempty"`
  
-@@ -36,6 +42,14 @@ type SessionState struct {
+@@ -36,6 +42,18 @@ type SessionState struct {
  	Clock     func() time.Time `msgpack:"-"` // override for time.Now, for testing
  	Lock      Lock             `msgpack:"-"`
  	Refreshed bool             `msgpack:"-"` // indicates whether the session was refreshed
@@ -695,15 +691,19 @@ index 6c55e2c8..623fd3fd 100644
 +	// (Deckhouse patch 002). The grant of the stored token may still be valid, a copy of the cookie
 +	// may carry it, and a sign-out revokes it as well. It is never saved.
 +	StoredRefreshToken string `msgpack:"-"`
++	// StoreUnavailable tells that the session is the stub of a cookie whose data the store could not
++	// read: it did not answer, so the data may still be there (Deckhouse patch 002). Such a session
++	// is neither trusted nor refreshed; the request is answered 503 and the cookie is kept.
++	StoreUnavailable bool `msgpack:"-"`
  }
  
  func (s *SessionState) now() time.Time {
 diff --git a/pkg/middleware/deckhouse_late_refresh.go b/pkg/middleware/deckhouse_late_refresh.go
 new file mode 100644
-index 00000000..092343c5
+index 00000000..9b0e1387
 --- /dev/null
 +++ b/pkg/middleware/deckhouse_late_refresh.go
-@@ -0,0 +1,229 @@
+@@ -0,0 +1,258 @@
 +package middleware
 +
 +import (
@@ -767,7 +767,7 @@ index 00000000..092343c5
 +		}()
 +
 +		answer := refreshAnswer{session: &refreshed}
-+		answer.isRefreshed, answer.err = s.refreshAtProvider(ctx, &refreshed)
++		answer.isRefreshed, answer.err = s.refreshBounded(ctx, &refreshed, wasStored)
 +		if errors.Is(answer.err, providers.ErrNotImplemented) {
 +			// HACK:
 +			// Providers that don't implement `RefreshSession` use the default
@@ -797,6 +797,30 @@ index 00000000..092343c5
 +	}
 +
 +	return s.answerTimeout
++}
++
++// refreshBounded calls the provider. The refresh of a stub, a session restored from its cookie,
++// first takes one of the slots of the process for such refreshes and frees it once the provider
++// has answered, whether the request still waits for the answer or not.
++func (s *storedSessionLoader) refreshBounded(ctx context.Context, session *sessionsapi.SessionState, wasStored bool) (bool, error) {
++	if wasStored {
++		return s.refreshAtProvider(ctx, session)
++	}
++
++	slots, wait := s.restoreSlots, s.restoreWait
++	if slots == nil {
++		slots = restoreSlots
++	}
++	if wait == 0 {
++		wait = restoreRefreshWait
++	}
++	release, err := takeRestoreSlot(ctx, slots, wait)
++	if err != nil {
++		return false, err
++	}
++	defer release()
++
++	return s.refreshAtProvider(ctx, session)
 +}
 +
 +// refreshAtProvider calls the provider. It runs in a goroutine of its own, where a panic of the
@@ -888,6 +912,11 @@ index 00000000..092343c5
 +// of the cookie instead, which has no ID token.
 +func (s *storedSessionLoader) isEnded(req *http.Request) bool {
 +	current, err := s.store.Load(req)
++	if err == nil && current != nil && current.StoreUnavailable {
++		// The store did not answer: the session is not known to be ended, and dropping the answer
++		// would leave the browser with the refresh token the provider has just replaced.
++		return false
++	}
 +	return err != nil || current == nil || current.IDToken == ""
 +}
 +
@@ -1774,18 +1803,20 @@ index 00000000..876d31ec
 +}
 diff --git a/pkg/middleware/deckhouse_refresh_unavailable.go b/pkg/middleware/deckhouse_refresh_unavailable.go
 new file mode 100644
-index 00000000..d49197ee
+index 00000000..facbf87e
 --- /dev/null
 +++ b/pkg/middleware/deckhouse_refresh_unavailable.go
-@@ -0,0 +1,104 @@
+@@ -0,0 +1,169 @@
 +package middleware
 +
 +import (
 +	"context"
 +	"crypto/sha256"
 +	"errors"
++	"math/rand/v2"
 +	"net/http"
 +	"net/url"
++	"strconv"
 +	"sync"
 +	"time"
 +
@@ -1798,6 +1829,10 @@ index 00000000..d49197ee
 +// which holds the only copy of the refresh token of a session restored from the cookie, and the request
 +// is answered 503 instead of being sent to log in.
 +var errRefreshUnavailable = errors.New("the session cannot be refreshed now")
++
++// errStoreUnavailable is the cause of errRefreshUnavailable for a session whose data the store
++// could not read (Deckhouse patch 002).
++var errStoreUnavailable = errors.New("the session store does not answer")
 +
 +// isProviderUnavailable reports whether a refresh failed without an answer of the provider about the
 +// refresh token: the request did not reach the provider or got no answer (connection, TLS, timeout), or
@@ -1881,6 +1916,65 @@ index 00000000..d49197ee
 +	u.mu.Lock()
 +	defer u.mu.Unlock()
 +	delete(u.since, key)
++}
++
++const (
++	// sessionUnavailableRetryAfterMin and sessionUnavailableRetryAfterMax bound the Retry-After, in
++	// seconds, of the 503 answered while the session of a request cannot be checked (Deckhouse patch
++	// 002). The delay is random between them, so that the clients a stalled store or provider has
++	// answered at once do not all come back in the same second.
++	sessionUnavailableRetryAfterMin = 5
++	sessionUnavailableRetryAfterMax = 15
++)
++
++// SessionUnavailableRetryAfter returns the Retry-After, in seconds, of a 503 answered while the
++// session of a request cannot be checked: a random delay of 5 to 15 seconds (Deckhouse patch 002).
++func SessionUnavailableRetryAfter() string {
++	//nolint:gosec // the jitter of a retry delay, not a secret
++	delay := sessionUnavailableRetryAfterMin + rand.IntN(sessionUnavailableRetryAfterMax-sessionUnavailableRetryAfterMin+1)
++	return strconv.Itoa(delay)
++}
++
++const (
++	// maxRestoreRefreshes is how many refreshes of sessions restored from their cookies one process
++	// makes at once (Deckhouse patch 002). A store that has lost its data, or a replica that sees an
++	// empty Redis, sends every session of its users to the provider at once: dex then refreshes them
++	// through the Kubernetes API, 7 to 9 requests one after another each, and the refusals of its API
++	// priority level end in 503 for every client of dex, not only for the proxy. Two replicas send at
++	// most 64 refreshes at once, one Kubernetes request each at any moment: a fraction of the 128
++	// requests in flight a dex replica allows itself, so the sign-ins and the refreshes of stored
++	// sessions keep their room. At about 0.1 second per refresh a replica restores 300 sessions a
++	// second, so a thousand restore within seconds.
++	maxRestoreRefreshes = 32
++	// restoreRefreshWait is how long a refresh of a restored session waits for a free slot before the
++	// request is answered 503. It is far below the deadline of the refresh (sessionRefreshTimeout), so
++	// the request still gets its answer from the proxy.
++	restoreRefreshWait = 2 * time.Second
++)
++
++// errNoRestoreSlot means that the session restored from its cookie was not refreshed because the
++// process already makes maxRestoreRefreshes such refreshes at once (Deckhouse patch 002). Nothing is
++// known against the session: the request is answered 503 and the cookie is kept.
++var errNoRestoreSlot = errors.New("too many sessions are being restored from their cookies at once")
++
++// restoreSlots is shared by every stored session loader of the process.
++var restoreSlots = make(chan struct{}, maxRestoreRefreshes)
++
++// takeRestoreSlot waits for a free slot for the refresh of a session restored from its cookie, at
++// most restoreRefreshWait. The returned function frees the slot; call it once the provider has
++// answered, not when the request is answered, or a slow provider would get more refreshes at once.
++func takeRestoreSlot(ctx context.Context, slots chan struct{}, wait time.Duration) (func(), error) {
++	timer := time.NewTimer(wait)
++	defer timer.Stop()
++
++	select {
++	case slots <- struct{}{}:
++		return func() { <-slots }, nil
++	case <-timer.C:
++		return nil, errNoRestoreSlot
++	case <-ctx.Done():
++		return nil, errNoRestoreSlot
++	}
 +}
 diff --git a/pkg/middleware/deckhouse_refresh_unavailable_test.go b/pkg/middleware/deckhouse_refresh_unavailable_test.go
 new file mode 100644
@@ -2577,8 +2671,193 @@ index 00000000..d7dba17d
 +		})
 +	}
 +}
+diff --git a/pkg/middleware/deckhouse_store_unavailable_test.go b/pkg/middleware/deckhouse_store_unavailable_test.go
+new file mode 100644
+index 00000000..204b3296
+--- /dev/null
++++ b/pkg/middleware/deckhouse_store_unavailable_test.go
+@@ -0,0 +1,179 @@
++package middleware
++
++import (
++	"net/http"
++	"strconv"
++	"sync/atomic"
++	"testing"
++	"testing/synctest"
++	"time"
++
++	sessionsapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
++	"github.com/stretchr/testify/assert"
++	"github.com/stretchr/testify/require"
++)
++
++// asStub makes the stored session the stub of patch 002: what the store gives for a cookie whose
++// data it does not have.
++func (s *lockedSessionStore) asStub() *lockedSessionStore {
++	s.mu.Lock()
++	defer s.mu.Unlock()
++	s.session.IDToken = ""
++	return s
++}
++
++// unavailableAfter makes the loader see a store that does not answer from load number n on (the
++// first load is 1): it gets the stub of the cookie marked as such.
++func unavailableAfter(loader *storedSessionLoader, n int32) *atomic.Int32 {
++	var loads atomic.Int32
++	inner := loader.store
++	loader.store = &fakeSessionStore{
++		LoadFunc: func(req *http.Request) (*sessionsapi.SessionState, error) {
++			session, err := inner.Load(req)
++			if err != nil || loads.Add(1) < n {
++				return session, err
++			}
++			stub := &sessionsapi.SessionState{
++				CreatedAt:        session.CreatedAt,
++				RefreshToken:     session.RefreshToken,
++				Lock:             session.Lock,
++				StoreUnavailable: true,
++			}
++			return stub, nil
++		},
++		SaveFunc:  inner.Save,
++		ClearFunc: inner.Clear,
++	}
++	return &loads
++}
++
++// A store that does not answer gets 503 and no refresh: when every Redis stalls at once, the
++// provider is not asked to refresh every session, and the cookie is kept.
++func TestStoreUnavailableIsNotRefreshed(t *testing.T) {
++	tests := []struct {
++		name string
++		// unavailableFrom is the first load the store does not answer.
++		unavailableFrom int32
++		expectedLoads   int32
++	}{
++		{name: "the store does not answer the request", unavailableFrom: 1, expectedLoads: 1},
++		{name: "the store stops answering under the lock of the session", unavailableFrom: 2, expectedLoads: 2},
++	}
++	for _, tt := range tests {
++		t.Run(tt.name, func(t *testing.T) {
++			synctest.Test(t, func(t *testing.T) {
++				store := newLockedSessionStore(time.Second)
++				loader := store.loader()
++				loads := unavailableAfter(loader, tt.unavailableFrom)
++
++				scope := serveSession(t.Context(), loader)
++
++				assert.True(t, scope.SessionUnavailable, "the request is answered 503")
++				assert.Nil(t, scope.Session)
++				assert.Zero(t, store.refreshes.Load(), "the provider is not asked")
++				assert.False(t, store.cleared, "the cookie is kept")
++				assert.Empty(t, loader.unavailable.since, "the window of a provider that does not answer does not start")
++				assert.True(t, store.lock.isFree())
++				assert.Equal(t, tt.expectedLoads, loads.Load())
++			})
++		})
++	}
++}
++
++// A refresh the provider answers late is saved although the store does not answer the check
++// whether the session has ended meanwhile: dropping it would leave the browser with a replaced
++// refresh token.
++func TestLateRefreshIsSavedWhileTheStoreDoesNotAnswer(t *testing.T) {
++	synctest.Test(t, func(t *testing.T) {
++		store := newLockedSessionStore(25 * time.Second)
++		loader := store.expiredLoader()
++		// Loads 1 and 2 are the request and its reload under the lock; 3 is the check of the late
++		// answer.
++		unavailableAfter(loader, 3)
++
++		scope := serveSession(t.Context(), loader)
++		require.True(t, scope.SessionUnavailable)
++
++		time.Sleep(20 * time.Second)
++		synctest.Wait()
++		assert.Equal(t, "rotated-refresh-token-1", store.stored().RefreshToken, "the answer is saved")
++		assert.True(t, store.lock.isFree())
++	})
++}
++
++// The refreshes of sessions restored from their cookies are bounded per process: a refresh that
++// gets no slot in time is answered 503, and the session and the window of the provider stay as they
++// were.
++func TestRestoreRefreshesAreBounded(t *testing.T) {
++	synctest.Test(t, func(t *testing.T) {
++		store := newLockedSessionStore(time.Second).asStub()
++		loader := store.loader()
++		loader.restoreSlots = make(chan struct{}, 1)
++		loader.restoreSlots <- struct{}{} // another restore holds the only slot
++		started := time.Now()
++
++		scope := serveSession(t.Context(), loader)
++
++		assert.Equal(t, restoreRefreshWait, time.Since(started), "the request waits for a slot for a while")
++		assert.True(t, scope.SessionUnavailable)
++		assert.Zero(t, store.refreshes.Load())
++		assert.False(t, store.cleared)
++		assert.Empty(t, loader.unavailable.since)
++		assert.True(t, store.lock.isFree())
++
++		<-loader.restoreSlots
++		scope = serveSession(t.Context(), loader)
++		require.NotNil(t, scope.Session)
++		assert.Equal(t, "rotated-refresh-token-1", scope.Session.RefreshToken)
++		assert.Empty(t, loader.restoreSlots, "the slot is free once the provider has answered")
++	})
++}
++
++// A session the store has is refreshed whatever the restores do.
++func TestStoredSessionRefreshTakesNoRestoreSlot(t *testing.T) {
++	synctest.Test(t, func(t *testing.T) {
++		store := newLockedSessionStore(time.Second)
++		loader := store.loader()
++		loader.restoreSlots = make(chan struct{}, 1)
++		loader.restoreSlots <- struct{}{}
++
++		scope := serveSession(t.Context(), loader)
++
++		require.NotNil(t, scope.Session)
++		assert.EqualValues(t, 1, store.refreshes.Load())
++	})
++}
++
++// The slot of a restore is held until the provider answers, not until the request is answered: a
++// slow provider gets no more restores at once than the bound.
++func TestRestoreSlotIsHeldUntilTheProviderAnswers(t *testing.T) {
++	synctest.Test(t, func(t *testing.T) {
++		store := newLockedSessionStore(25 * time.Second).asStub()
++		loader := store.loader()
++		loader.restoreSlots = make(chan struct{}, 2)
++
++		scope := serveSession(t.Context(), loader)
++		require.True(t, scope.SessionUnavailable, "the request stops waiting at its deadline")
++		assert.Len(t, loader.restoreSlots, 1, "the refresh still holds its slot")
++
++		time.Sleep(20 * time.Second)
++		synctest.Wait()
++		assert.Empty(t, loader.restoreSlots, "the slot is free once the provider has answered")
++		assert.True(t, store.lock.isFree())
++	})
++}
++
++// The clients a stalled store has answered at once do not come back in the same second.
++func TestSessionUnavailableRetryAfter(t *testing.T) {
++	t.Parallel()
++
++	seen := map[int]bool{}
++	for range 1000 {
++		delay, err := strconv.Atoi(SessionUnavailableRetryAfter())
++		require.NoError(t, err)
++		require.GreaterOrEqual(t, delay, sessionUnavailableRetryAfterMin)
++		require.LessOrEqual(t, delay, sessionUnavailableRetryAfterMax)
++		seen[delay] = true
++	}
++	assert.Greater(t, len(seen), 5, "the delay is spread")
++}
 diff --git a/pkg/middleware/stored_session.go b/pkg/middleware/stored_session.go
-index 53238f19..c94de36c 100644
+index 53238f19..68aae20a 100644
 --- a/pkg/middleware/stored_session.go
 +++ b/pkg/middleware/stored_session.go
 @@ -12,7 +12,6 @@ import (
@@ -2651,7 +2930,7 @@ index 53238f19..c94de36c 100644
  }
  
  // storedSessionLoader is responsible for loading sessions from cookie
-@@ -99,6 +116,17 @@ type storedSessionLoader struct {
+@@ -99,6 +116,22 @@ type storedSessionLoader struct {
  	refreshPeriod    time.Duration
  	sessionRefresher func(context.Context, *sessionsapi.SessionState) (bool, error)
  	sessionValidator func(context.Context, *sessionsapi.SessionState) bool
@@ -2666,10 +2945,15 @@ index 53238f19..c94de36c 100644
 +	// obtainTimeout bounds the wait of a request for the lock of its session, held by the refresh
 +	// of another request of the session; zero is sessionRefreshObtainTimeout (Deckhouse patch 002).
 +	obtainTimeout time.Duration
++	// restoreSlots bounds the refreshes of sessions restored from their cookies that run at once,
++	// and restoreWait the wait for a free one; nil and zero are those of the process (Deckhouse
++	// patch 002).
++	restoreSlots chan struct{}
++	restoreWait  time.Duration
  }
  
  // loadSession attempts to load a session as identified by the request cookies.
-@@ -116,7 +144,13 @@ func (s *storedSessionLoader) loadSession(next http.Handler) http.Handler {
+@@ -116,7 +149,13 @@ func (s *storedSessionLoader) loadSession(next http.Handler) http.Handler {
  		}
  
  		session, err := s.getValidatedSession(rw, req)
@@ -2684,7 +2968,7 @@ index 53238f19..c94de36c 100644
  			// In the case when there was an error loading the session,
  			// we should clear the session
  			logger.Errorf("Error loading cookied session: %v, removing session", err)
-@@ -126,6 +160,10 @@ func (s *storedSessionLoader) loadSession(next http.Handler) http.Handler {
+@@ -126,6 +165,10 @@ func (s *storedSessionLoader) loadSession(next http.Handler) http.Handler {
  			}
  		}
  
@@ -2695,7 +2979,7 @@ index 53238f19..c94de36c 100644
  		// Add the session to the scope if it was found
  		scope.Session = session
  		next.ServeHTTP(rw, req)
-@@ -143,7 +181,7 @@ func (s *storedSessionLoader) getValidatedSession(rw http.ResponseWriter, req *h
+@@ -143,7 +186,7 @@ func (s *storedSessionLoader) getValidatedSession(rw http.ResponseWriter, req *h
  
  	err = s.refreshSessionIfNeeded(rw, req, session)
  	if err != nil {
@@ -2704,7 +2988,18 @@ index 53238f19..c94de36c 100644
  	}
  
  	return session, nil
-@@ -159,17 +197,21 @@ func (s *storedSessionLoader) refreshSessionIfNeeded(rw http.ResponseWriter, req
+@@ -153,23 +196,32 @@ func (s *storedSessionLoader) getValidatedSession(rw http.ResponseWriter, req *h
+ // is older than the refresh period.
+ // Success or fail, we will then validate the session.
+ func (s *storedSessionLoader) refreshSessionIfNeeded(rw http.ResponseWriter, req *http.Request, session *sessionsapi.SessionState) error {
++	if session.StoreUnavailable {
++		// The store did not answer, so the data of the session may still be there: nothing is
++		// known against the session, and nothing proves it either (Deckhouse patch 002).
++		return fmt.Errorf("%w: %w", errRefreshUnavailable, errStoreUnavailable)
++	}
+ 	if !needsRefresh(s.refreshPeriod, session) {
+ 		// Refresh is disabled or the session is not old enough, do nothing
+ 		return nil
  	}
  
  	var lockObtained bool
@@ -2730,7 +3025,7 @@ index 53238f19..c94de36c 100644
  			} else if errors.Is(err, sessionsapi.ErrLockNotObtained) {
  				time.Sleep(sessionRefreshRetryPeriod)
  				continue
-@@ -180,12 +222,16 @@ func (s *storedSessionLoader) refreshSessionIfNeeded(rw http.ResponseWriter, req
+@@ -180,12 +232,16 @@ func (s *storedSessionLoader) refreshSessionIfNeeded(rw http.ResponseWriter, req
  	}
  
  	// The rest of this function is carried out under lock, but we must release it
@@ -2750,7 +3045,19 @@ index 53238f19..c94de36c 100644
  			logger.Errorf("unable to release lock: %v", err)
  		}
  	}()
-@@ -215,12 +261,23 @@ func (s *storedSessionLoader) refreshSessionIfNeeded(rw http.ResponseWriter, req
+@@ -198,6 +254,11 @@ func (s *storedSessionLoader) refreshSessionIfNeeded(rw http.ResponseWriter, req
+ 	if freshSession == nil {
+ 		return errors.New("session no longer exists, it may have been removed by another request")
+ 	}
++	if freshSession.StoreUnavailable {
++		// The store has stopped answering since the session was loaded: the stub of the cookie is
++		// not refreshed in place of the stored session (Deckhouse patch 002).
++		return fmt.Errorf("%w: %w", errRefreshUnavailable, errStoreUnavailable)
++	}
+ 	// Restore the state of the fresh session into the original pointer.
+ 	// This is important so that changes are passed up the to the parent scope.
+ 	lock := session.Lock
+@@ -215,12 +276,28 @@ func (s *storedSessionLoader) refreshSessionIfNeeded(rw http.ResponseWriter, req
  
  	// We are holding the lock and the session needs a refresh
  	logger.Printf("Refreshing session - User: %s; SessionAge: %s", session.User, session.Age())
@@ -2764,6 +3071,11 @@ index 53238f19..c94de36c 100644
 +	refreshCtx, cancelRefresh := context.WithTimeout(context.WithoutCancel(req.Context()), s.refreshTimeout)
 +	defer cancelRefresh()
 +	refreshErr = s.refreshSession(rw, req.WithContext(refreshCtx), session)
++	if errors.Is(refreshErr, errNoRestoreSlot) {
++		// The provider was not asked: neither the window of unavailableSince nor the session
++		// changes (Deckhouse patch 002).
++		return fmt.Errorf("%w: %w", errRefreshUnavailable, refreshErr)
++	}
 +	if !isProviderUnavailable(refreshErr) {
 +		s.unavailable.forget(refreshToken)
 +	}
@@ -2777,7 +3089,7 @@ index 53238f19..c94de36c 100644
  			logger.Printf("Fatal refresh error detected (session revoked or invalid), clearing session for user: %s", session.User)
  
  			// Clear the session from storage (Redis) and remove the cookie
-@@ -229,7 +286,7 @@ func (s *storedSessionLoader) refreshSessionIfNeeded(rw http.ResponseWriter, req
+@@ -229,7 +306,7 @@ func (s *storedSessionLoader) refreshSessionIfNeeded(rw http.ResponseWriter, req
  			}
  
  			// Return error immediately to force re-authentication
@@ -2786,7 +3098,7 @@ index 53238f19..c94de36c 100644
  		}
  
  		// For non-fatal errors (network issues, timeouts), keep the session
-@@ -237,7 +294,29 @@ func (s *storedSessionLoader) refreshSessionIfNeeded(rw http.ResponseWriter, req
+@@ -237,7 +314,29 @@ func (s *storedSessionLoader) refreshSessionIfNeeded(rw http.ResponseWriter, req
  	}
  
  	// Validate all sessions after any Redeem/Refresh operation (fail or success)
@@ -2817,7 +3129,7 @@ index 53238f19..c94de36c 100644
  }
  
  // needsRefresh determines whether we should attempt to refresh a session or not.
-@@ -247,34 +326,37 @@ func needsRefresh(refreshPeriod time.Duration, session *sessionsapi.SessionState
+@@ -247,34 +346,37 @@ func needsRefresh(refreshPeriod time.Duration, session *sessionsapi.SessionState
  
  // refreshSession attempts to refresh the session with the provider
  // and will save the session if it was updated.
@@ -3364,8 +3676,104 @@ index 00000000..0016df28
 +	assert.Empty(t, decoded.StoredRefreshToken)
 +	assert.Equal(t, testRefreshToken, decoded.RefreshToken)
 +}
+diff --git a/pkg/sessions/persistence/deckhouse_store_unavailable_test.go b/pkg/sessions/persistence/deckhouse_store_unavailable_test.go
+new file mode 100644
+index 00000000..ba9095c8
+--- /dev/null
++++ b/pkg/sessions/persistence/deckhouse_store_unavailable_test.go
+@@ -0,0 +1,67 @@
++package persistence
++
++import (
++	"context"
++	"errors"
++	"fmt"
++	"net/http"
++	"net/http/httptest"
++	"testing"
++
++	sessiontests "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions/tests"
++	"github.com/stretchr/testify/assert"
++	"github.com/stretchr/testify/require"
++)
++
++// loadFailingStore keeps what is saved but fails every load with loadErr.
++type loadFailingStore struct {
++	*sessiontests.MockStore
++	loadErr error
++}
++
++func (s *loadFailingStore) Load(context.Context, string) ([]byte, error) {
++	return nil, s.loadErr
++}
++
++// A store that cannot tell whether it has the session gives a stub that is not to be refreshed;
++// a store that has no data gives the stub of patch 002 as before.
++func TestLoadOfAStoreThatDoesNotAnswer(t *testing.T) {
++	t.Parallel()
++
++	tests := []struct {
++		name                string
++		loadErr             error
++		expectedUnavailable bool
++	}{
++		{
++			name:                "no redis answered",
++			loadErr:             fmt.Errorf("%w: no filled redis answered", ErrStoreUnavailable),
++			expectedUnavailable: true,
++		},
++		{
++			name:    "the session is not in the store",
++			loadErr: errors.New("session does not exist"),
++		},
++		{
++			// The redis store of upstream: its pod is not ready without Redis.
++			name:    "an error of another store",
++			loadErr: errors.New("error loading redis session: i/o timeout"),
++		},
++	}
++	for _, tt := range tests {
++		t.Run(tt.name, func(t *testing.T) {
++			t.Parallel()
++			store := &loadFailingStore{MockStore: sessiontests.NewMockStore(), loadErr: tt.loadErr}
++			manager := NewManager(store, testCookieOptions(true))
++			req := saveSession(t, manager, httptest.NewRequest(http.MethodGet, "http://example.com/", nil), newSession())
++
++			loaded, err := manager.Load(req)
++			require.NoError(t, err, "the cookie is kept: it holds the only copy of the refresh token")
++			require.NotNil(t, loaded)
++			assert.Equal(t, tt.expectedUnavailable, loaded.StoreUnavailable)
++			assert.Equal(t, testRefreshToken, loaded.RefreshToken, "a sign-out can still revoke the token of the cookie")
++			assert.Empty(t, loaded.IDToken)
++			assert.NotNil(t, loaded.Lock)
++		})
++	}
++}
+diff --git a/pkg/sessions/persistence/interfaces.go b/pkg/sessions/persistence/interfaces.go
+index 5bab9912..c218495a 100644
+--- a/pkg/sessions/persistence/interfaces.go
++++ b/pkg/sessions/persistence/interfaces.go
+@@ -2,11 +2,18 @@ package persistence
+ 
+ import (
+ 	"context"
++	"errors"
+ 	"time"
+ 
+ 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
+ )
+ 
++// ErrStoreUnavailable is returned by Load of a Store that cannot tell whether it has the data of a
++// key: none of its backends answered (Deckhouse patch 002). Any other error of Load means that the
++// store has no data for the key. The Manager keeps the session of such a request without trusting
++// or refreshing it.
++var ErrStoreUnavailable = errors.New("the session store does not answer")
++
+ // Store is used for persistent session stores (IE not Cookie)
+ // Implementing this interface allows it to easily use the persistence.Manager
+ // for session ticket + encryption details.
 diff --git a/pkg/sessions/persistence/manager.go b/pkg/sessions/persistence/manager.go
-index 9652f015..9fbaf071 100644
+index 9652f015..3fd5a842 100644
 --- a/pkg/sessions/persistence/manager.go
 +++ b/pkg/sessions/persistence/manager.go
 @@ -2,6 +2,7 @@ package persistence
@@ -3397,7 +3805,7 @@ index 9652f015..9fbaf071 100644
  	if err != nil {
  		tckt, err = newTicket(m.Options)
  		if err != nil {
-@@ -55,23 +61,76 @@ func (m *Manager) Save(rw http.ResponseWriter, req *http.Request, s *sessions.Se
+@@ -55,23 +61,85 @@ func (m *Manager) Save(rw http.ResponseWriter, req *http.Request, s *sessions.Se
  // Load reads sessions.SessionState information from a session store. It will
  // use the session ticket from the http.Request's cookie.
  func (m *Manager) Load(req *http.Request) (*sessions.SessionState, error) {
@@ -3438,11 +3846,20 @@ index 9652f015..9fbaf071 100644
 +		// Without a refresh token in the cookie nothing can restore the session, and a session
 +		// that cannot be decrypted is not restored either.
 +		return nil, err
++	case errors.Is(err, ErrStoreUnavailable):
++		// The store did not answer, so the data of the ticket may still be there. The stub is not
++		// refreshed: when every Redis stalls at once, a refresh of every session through the
++		// provider would overload it, and two replicas would refresh the same refresh token. The
++		// caller answers 503 and keeps the cookie, the only copy of the refresh token; the stub
++		// still lets a sign-out revoke that token.
++		state := refreshTokenOnlySession(refreshToken, m.Store.Lock(tckt.id))
++		state.StoreUnavailable = true
++		return state, nil
 +	default:
 +		// The store has no data for the ticket: Redis restarted, the request reached another
-+		// replica, or the session was cleared. Any error of the store counts, an unreachable
-+		// Redis included: the caller clears the cookie on a load error, and the cookie holds
-+		// the only copy of the refresh token.
++		// replica, or the session was cleared. Any error of a store but ErrStoreUnavailable counts,
++		// an unreachable Redis of the redis store included: the caller clears the cookie on a load
++		// error, and the cookie holds the only copy of the refresh token.
 +		return refreshTokenOnlySession(refreshToken, m.Store.Lock(tckt.id)), nil
 +	}
 +}

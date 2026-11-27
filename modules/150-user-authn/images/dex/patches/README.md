@@ -216,6 +216,43 @@ level (`templates/dex/flowcontrol.yaml`).
 `types_test.go`). The later patches that add storage requests (150, 250, 300,
 320, 330, 450) pass the context to them.
 
+### 140-storage-health-throttling.patch
+
+**Zone:** the storage health check (`storage/health.go`), which
+`/healthz/ready` reports.
+
+The check writes and removes an auth request every 15 seconds through the
+same storage, and so through the APF level of Dex in the API server
+(`templates/dex/flowcontrol.yaml`). When the level is full, the API server
+answers 429 Too Many Requests to every replica of Dex alike, the check fails
+on all of them, and the kubelet takes every replica out of its Services at
+once: under a refresh storm (2026-11-23, 921 refusals a second) both pods of
+Dex were not ready for 20 seconds, and with them the signing keys, the
+discovery document and the sign-in pages, which need no write. Readiness
+cannot shed load between replicas that share one API server level.
+
+- A 429 answer of the storage counts as working: the API server has
+  answered. The check passes with the error in its details.
+- The check does not wait for the limit of requests in flight of 130
+  (`storage.WithoutRequestLimit`): with every slot taken by a refresh storm
+  the wait would end in `errNoSlot` and fail the check of every replica alike.
+  Its two requests every 15 seconds go to the API server at once; a throttled
+  one is sent again within the budget of a request and then returned as 429.
+- Any other failure still fails the check: an API server that does not
+  answer, refuses the ServiceAccount of Dex or answers 5xx.
+- The check reads the status through `StatusCode()` of the error, which the
+  Kubernetes storage implements; other storages never answer 429.
+- `TestHealthCheckUnderThrottling`: the outcome of each answer, and that no
+  request of the check waits for the limit.
+
+**Consumer in Deckhouse:** the readiness probes of Dex and of its proxy
+container (`templates/dex/deployment.yaml`).
+
+**Upstream status:** Deckhouse only.
+
+**Depends on:** 130 (`storage.WithoutRequestLimit`, and the 429 it returns once
+the retries of a request are over).
+
 ### 150-transitional-offline-sessions.patch
 
 **Zone:** transitional. Removed in Deckhouse 1.79 together with the controller

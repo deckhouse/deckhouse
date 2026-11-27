@@ -27,8 +27,13 @@ cpu: 100m
 memory: 128Mi
 {{- end }}
 
+{{- /* The CPU a Redis is sure to get on a busy node, and the floor of the VPA: a Redis used about 0.11 of a core
+       when its pod served 1500 requests a second. With 20m to 80m it got almost no CPU on a node at its limit, and
+       the requests of the proxy timed out on it. No limits, as elsewhere in Deckhouse: a CPU limit throttles Redis
+       exactly when the requests pile up, and a memory limit without maxmemory in Redis would kill it with every
+       session of the pod; the sessions expire with their cookies. */ -}}
 {{- define "shared_dex_authenticator_redis_resources" }}
-cpu: 20m
+cpu: 100m
 memory: 64Mi
 {{- end }}
 

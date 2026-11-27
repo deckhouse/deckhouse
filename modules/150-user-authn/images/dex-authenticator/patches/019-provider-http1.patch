@@ -1,0 +1,937 @@
+diff --git a/pkg/providers/oidc/provider_verifier.go b/pkg/providers/oidc/provider_verifier.go
+index 7a132c27..ecc3f841 100644
+--- a/pkg/providers/oidc/provider_verifier.go
++++ b/pkg/providers/oidc/provider_verifier.go
+@@ -169,7 +169,7 @@ func remoteKeySet(ctx context.Context, jwksURL string) oidc.KeySet {
+ }
+ 
+ func getVerifierBuilder(ctx context.Context, opts ProviderVerifierOptions) (verifierBuilder, DiscoveryProvider, error) {
+-	ctx = oidc.ClientContext(ctx, requests.DefaultHTTPClient)
++	ctx = oidc.ClientContext(ctx, requests.ProviderHTTPClient)
+ 
+ 	if opts.SkipDiscovery {
+ 		var keySet oidc.KeySet
+diff --git a/pkg/requests/deckhouse_provider_metrics.go b/pkg/requests/deckhouse_provider_metrics.go
+new file mode 100644
+index 00000000..a24cd830
+--- /dev/null
++++ b/pkg/requests/deckhouse_provider_metrics.go
+@@ -0,0 +1,210 @@
++package requests
++
++import (
++	"context"
++	"errors"
++	"io"
++	"net"
++	"net/http"
++	"net/http/httptrace"
++	"sync"
++	"time"
++
++	"github.com/prometheus/client_golang/prometheus"
++)
++
++const (
++	connectionReused = "reused"
++	connectionNew    = "new"
++
++	waitTimeout  = "timeout"
++	waitCanceled = "canceled"
++	waitError    = "error"
++)
++
++// providerMetrics describe the pool of connections to the OIDC provider. No label carries an
++// address, a client or a user.
++type providerMetrics struct {
++	open         prometheus.Gauge
++	inUse        prometheus.Gauge
++	waiting      prometheus.Gauge
++	wait         *prometheus.HistogramVec
++	waitFailures *prometheus.CounterVec
++}
++
++func newProviderMetrics() *providerMetrics {
++	const prefix = "oauth2_proxy_provider_"
++
++	return &providerMetrics{
++		open: prometheus.NewGauge(prometheus.GaugeOpts{
++			Name: prefix + "connections_open",
++			Help: "Connections to the OIDC provider that are open, idle ones included.",
++		}),
++		inUse: prometheus.NewGauge(prometheus.GaugeOpts{
++			Name: prefix + "connections_in_use",
++			Help: "Connections to the OIDC provider that carry a request now, until its answer is read.",
++		}),
++		waiting: prometheus.NewGauge(prometheus.GaugeOpts{
++			Name: prefix + "connection_waiting_requests",
++			Help: "Requests to the OIDC provider that wait for a connection now: for a free one of the pool, or for a new one to be opened.",
++		}),
++		wait: prometheus.NewHistogramVec(prometheus.HistogramOpts{
++			Name:    prefix + "connection_wait_seconds",
++			Help:    "How long a request to the OIDC provider waited for its connection, by connection: reused (from the pool) or new (opened for it, with the TLS handshake).",
++			Buckets: []float64{0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10, 30},
++		}, []string{"connection"}),
++		waitFailures: prometheus.NewCounterVec(prometheus.CounterOpts{
++			Name: prefix + "connection_wait_failures_total",
++			Help: "Requests to the OIDC provider that ended without a connection, by reason: timeout (the deadline of the request passed while it waited), canceled, or error (the connection could not be opened).",
++		}, []string{"reason"}),
++	}
++}
++
++func (m *providerMetrics) collectors() []prometheus.Collector {
++	return []prometheus.Collector{m.open, m.inUse, m.waiting, m.wait, m.waitFailures}
++}
++
++// defaultProviderMetrics are the metrics of ProviderTransport, the one pool of the process.
++var defaultProviderMetrics = newProviderMetrics()
++
++func init() {
++	prometheus.MustRegister(defaultProviderMetrics.collectors()...)
++}
++
++// countedDialer wraps the dialer of the transport to count the open connections.
++func countedDialer(dial func(ctx context.Context, network, addr string) (net.Conn, error), m *providerMetrics) func(ctx context.Context, network, addr string) (net.Conn, error) {
++	return func(ctx context.Context, network, addr string) (net.Conn, error) {
++		conn, err := dial(ctx, network, addr)
++		if err != nil {
++			return nil, err
++		}
++		m.open.Inc()
++
++		return &countedConn{Conn: conn, metrics: m}, nil
++	}
++}
++
++type countedConn struct {
++	net.Conn
++	metrics *providerMetrics
++	once    sync.Once
++}
++
++func (c *countedConn) Close() error {
++	c.once.Do(c.metrics.open.Dec)
++
++	return c.Conn.Close()
++}
++
++// measuredTransport measures how a request to the provider waits for its connection and how long
++// it holds it.
++type measuredTransport struct {
++	next    http.RoundTripper
++	metrics *providerMetrics
++}
++
++func (t *measuredTransport) RoundTrip(req *http.Request) (*http.Response, error) {
++	r := &measuredRequest{metrics: t.metrics}
++	trace := &httptrace.ClientTrace{GetConn: r.getConn, GotConn: r.gotConn}
++
++	resp, err := t.next.RoundTrip(req.WithContext(httptrace.WithClientTrace(req.Context(), trace)))
++	if err != nil {
++		r.finish(err)
++		return nil, err
++	}
++	resp.Body = &measuredBody{ReadCloser: resp.Body, request: r}
++
++	return resp, nil
++}
++
++// measuredRequest is the state of one request. The transport may ask for a second connection when
++// the first one was closed before the request was written.
++type measuredRequest struct {
++	metrics *providerMetrics
++
++	mu        sync.Mutex
++	waitStart time.Time
++	isWaiting bool
++	isHolding bool
++	isDone    bool
++}
++
++func (r *measuredRequest) getConn(string) {
++	r.mu.Lock()
++	defer r.mu.Unlock()
++
++	if r.isDone || r.isWaiting {
++		return
++	}
++	if r.isHolding {
++		r.isHolding = false
++		r.metrics.inUse.Dec()
++	}
++	r.isWaiting = true
++	r.waitStart = time.Now()
++	r.metrics.waiting.Inc()
++}
++
++func (r *measuredRequest) gotConn(info httptrace.GotConnInfo) {
++	r.mu.Lock()
++	defer r.mu.Unlock()
++
++	if r.isDone {
++		return
++	}
++	if r.isWaiting {
++		r.isWaiting = false
++		r.metrics.waiting.Dec()
++		connection := connectionNew
++		if info.Reused {
++			connection = connectionReused
++		}
++		r.metrics.wait.WithLabelValues(connection).Observe(time.Since(r.waitStart).Seconds())
++	}
++	if !r.isHolding {
++		r.isHolding = true
++		r.metrics.inUse.Inc()
++	}
++}
++
++// finish ends the request: its answer is read, or it failed with err.
++func (r *measuredRequest) finish(err error) {
++	r.mu.Lock()
++	defer r.mu.Unlock()
++
++	if r.isDone {
++		return
++	}
++	r.isDone = true
++	if r.isWaiting {
++		r.isWaiting = false
++		r.metrics.waiting.Dec()
++		r.metrics.waitFailures.WithLabelValues(waitFailureReason(err)).Inc()
++	}
++	if r.isHolding {
++		r.isHolding = false
++		r.metrics.inUse.Dec()
++	}
++}
++
++func waitFailureReason(err error) string {
++	switch {
++	case errors.Is(err, context.DeadlineExceeded):
++		return waitTimeout
++	case errors.Is(err, context.Canceled):
++		return waitCanceled
++	default:
++		return waitError
++	}
++}
++
++type measuredBody struct {
++	io.ReadCloser
++	request *measuredRequest
++}
++
++func (b *measuredBody) Close() error {
++	b.request.finish(nil)
++
++	return b.ReadCloser.Close()
++}
+diff --git a/pkg/requests/deckhouse_provider_metrics_test.go b/pkg/requests/deckhouse_provider_metrics_test.go
+new file mode 100644
+index 00000000..cf04f7fa
+--- /dev/null
++++ b/pkg/requests/deckhouse_provider_metrics_test.go
+@@ -0,0 +1,215 @@
++package requests
++
++import (
++	"context"
++	"crypto/tls"
++	"crypto/x509"
++	"errors"
++	"io"
++	"net/http"
++	"net/http/httptest"
++	"sync"
++	"testing"
++	"time"
++
++	"github.com/prometheus/client_golang/prometheus"
++	"github.com/prometheus/client_golang/prometheus/testutil"
++	"github.com/stretchr/testify/assert"
++	"github.com/stretchr/testify/require"
++)
++
++// measuredSetup is a provider client over a pool of maxConns connections to server, with metrics
++// of its own.
++type measuredSetup struct {
++	metrics   *providerMetrics
++	transport *http.Transport
++	client    *http.Client
++}
++
++func newMeasuredSetup(t *testing.T, server *httptest.Server, maxConns int) *measuredSetup {
++	t.Helper()
++
++	m := newProviderMetrics()
++	registry := prometheus.NewRegistry()
++	for _, collector := range m.collectors() {
++		require.NoError(t, registry.Register(collector))
++	}
++
++	pool := x509.NewCertPool()
++	pool.AddCert(server.Certificate())
++	transport := newProviderTransport(m)
++	transport.TLSClientConfig = &tls.Config{RootCAs: pool, MinVersion: tls.VersionTLS12}
++	transport.MaxConnsPerHost = maxConns
++	t.Cleanup(transport.CloseIdleConnections)
++
++	return &measuredSetup{
++		metrics:   m,
++		transport: transport,
++		client:    &http.Client{Transport: &measuredTransport{next: transport, metrics: m}},
++	}
++}
++
++// get sends a request and reads and closes its answer.
++func (s *measuredSetup) get(ctx context.Context, url string) error {
++	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
++	if err != nil {
++		return err
++	}
++	resp, err := s.client.Do(req)
++	if err != nil {
++		return err
++	}
++	_, err = io.Copy(io.Discard, resp.Body)
++
++	return errors.Join(err, resp.Body.Close())
++}
++
++// heldServer answers a request once release is closed.
++func heldServer(t *testing.T) (*httptest.Server, chan struct{}, *sync.WaitGroup) {
++	t.Helper()
++
++	release := make(chan struct{})
++	var arrived sync.WaitGroup
++	server := newHTTP2Server(t, func(rw http.ResponseWriter, r *http.Request) {
++		arrived.Done()
++		select {
++		case <-release:
++		case <-r.Context().Done():
++		}
++		rw.WriteHeader(http.StatusNoContent)
++	})
++
++	return server, release, &arrived
++}
++
++func TestProviderMetricsShowTheRequestsThatWaitForAConnection(t *testing.T) {
++	t.Parallel()
++
++	const (
++		maxConns = 2
++		parallel = 5
++	)
++	server, release, arrived := heldServer(t)
++	arrived.Add(maxConns)
++	setup := newMeasuredSetup(t, server, maxConns)
++	m := setup.metrics
++
++	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
++	defer cancel()
++
++	var done sync.WaitGroup
++	errs := make(chan error, parallel)
++	for range parallel {
++		done.Go(func() { errs <- setup.get(ctx, server.URL) })
++	}
++
++	// The pool is full: two requests hold the connections, three wait for one.
++	arrived.Wait()
++	require.Eventually(t, func() bool {
++		return testutil.ToFloat64(m.waiting) == parallel-maxConns
++	}, 5*time.Second, 10*time.Millisecond)
++	assert.InDelta(t, maxConns, testutil.ToFloat64(m.inUse), 0)
++	assert.InDelta(t, maxConns, testutil.ToFloat64(m.open), 0)
++
++	arrived.Add(parallel - maxConns)
++	close(release)
++	done.Wait()
++	close(errs)
++	for err := range errs {
++		require.NoError(t, err)
++	}
++
++	assert.Zero(t, testutil.ToFloat64(m.waiting))
++	assert.Zero(t, testutil.ToFloat64(m.inUse))
++	assert.InDelta(t, maxConns, testutil.ToFloat64(m.open), 0, "the pool keeps its idle connections")
++	assert.Equal(t, uint64(parallel), histogramCount(t, m.wait))
++	assert.Zero(t, testutil.CollectAndCount(m.waitFailures))
++
++	setup.transport.CloseIdleConnections()
++	assert.Zero(t, testutil.ToFloat64(m.open), "a closed connection is not counted")
++}
++
++func TestProviderMetricsCountTheRequestsThatGaveUpWaiting(t *testing.T) {
++	t.Parallel()
++
++	server, release, arrived := heldServer(t)
++	arrived.Add(1)
++	setup := newMeasuredSetup(t, server, 1)
++	m := setup.metrics
++
++	// One request holds the only connection.
++	holder := make(chan error, 1)
++	go func() { holder <- setup.get(context.Background(), server.URL) }()
++	arrived.Wait()
++
++	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
++	defer cancel()
++	require.ErrorIs(t, setup.get(ctx, server.URL), context.DeadlineExceeded)
++
++	canceled, cancelNow := context.WithCancel(context.Background())
++	go func() {
++		// Cancel once the request waits; the deadline of the test stops a request that never does.
++		deadline := time.Now().Add(5 * time.Second)
++		for testutil.ToFloat64(m.waiting) != 1 && time.Now().Before(deadline) {
++			time.Sleep(5 * time.Millisecond)
++		}
++		cancelNow()
++	}()
++	require.ErrorIs(t, setup.get(canceled, server.URL), context.Canceled)
++
++	assert.InDelta(t, 1, testutil.ToFloat64(m.waitFailures.WithLabelValues(waitTimeout)), 0)
++	assert.InDelta(t, 1, testutil.ToFloat64(m.waitFailures.WithLabelValues(waitCanceled)), 0)
++	assert.Zero(t, testutil.ToFloat64(m.waiting))
++	assert.InDelta(t, 1, testutil.ToFloat64(m.inUse), 0)
++
++	close(release)
++	require.NoError(t, <-holder)
++	assert.Zero(t, testutil.ToFloat64(m.inUse))
++}
++
++func TestProviderMetricsCountAConnectionThatCouldNotBeOpened(t *testing.T) {
++	t.Parallel()
++
++	server := newHTTP2Server(t, func(rw http.ResponseWriter, _ *http.Request) {
++		rw.WriteHeader(http.StatusNoContent)
++	})
++	setup := newMeasuredSetup(t, server, 1)
++	m := setup.metrics
++	url := server.URL
++	server.Close()
++
++	require.Error(t, setup.get(context.Background(), url))
++
++	assert.InDelta(t, 1, testutil.ToFloat64(m.waitFailures.WithLabelValues(waitError)), 0)
++	assert.Zero(t, testutil.ToFloat64(m.waiting))
++	assert.Zero(t, testutil.ToFloat64(m.inUse))
++	assert.Zero(t, testutil.ToFloat64(m.open))
++}
++
++// histogramCount returns the number of observations of every series of h.
++func histogramCount(t *testing.T, h *prometheus.HistogramVec) uint64 {
++	t.Helper()
++
++	registry := prometheus.NewRegistry()
++	require.NoError(t, registry.Register(h))
++	families, err := registry.Gather()
++	require.NoError(t, err)
++
++	var count uint64
++	for _, family := range families {
++		for _, metric := range family.GetMetric() {
++			count += metric.GetHistogram().GetSampleCount()
++		}
++	}
++
++	return count
++}
++
++func TestProviderMetricsAreExported(t *testing.T) {
++	t.Parallel()
++
++	for _, collector := range defaultProviderMetrics.collectors() {
++		_, isRegistered := errors.AsType[prometheus.AlreadyRegisteredError](prometheus.DefaultRegisterer.Register(collector))
++		assert.True(t, isRegistered, "the metrics of the pool of the process are on the default registry")
++	}
++}
+diff --git a/pkg/requests/deckhouse_provider_transport.go b/pkg/requests/deckhouse_provider_transport.go
+new file mode 100644
+index 00000000..75ac8d59
+--- /dev/null
++++ b/pkg/requests/deckhouse_provider_transport.go
+@@ -0,0 +1,58 @@
++package requests
++
++import (
++	"crypto/tls"
++	"net/http"
++	"time"
++
++	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/version"
++)
++
++// The pool of connections to the provider. Over HTTP/1.1 a connection carries one request at a
++// time, so the requests of a wave spread over many connections, and the Service of the provider
++// spreads the connections over its pods.
++const (
++	// providerMaxConnsPerHost bounds the connections to one address of the provider: twice the
++	// sessions restored from cookies at a time, with room for the logins and the refreshes of
++	// stored sessions. A request over the bound waits for a free connection within its context.
++	providerMaxConnsPerHost = 64
++	// providerMaxIdleConnsPerHost keeps the connections of the restores between two waves, so a
++	// steady load does not open a TLS connection per request. The default of net/http is 2.
++	providerMaxIdleConnsPerHost = 32
++	// providerIdleConnTimeout closes a connection idle for longer. Dex sets no idle timeout of its
++	// own; a short one lets the pool spread over the pods of Dex again after a restart or a scale.
++	providerIdleConnTimeout = 30 * time.Second
++)
++
++// ProviderTransport carries the requests of the OIDC provider: the token endpoint, the refresh and
++// the keys. It speaks HTTP/1.1 only. Over HTTP/2 a few connections carry every request, so one pod
++// of the provider gets most of them, as a Service balances connections, not requests.
++var ProviderTransport = newProviderTransport(defaultProviderMetrics)
++
++// ProviderHTTPClient is the client of the requests of the OIDC provider. Its pool is measured by
++// the metrics of deckhouse_provider_metrics.go.
++var ProviderHTTPClient = &http.Client{Transport: &userAgentTransport{
++	next:      &measuredTransport{next: ProviderTransport, metrics: defaultProviderMetrics},
++	userAgent: "oauth2-proxy/" + version.VERSION,
++}}
++
++// newProviderTransport returns a copy of the default transport without HTTP/2 and with a pool for
++// one provider, whose open connections m counts.
++func newProviderTransport(m *providerMetrics) *http.Transport {
++	transport := http.DefaultTransport.(*http.Transport).Clone()
++	transport.DialContext = countedDialer(transport.DialContext, m)
++
++	protocols := new(http.Protocols)
++	protocols.SetHTTP1(true)
++	transport.Protocols = protocols
++	transport.ForceAttemptHTTP2 = false
++	// An empty, not nil, map keeps HTTP/2 off whatever sets the protocols later.
++	transport.TLSNextProto = map[string]func(string, *tls.Conn) http.RoundTripper{}
++
++	transport.MaxConnsPerHost = providerMaxConnsPerHost
++	transport.MaxIdleConnsPerHost = providerMaxIdleConnsPerHost
++	transport.MaxIdleConns = max(transport.MaxIdleConns, providerMaxIdleConnsPerHost)
++	transport.IdleConnTimeout = providerIdleConnTimeout
++
++	return transport
++}
+diff --git a/pkg/requests/deckhouse_provider_transport_test.go b/pkg/requests/deckhouse_provider_transport_test.go
+new file mode 100644
+index 00000000..c0339302
+--- /dev/null
++++ b/pkg/requests/deckhouse_provider_transport_test.go
+@@ -0,0 +1,163 @@
++package requests
++
++import (
++	"context"
++	"crypto/tls"
++	"crypto/x509"
++	"net/http"
++	"net/http/httptest"
++	"sync"
++	"testing"
++	"time"
++
++	"github.com/stretchr/testify/assert"
++	"github.com/stretchr/testify/require"
++)
++
++// newHTTP2Server starts a TLS server that offers HTTP/2 and calls handle for each request.
++func newHTTP2Server(t *testing.T, handle http.HandlerFunc) *httptest.Server {
++	t.Helper()
++
++	server := httptest.NewUnstartedServer(handle)
++	server.EnableHTTP2 = true
++	server.StartTLS()
++	t.Cleanup(server.Close)
++
++	return server
++}
++
++// newTestProviderClient returns a client over a fresh provider transport that trusts server.
++func newTestProviderClient(t *testing.T, server *httptest.Server) *http.Client {
++	t.Helper()
++
++	pool := x509.NewCertPool()
++	pool.AddCert(server.Certificate())
++	transport := newProviderTransport(newProviderMetrics())
++	transport.TLSClientConfig = &tls.Config{RootCAs: pool, MinVersion: tls.VersionTLS12}
++	t.Cleanup(transport.CloseIdleConnections)
++
++	return &http.Client{Transport: transport, Timeout: 10 * time.Second}
++}
++
++func TestProviderTransportSpeaksHTTP1(t *testing.T) {
++	t.Parallel()
++
++	server := newHTTP2Server(t, func(rw http.ResponseWriter, _ *http.Request) {
++		rw.WriteHeader(http.StatusNoContent)
++	})
++
++	// The server does speak HTTP/2 to a client that offers it.
++	resp, err := server.Client().Get(server.URL)
++	require.NoError(t, err)
++	require.NoError(t, resp.Body.Close())
++	require.Equal(t, "HTTP/2.0", resp.Proto)
++
++	resp, err = newTestProviderClient(t, server).Get(server.URL)
++	require.NoError(t, err)
++	require.NoError(t, resp.Body.Close())
++
++	assert.Equal(t, "HTTP/1.1", resp.Proto)
++	require.NotNil(t, resp.TLS)
++	assert.NotEqual(t, "h2", resp.TLS.NegotiatedProtocol)
++}
++
++func TestProviderTransportOpensAConnectionPerParallelRequest(t *testing.T) {
++	t.Parallel()
++
++	const parallel = 8
++
++	var (
++		mu      sync.Mutex
++		remotes = map[string]int{}
++		arrived sync.WaitGroup
++	)
++	arrived.Add(parallel)
++	allArrived := make(chan struct{})
++	go func() {
++		arrived.Wait()
++		close(allArrived)
++	}()
++
++	server := newHTTP2Server(t, func(rw http.ResponseWriter, r *http.Request) {
++		mu.Lock()
++		remotes[r.RemoteAddr]++
++		mu.Unlock()
++		arrived.Done()
++		// Every request is held until all of them are in flight: a client that waits for a free
++		// connection would never send the last ones.
++		select {
++		case <-allArrived:
++		case <-r.Context().Done():
++		}
++		rw.WriteHeader(http.StatusNoContent)
++	})
++	client := newTestProviderClient(t, server)
++
++	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
++	defer cancel()
++
++	var done sync.WaitGroup
++	errs := make(chan error, parallel)
++	for range parallel {
++		done.Go(func() {
++			req, err := http.NewRequestWithContext(ctx, http.MethodGet, server.URL, nil)
++			if err != nil {
++				errs <- err
++				return
++			}
++			resp, err := client.Do(req)
++			if err != nil {
++				errs <- err
++				return
++			}
++			errs <- resp.Body.Close()
++		})
++	}
++	done.Wait()
++	close(errs)
++	for err := range errs {
++		require.NoError(t, err)
++	}
++
++	mu.Lock()
++	defer mu.Unlock()
++	assert.Len(t, remotes, parallel, "each request in flight takes its own connection")
++}
++
++func TestProviderTransportPool(t *testing.T) {
++	t.Parallel()
++
++	transport := newProviderTransport(newProviderMetrics())
++
++	assert.False(t, transport.ForceAttemptHTTP2)
++	require.NotNil(t, transport.Protocols)
++	assert.True(t, transport.Protocols.HTTP1())
++	assert.False(t, transport.Protocols.HTTP2())
++	assert.False(t, transport.Protocols.UnencryptedHTTP2())
++	assert.NotNil(t, transport.TLSNextProto)
++	assert.Empty(t, transport.TLSNextProto)
++
++	assert.Equal(t, providerMaxConnsPerHost, transport.MaxConnsPerHost)
++	assert.Equal(t, providerMaxIdleConnsPerHost, transport.MaxIdleConnsPerHost)
++	assert.GreaterOrEqual(t, transport.MaxIdleConns, providerMaxIdleConnsPerHost)
++	assert.Equal(t, providerIdleConnTimeout, transport.IdleConnTimeout)
++	assert.Less(t, providerMaxIdleConnsPerHost, providerMaxConnsPerHost)
++}
++
++func TestProviderClientLeavesTheDefaultTransportAlone(t *testing.T) {
++	t.Parallel()
++
++	userAgent, ok := ProviderHTTPClient.Transport.(*userAgentTransport)
++	require.True(t, ok)
++	measured, ok := userAgent.next.(*measuredTransport)
++	require.True(t, ok)
++	assert.Same(t, ProviderTransport, measured.next)
++	assert.Same(t, defaultProviderMetrics, measured.metrics)
++
++	defaultTransport, ok := DefaultTransport.(*http.Transport)
++	require.True(t, ok)
++	assert.NotSame(t, defaultTransport, ProviderTransport)
++	assert.True(t, defaultTransport.ForceAttemptHTTP2, "the other clients keep HTTP/2")
++	assert.Zero(t, defaultTransport.MaxConnsPerHost)
++	assert.Zero(t, defaultTransport.MaxIdleConnsPerHost)
++}
+diff --git a/pkg/validation/deckhouse_provider_transport_test.go b/pkg/validation/deckhouse_provider_transport_test.go
+new file mode 100644
+index 00000000..357e328c
+--- /dev/null
++++ b/pkg/validation/deckhouse_provider_transport_test.go
+@@ -0,0 +1,78 @@
++package validation
++
++import (
++	"encoding/pem"
++	"net/http"
++	"net/http/httptest"
++	"os"
++	"path/filepath"
++	"testing"
++
++	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
++	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
++	"github.com/stretchr/testify/assert"
++	"github.com/stretchr/testify/require"
++)
++
++// TestConfigureProviderTransportSetsBothTransports checks that the TLS of the provider reaches the
++// transport of the OIDC provider as well as the default one.
++func TestConfigureProviderTransportSetsBothTransports(t *testing.T) {
++	// Not parallel: the test sets the TLS of the transports of the process.
++	defaultTransport, ok := requests.DefaultTransport.(*http.Transport)
++	require.True(t, ok)
++	defaultBefore := defaultTransport.TLSClientConfig
++	providerBefore := requests.ProviderTransport.TLSClientConfig
++	t.Cleanup(func() {
++		defaultTransport.TLSClientConfig = defaultBefore
++		requests.ProviderTransport.TLSClientConfig = providerBefore
++	})
++
++	server := httptest.NewTLSServer(http.HandlerFunc(func(rw http.ResponseWriter, _ *http.Request) {
++		rw.WriteHeader(http.StatusNoContent)
++	}))
++	t.Cleanup(server.Close)
++	caFile := filepath.Join(t.TempDir(), "ca.crt")
++	require.NoError(t, os.WriteFile(caFile, pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: server.Certificate().Raw}), 0o600))
++
++	t.Run("provider ca", func(t *testing.T) {
++		o := options.NewOptions()
++		o.Providers[0].CAFiles = []string{caFile}
++
++		require.Empty(t, configureProviderTransport(o, nil))
++
++		require.NotNil(t, requests.ProviderTransport.TLSClientConfig)
++		require.NotNil(t, defaultTransport.TLSClientConfig)
++		assert.NotSame(t, defaultTransport.TLSClientConfig, requests.ProviderTransport.TLSClientConfig)
++		assert.Empty(t, requests.ProviderTransport.TLSClientConfig.NextProtos, "HTTP/2 must not be offered")
++
++		resp, err := requests.ProviderHTTPClient.Get(server.URL)
++		require.NoError(t, err)
++		require.NoError(t, resp.Body.Close())
++		assert.Equal(t, "HTTP/1.1", resp.Proto)
++		requests.ProviderTransport.CloseIdleConnections()
++	})
++
++	t.Run("insecure skip verify", func(t *testing.T) {
++		o := options.NewOptions()
++		o.SSLInsecureSkipVerify = true
++
++		require.Empty(t, configureProviderTransport(o, nil))
++
++		assert.True(t, requests.ProviderTransport.TLSClientConfig.InsecureSkipVerify)
++		assert.True(t, defaultTransport.TLSClientConfig.InsecureSkipVerify)
++	})
++
++	t.Run("a CA file that does not load changes nothing", func(t *testing.T) {
++		defaultTransport.TLSClientConfig = nil
++		requests.ProviderTransport.TLSClientConfig = nil
++		o := options.NewOptions()
++		o.Providers[0].CAFiles = []string{filepath.Join(t.TempDir(), "missing.crt")}
++
++		msgs := configureProviderTransport(o, nil)
++
++		require.Len(t, msgs, 1)
++		assert.Contains(t, msgs[0], "unable to load provider CA file(s)")
++		assert.Nil(t, defaultTransport.TLSClientConfig)
++		assert.Nil(t, requests.ProviderTransport.TLSClientConfig)
++	})
++}
+diff --git a/pkg/validation/options.go b/pkg/validation/options.go
+index ff2c5f22..08390cba 100644
+--- a/pkg/validation/options.go
++++ b/pkg/validation/options.go
+@@ -110,23 +110,28 @@ func validate(o *options.Options, in scope) error {
+ }
+ 
+ // configureProviderTransport sets the TLS settings of the requests to the provider. They belong
+-// to the process: every provider uses the same transport.
++// to the process: every provider uses the same transports, the default one and the one of the
++// OIDC provider.
+ func configureProviderTransport(o *options.Options, msgs []string) []string {
++	var tlsConfig *tls.Config
+ 	if o.SSLInsecureSkipVerify {
+-		transport := requests.DefaultTransport.(*http.Transport)
+-		transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true} // #nosec G402 -- InsecureSkipVerify is a configurable option we allow
++		tlsConfig = &tls.Config{InsecureSkipVerify: true} // #nosec G402 -- InsecureSkipVerify is a configurable option we allow
+ 	} else if len(o.Providers[0].CAFiles) > 0 {
+ 		pool, err := util.GetCertPool(o.Providers[0].CAFiles, ptr.Deref(o.Providers[0].UseSystemTrustStore, options.DefaultUseSystemTrustStore))
+-		if err == nil {
+-			transport := requests.DefaultTransport.(*http.Transport)
+-			transport.TLSClientConfig = &tls.Config{
+-				RootCAs:    pool,
+-				MinVersion: tls.VersionTLS12,
+-			}
+-		} else {
+-			msgs = append(msgs, fmt.Sprintf("unable to load provider CA file(s): %v", err))
++		if err != nil {
++			return append(msgs, fmt.Sprintf("unable to load provider CA file(s): %v", err))
++		}
++		tlsConfig = &tls.Config{
++			RootCAs:    pool,
++			MinVersion: tls.VersionTLS12,
+ 		}
+ 	}
++	if tlsConfig == nil {
++		return msgs
++	}
++
++	requests.DefaultTransport.(*http.Transport).TLSClientConfig = tlsConfig
++	requests.ProviderTransport.TLSClientConfig = tlsConfig.Clone()
+ 
+ 	return msgs
+ }
+diff --git a/providers/deckhouse_provider_transport_test.go b/providers/deckhouse_provider_transport_test.go
+new file mode 100644
+index 00000000..717c92a6
+--- /dev/null
++++ b/providers/deckhouse_provider_transport_test.go
+@@ -0,0 +1,80 @@
++package providers
++
++import (
++	"context"
++	"crypto/tls"
++	"crypto/x509"
++	"encoding/json"
++	"net/http"
++	"net/http/httptest"
++	"net/url"
++	"sync"
++	"testing"
++
++	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
++	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
++	"github.com/stretchr/testify/assert"
++	"github.com/stretchr/testify/require"
++)
++
++// TestOIDCProviderTalksHTTP1ToTheProvider checks that the code exchange and the refresh go over
++// the transport of the provider: a TLS server that offers HTTP/2 and that only that transport
++// trusts gets them over HTTP/1.1.
++func TestOIDCProviderTalksHTTP1ToTheProvider(t *testing.T) {
++	// Not parallel: the test sets the TLS of the transport of the process.
++	idToken, err := newSignedTestIDToken(defaultIDToken)
++	require.NoError(t, err)
++	body, err := json.Marshal(redeemTokenResponse{
++		AccessToken:  accessToken,
++		ExpiresIn:    10,
++		TokenType:    "Bearer",
++		RefreshToken: refreshToken,
++		IDToken:      idToken,
++	})
++	require.NoError(t, err)
++
++	var (
++		mu     sync.Mutex
++		protos []string
++	)
++	server := httptest.NewUnstartedServer(http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
++		mu.Lock()
++		protos = append(protos, r.Proto)
++		mu.Unlock()
++		rw.Header().Add("content-type", "application/json")
++		_, _ = rw.Write(body)
++	}))
++	server.EnableHTTP2 = true
++	server.StartTLS()
++	t.Cleanup(server.Close)
++
++	pool := x509.NewCertPool()
++	pool.AddCert(server.Certificate())
++	tlsBefore := requests.ProviderTransport.TLSClientConfig
++	requests.ProviderTransport.TLSClientConfig = &tls.Config{RootCAs: pool, MinVersion: tls.VersionTLS12}
++	t.Cleanup(func() {
++		requests.ProviderTransport.CloseIdleConnections()
++		requests.ProviderTransport.TLSClientConfig = tlsBefore
++	})
++
++	serverURL, err := url.Parse(server.URL)
++	require.NoError(t, err)
++	provider := newOIDCProvider(serverURL, false)
++
++	_, err = provider.Redeem(context.Background(), provider.RedeemURL.String(), "code1234", "")
++	require.NoError(t, err)
++
++	refreshed, err := provider.RefreshSession(context.Background(), &sessions.SessionState{
++		AccessToken:  "changeit",
++		IDToken:      idToken,
++		RefreshToken: refreshToken,
++		Email:        "janedoe@example.com",
++		User:         "11223344",
++	})
++	require.NoError(t, err)
++	assert.True(t, refreshed)
++
++	mu.Lock()
++	defer mu.Unlock()
++	assert.Equal(t, []string{"HTTP/1.1", "HTTP/1.1"}, protos)
++}
+diff --git a/providers/oidc.go b/providers/oidc.go
+index 559131bc..ac304145 100644
+--- a/providers/oidc.go
++++ b/providers/oidc.go
+@@ -92,7 +92,7 @@ func (p *OIDCProvider) Redeem(ctx context.Context, redirectURL, code, codeVerifi
+ 		RedirectURL: redirectURL,
+ 	}
+ 
+-	ctx = oidc.ClientContext(ctx, requests.DefaultHTTPClient)
++	ctx = oidc.ClientContext(ctx, requests.ProviderHTTPClient)
+ 	token, err := c.Exchange(ctx, code, opts...)
+ 	if err != nil {
+ 		// Wrap, not flatten: the caller tells a code the provider refused
+@@ -116,7 +116,7 @@ func (p *OIDCProvider) EnrichSession(_ context.Context, s *sessions.SessionState
+ 
+ // ValidateSession checks that the session's id_token or access_token (when a ValidateURL is configured) is still valid
+ func (p *OIDCProvider) ValidateSession(ctx context.Context, s *sessions.SessionState) bool {
+-	ctx = oidc.ClientContext(ctx, requests.DefaultHTTPClient)
++	ctx = oidc.ClientContext(ctx, requests.ProviderHTTPClient)
+ 
+ 	// https://openid.net/specs/openid-connect-core-1_0.html#RefreshTokenResponse
+ 	// The ID Token is optional in the Refresh Token Response
+@@ -152,7 +152,7 @@ func (p *OIDCProvider) RefreshSession(ctx context.Context, s *sessions.SessionSt
+ 		return false, nil
+ 	}
+ 
+-	ctx = oidc.ClientContext(ctx, requests.DefaultHTTPClient)
++	ctx = oidc.ClientContext(ctx, requests.ProviderHTTPClient)
+ 	err := p.redeemRefreshToken(ctx, s)
+ 	if err != nil {
+ 		return false, fmt.Errorf("unable to redeem refresh token: %w", err)
+@@ -213,7 +213,7 @@ func (p *OIDCProvider) redeemRefreshToken(ctx context.Context, s *sessions.Sessi
+ 
+ // CreateSessionFromToken converts Bearer IDTokens into sessions
+ func (p *OIDCProvider) CreateSessionFromToken(ctx context.Context, token string) (*sessions.SessionState, error) {
+-	ctx = oidc.ClientContext(ctx, requests.DefaultHTTPClient)
++	ctx = oidc.ClientContext(ctx, requests.ProviderHTTPClient)
+ 	idToken, err := p.Verifier.Verify(ctx, token)
+ 	if err != nil {
+ 		return nil, err

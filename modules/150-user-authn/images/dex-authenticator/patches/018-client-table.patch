@@ -4730,7 +4730,7 @@ index ba970679..54513c53 100644
  		logger.Fatalf("%s", err)
  	}
 diff --git a/oauthproxy.go b/oauthproxy.go
-index f783a1ed..243b3c7a 100644
+index 2b16a954..3c21efbd 100644
 --- a/oauthproxy.go
 +++ b/oauthproxy.go
 @@ -14,6 +14,7 @@ import (
@@ -5067,7 +5067,7 @@ index f783a1ed..243b3c7a 100644
  		return nil, nil
  	}
  
-@@ -1794,3 +1901,18 @@ func LoggingCSRFCookiesInOAuthCallback(req *http.Request, cookieName string) {
+@@ -1790,3 +1897,18 @@ func LoggingCSRFCookiesInOAuthCallback(req *http.Request, cookieName string) {
  
  	logger.PrintAuthf("", req, logger.AuthFailure, "Cookies were found in OAuth callback, but none was a CSRF cookie.")
  }
@@ -5276,14 +5276,13 @@ index 7d606942..c21924b0 100644
  		return
  	}
 diff --git a/pkg/middleware/deckhouse_refresh_unavailable.go b/pkg/middleware/deckhouse_refresh_unavailable.go
-index d49197ee..29c6f506 100644
+index facbf87e..08db6a35 100644
 --- a/pkg/middleware/deckhouse_refresh_unavailable.go
 +++ b/pkg/middleware/deckhouse_refresh_unavailable.go
-@@ -102,3 +102,14 @@ func (u *unavailableSince) forget(refreshToken string) {
- 	defer u.mu.Unlock()
+@@ -109,6 +109,17 @@ func (u *unavailableSince) forget(refreshToken string) {
  	delete(u.since, key)
  }
-+
+ 
 +// RefreshWindows is the memory of the refreshes the provider did not answer, unavailableSince, for
 +// the clients of a table of clients to share (Deckhouse patch 018). A session is known there by
 +// the hash of its refresh token, which no two clients have in common, and the bound of the memory
@@ -5294,6 +5293,10 @@ index d49197ee..29c6f506 100644
 +func NewRefreshWindows() *RefreshWindows {
 +	return newUnavailableSince()
 +}
++
+ const (
+ 	// sessionUnavailableRetryAfterMin and sessionUnavailableRetryAfterMax bound the Retry-After, in
+ 	// seconds, of the 503 answered while the session of a request cannot be checked (Deckhouse patch
 diff --git a/pkg/middleware/deckhouse_refresh_unavailable_test.go b/pkg/middleware/deckhouse_refresh_unavailable_test.go
 index d7dba17d..04224809 100644
 --- a/pkg/middleware/deckhouse_refresh_unavailable_test.go
@@ -5320,7 +5323,7 @@ index d7dba17d..04224809 100644
 +	assert.NotSame(t, windows, alone.unavailable)
 +}
 diff --git a/pkg/middleware/stored_session.go b/pkg/middleware/stored_session.go
-index 2b183103..142f23e6 100644
+index 36a3b602..d4b89582 100644
 --- a/pkg/middleware/stored_session.go
 +++ b/pkg/middleware/stored_session.go
 @@ -92,6 +92,10 @@ type StoredSessionLoaderOptions struct {

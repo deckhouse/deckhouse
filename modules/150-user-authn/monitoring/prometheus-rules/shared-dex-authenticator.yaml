@@ -30,61 +30,28 @@
         d8 k -n d8-user-authn get secret {{ $labels.instance_name }}-clients
         d8 k -n d8-user-authn logs {{ $labels.pod }} -c dex-authenticator
         ```
-  - alert: D8SharedDexAuthenticatorWithoutOwnRedis
+  - alert: D8SharedDexAuthenticatorSessionStoreUnavailable
     expr: |
-      max by (namespace, pod, instance_name, mode) (
+      max by (namespace, pod, instance_name) (
         oauth2_proxy_session_store_redis_peers_mode{
           namespace="d8-user-authn",
           job="shared-dex-authenticator",
-          mode!="redis"
+          mode="memory"
         }
       ) == 1
-    for: 10m
-    labels:
-      severity_level: "6"
-      tier: cluster
-      d8_module: user-authn
-      d8_component: shared-dex-authenticator
-    annotations:
-      plk_protocol_version: "1"
-      plk_markup_format: markdown
-      plk_create_group_if_not_exists__d8_shared_dex_authenticator_malfunctioning: "D8SharedDexAuthenticatorMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
-      plk_grouped_by__d8_shared_dex_authenticator_malfunctioning: "D8SharedDexAuthenticatorMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
-      summary: The pod `{{ $labels.pod }}` of the shared dex-authenticator `{{ $labels.instance_name }}` does not use its own Redis.
-      description: |-
-        For more than 10 minutes, the pod `{{ $labels.pod }}` of the shared dex-authenticator instance `{{ $labels.instance_name }}` has not used the Redis in its pod. Users stay signed in, but their sessions are refreshed with additional requests to Dex.
-
-        Check the containers of the pod and its log:
-
-        ```bash
-        d8 k -n d8-user-authn get pod {{ $labels.pod }}
-        d8 k -n d8-user-authn logs {{ $labels.pod }} -c dex-authenticator
-        ```
-  - alert: D8SharedDexAuthenticatorSessionStoreNotSeeded
-    expr: |
-      max by (namespace, pod, instance_name) (
-        oauth2_proxy_session_store_redis_peers_seed_duration_seconds_count{
-          namespace="d8-user-authn",
-          job="shared-dex-authenticator",
-          outcome=~"timeout|error"
-        }
-      ) > 0
-      unless on (namespace, pod)
-      max by (namespace, pod) (
-        oauth2_proxy_session_store_redis_peers_seed_duration_seconds_count{
-          namespace="d8-user-authn",
-          job="shared-dex-authenticator",
-          outcome="copied"
-        }
-      ) > 0
-      and on (namespace, pod)
-      (
-        time() - max by (namespace, pod) (
-          process_start_time_seconds{namespace="d8-user-authn", job="shared-dex-authenticator"}
+      or
+      sum by (namespace, pod, instance_name) (
+        increase(
+          oauth2_proxy_session_store_redis_peers_loads_total{
+            namespace="d8-user-authn",
+            job="shared-dex-authenticator",
+            step="unavailable"
+          }[2m]
         )
-      ) < 3600
+      ) > 0
+    for: 3m
     labels:
-      severity_level: "9"
+      severity_level: "4"
       tier: cluster
       d8_module: user-authn
       d8_component: shared-dex-authenticator
@@ -93,13 +60,15 @@
       plk_markup_format: markdown
       plk_create_group_if_not_exists__d8_shared_dex_authenticator_malfunctioning: "D8SharedDexAuthenticatorMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_grouped_by__d8_shared_dex_authenticator_malfunctioning: "D8SharedDexAuthenticatorMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
-      summary: The pod `{{ $labels.pod }}` of the shared dex-authenticator `{{ $labels.instance_name }}` started without the sessions of the other pod.
+      summary: The pod `{{ $labels.pod }}` of the shared dex-authenticator `{{ $labels.instance_name }}` answers 503 to signed-in users.
       description: |-
-        The pod `{{ $labels.pod }}` of the shared dex-authenticator instance `{{ $labels.instance_name }}` has not copied the sessions of the other pod since it started. Users stay signed in. If the other pod restarts before the sessions are refreshed, which takes up to `idTokenTTL`, every session is refreshed with an additional request to Dex.
+        For more than 3 minutes, the pod `{{ $labels.pod }}` of the shared dex-authenticator instance `{{ $labels.instance_name }}` has not reached a Redis that holds the sessions: neither the Redis in its pod nor that of the other pod answers. The pod answers 503 to every request whose session it cannot find. Signing in again does not help, since the session cookie is kept. Sessions come back once a Redis answers again.
 
-        The alert is resolved an hour after the pod starts. Check the log of the pod:
+        Check the Redis containers of both pods of the instance and the log of this pod:
 
         ```bash
+        d8 k -n d8-user-authn get pods -l app=shared-dex-authenticator,instance={{ $labels.instance_name }} -o wide
+        d8 k -n d8-user-authn logs {{ $labels.pod }} -c redis
         d8 k -n d8-user-authn logs {{ $labels.pod }} -c dex-authenticator
         ```
   - alert: D8SharedDexAuthenticatorClientTableAlmostFull

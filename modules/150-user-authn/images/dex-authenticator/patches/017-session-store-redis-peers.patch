@@ -33,7 +33,7 @@ index 9199aade..d879ce10 100644
  	flagSet.Bool("gcp-healthchecks", false, "Enable GCP/GKE healthcheck endpoints")
  	flagSet.String("revocation-feed-url", "", "https URL of the revocation feed of the user-authn module of Deckhouse: sessions it revokes are refused. Disabled when empty")
 diff --git a/pkg/apis/options/sessions.go b/pkg/apis/options/sessions.go
-index c90c0ac2..7d6cbbaa 100644
+index c90c0ac2..d8034c6a 100644
 --- a/pkg/apis/options/sessions.go
 +++ b/pkg/apis/options/sessions.go
 @@ -1,10 +1,15 @@
@@ -63,7 +63,7 @@ index c90c0ac2..7d6cbbaa 100644
  // CookieStoreOptions contains configuration options for the CookieSessionStore.
  type CookieStoreOptions struct {
  	Minimal bool `flag:"session-cookie-minimal" cfg:"session_cookie_minimal"`
-@@ -36,11 +45,53 @@ type RedisStoreOptions struct {
+@@ -36,11 +45,58 @@ type RedisStoreOptions struct {
  	IdleTimeout            int      `flag:"redis-connection-idle-timeout" cfg:"redis_connection_idle_timeout"`
  }
  
@@ -96,7 +96,12 @@ index c90c0ac2..7d6cbbaa 100644
 +// The defaults of RedisPeersStoreOptions.
 +const (
 +	DefaultRedisPeersSeedTimeout = 15 * time.Second
-+	DefaultRedisPeersTimeout     = 200 * time.Millisecond
++	// DefaultRedisPeersTimeout is far above the time Redis takes to answer, a fraction of a
++	// millisecond: it is the time a Redis may stall before a request goes on to the next one. The
++	// Redis of a pod shares the CPU of its node, and a node near its limit delays a process by
++	// hundreds of milliseconds now and then; with 200 milliseconds every Redis of a loaded node
++	// timed out at once.
++	DefaultRedisPeersTimeout = 500 * time.Millisecond
 +)
 +
 +// DefaultMemoryStoreMaxBytes is the default limit of the session store in the memory of the process.
@@ -2903,10 +2908,10 @@ index 00000000..398b0152
 +}
 diff --git a/pkg/sessions/redispeers/lock.go b/pkg/sessions/redispeers/lock.go
 new file mode 100644
-index 00000000..c3a5ac0d
+index 00000000..539847ec
 --- /dev/null
 +++ b/pkg/sessions/redispeers/lock.go
-@@ -0,0 +1,106 @@
+@@ -0,0 +1,168 @@
 +package redispeers
 +
 +import (
@@ -2915,110 +2920,172 @@ index 00000000..c3a5ac0d
 +	"time"
 +
 +	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
++	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 +)
 +
-+// lock is the refresh lock of a session. It is taken in the Redis the store names as the home of
-+// the locks at that moment, or in the memory of the process when no Redis answers, and it is
-+// refreshed and released where it was taken. A lock belongs to one request, as the lock of the
-+// Redis store does, so it is not safe for use by several goroutines.
++// errNoLockHome is the answer of Obtain when no Redis can hold the lock and the replica has
++// neighbours: the memory of the process would let a neighbour refresh the same session at once.
++var errNoLockHome = errors.New("no redis answers to hold the refresh lock")
++
++// lock is the refresh lock of a session. It is taken in every Redis that answers and is filled, in
++// the order of their addresses, and refreshed and released where it was taken. A lock belongs to one
++// request, as the lock of the Redis store does, so it is not safe for use by several goroutines.
++//
++// One Redis would do while every replica sees the same ones. A Redis that stalls is left by each
++// replica on its own, after its own requests have failed, so for a while the replicas see different
++// Redis: with the lock in the lowest of them only, each one took it in another Redis, and both
++// refreshed the same refresh token, which dex refuses the second time. Taken in all of them, the
++// locks of two replicas meet in every Redis both of them see. They miss each other only when each
++// replica has left the Redis the other one still uses and nothing else, a network split between the
++// pods.
++//
++// A Redis that fails the lock fails the request, which is answered 503: the memory of the process
++// stands in only for a replica without neighbours.
 +type lock struct {
 +	store *Store
 +	key   string
 +
-+	held sessions.Lock
++	held []sessions.Lock
 +}
 +
 +var _ sessions.Lock = (*lock)(nil)
 +
-+// at returns the lock of the key in the home of the locks; a nil endpoint is the memory.
-+func (l *lock) at() (sessions.Lock, *endpoint, string) {
-+	home := l.store.lockHome()
-+	switch home {
++func stepOf(s *Store, ep *endpoint) string {
++	switch ep {
 +	case nil:
-+		return l.store.memory.Lock(l.key), nil, stepMemory
-+	case l.store.own:
-+		return home.node.Lock(l.key), home, stepOwn
++		return stepMemory
++	case s.own:
++		return stepOwn
 +	default:
-+		return home.node.Lock(l.key), home, stepPeer
++		return stepPeer
 +	}
 +}
 +
-+// Obtain takes the lock in its home. A home that does not answer is not waited for: the memory of
-+// the process holds the lock then, which is one refresh per replica instead of one in all.
++// Obtain takes the lock in every Redis that answers and is filled. A lock that one of them holds is
++// ErrLockNotObtained; any other failure is returned as is, and the request is answered 503. Either
++// way the locks taken so far are released.
 +func (l *lock) Obtain(ctx context.Context, expiration time.Duration) error {
-+	inner, home, name := l.at()
-+
-+	err := inner.Obtain(ctx, expiration)
-+	switch {
-+	case err == nil:
-+		l.store.metrics.locks.WithLabelValues(name, lockObtained).Inc()
-+		l.held = inner
++	nodes, isAlone := l.store.lockNodes()
++	if len(nodes) == 0 {
++		if !isAlone {
++			l.store.metrics.locks.WithLabelValues(homeMemory, lockError).Inc()
++			return errNoLockHome
++		}
++		inner := l.store.memory.Lock(l.key)
++		if err := inner.Obtain(ctx, expiration); err != nil {
++			l.count(nil, err)
++			return err
++		}
++		l.count(nil, nil)
++		l.held = []sessions.Lock{inner}
 +
 +		return nil
-+	case errors.Is(err, sessions.ErrLockNotObtained):
-+		l.store.metrics.locks.WithLabelValues(name, lockBusy).Inc()
-+		return err
 +	}
 +
-+	l.store.metrics.locks.WithLabelValues(name, lockError).Inc()
-+	if home == nil {
-+		return err
-+	}
-+	l.store.observe(ctx, home, err)
-+
-+	fallback := l.store.memory.Lock(l.key)
-+	if err := fallback.Obtain(ctx, expiration); err != nil {
-+		if errors.Is(err, sessions.ErrLockNotObtained) {
-+			l.store.metrics.locks.WithLabelValues(stepMemory, lockBusy).Inc()
++	held := make([]sessions.Lock, 0, len(nodes))
++	for _, ep := range nodes {
++		inner := ep.node.Lock(l.key)
++		err := inner.Obtain(ctx, expiration)
++		l.count(ep, err)
++		if err != nil {
++			if !errors.Is(err, sessions.ErrLockNotObtained) {
++				l.store.observe(ctx, ep, err)
++			}
++			l.releaseAll(ctx, held)
++			return err
 +		}
-+		return err
++		held = append(held, inner)
 +	}
-+	l.store.metrics.locks.WithLabelValues(stepMemory, lockObtained).Inc()
-+	l.held = fallback
++	l.held = held
 +
 +	return nil
 +}
 +
-+// Peek reports whether the lock is taken: the one this request holds or, before that, the one in
-+// the home of the locks.
-+func (l *lock) Peek(ctx context.Context) (bool, error) {
-+	if l.held != nil {
-+		return l.held.Peek(ctx)
++func (l *lock) count(ep *endpoint, err error) {
++	result := lockObtained
++	switch {
++	case errors.Is(err, sessions.ErrLockNotObtained):
++		result = lockBusy
++	case err != nil:
++		result = lockError
 +	}
-+
-+	inner, home, _ := l.at()
-+	isHeld, err := inner.Peek(ctx)
-+	if err == nil || home == nil {
-+		return isHeld, err
-+	}
-+	l.store.observe(ctx, home, err)
-+
-+	return l.store.memory.Lock(l.key).Peek(ctx)
++	l.store.metrics.locks.WithLabelValues(stepOf(l.store, ep), result).Inc()
 +}
 +
++// releaseAll gives back the locks a failed Obtain took. A client that has gone away still releases
++// them, or the session would wait for them to expire.
++func (l *lock) releaseAll(ctx context.Context, held []sessions.Lock) {
++	ctx = context.WithoutCancel(ctx)
++	for _, h := range held {
++		// The lock expires anyway, and the request fails with the reason it could not be taken.
++		if err := h.Release(ctx); err != nil {
++			logger.Errorf("redis-peers: releasing a refresh lock that was taken in part: %v", err)
++		}
++	}
++}
++
++// Peek reports whether the lock is taken: the one this request holds or, before that, the one in
++// any Redis that answers and is filled.
++func (l *lock) Peek(ctx context.Context) (bool, error) {
++	if len(l.held) > 0 {
++		return l.held[0].Peek(ctx)
++	}
++
++	nodes, _ := l.store.lockNodes()
++	if len(nodes) == 0 {
++		return l.store.memory.Lock(l.key).Peek(ctx)
++	}
++	var errs []error
++	for _, ep := range nodes {
++		isHeld, err := ep.node.Lock(l.key).Peek(ctx)
++		if err != nil {
++			l.store.observe(ctx, ep, err)
++			errs = append(errs, err)
++			continue
++		}
++		if isHeld {
++			return true, nil
++		}
++	}
++
++	return false, errors.Join(errs...)
++}
++
++// Refresh extends the lock in every Redis it was taken in.
 +func (l *lock) Refresh(ctx context.Context, expiration time.Duration) error {
-+	if l.held == nil {
++	if len(l.held) == 0 {
 +		return sessions.ErrNotLocked
 +	}
 +
-+	return l.held.Refresh(ctx, expiration)
++	errs := make([]error, 0, len(l.held))
++	for _, h := range l.held {
++		errs = append(errs, h.Refresh(ctx, expiration))
++	}
++
++	return errors.Join(errs...)
 +}
 +
++// Release gives the lock back in every Redis it was taken in.
 +func (l *lock) Release(ctx context.Context) error {
-+	if l.held == nil {
++	if len(l.held) == 0 {
 +		return sessions.ErrNotLocked
 +	}
 +	held := l.held
 +	l.held = nil
 +
-+	return held.Release(ctx)
++	errs := make([]error, 0, len(held))
++	for _, h := range held {
++		errs = append(errs, h.Release(ctx))
++	}
++
++	return errors.Join(errs...)
 +}
 diff --git a/pkg/sessions/redispeers/lock_test.go b/pkg/sessions/redispeers/lock_test.go
 new file mode 100644
-index 00000000..b9a06ac49
+index 00000000..31f3dee7
 --- /dev/null
 +++ b/pkg/sessions/redispeers/lock_test.go
-@@ -0,0 +1,158 @@
+@@ -0,0 +1,204 @@
 +package redispeers
 +
 +import (
@@ -3123,7 +3190,7 @@ index 00000000..b9a06ac49
 +		assert.False(t, isHeld)
 +	})
 +
-+	t.Run("a home that does not answer is replaced by the memory", func(t *testing.T) {
++	t.Run("a filled redis that does not answer fails the lock instead of the memory", func(t *testing.T) {
 +		t.Parallel()
 +		fakes, _, storeB := twoReplicas(t)
 +		fakes.mu.Lock()
@@ -3132,14 +3199,60 @@ index 00000000..b9a06ac49
 +		a.setDown(true)
 +
 +		lock := storeB.Lock("ticket")
-+		require.NoError(t, lock.Obtain(t.Context(), time.Minute), "the request does not fail with its home")
++		err := lock.Obtain(t.Context(), time.Minute)
++		require.Error(t, err)
++		require.NotErrorIs(t, err, sessions.ErrLockNotObtained, "the request is answered 503, not made to wait")
 +		assert.InDelta(t, 1, locks(storeB, stepPeer, lockError), 0)
-+		assert.InDelta(t, 1, locks(storeB, stepMemory, lockObtained), 0)
++		assert.Zero(t, locks(storeB, stepMemory, lockObtained), "the memory of one replica is no lock for two")
++		require.ErrorIs(t, lock.Release(t.Context()), sessions.ErrNotLocked)
++	})
 +
-+		isHeld, err := storeB.memory.Lock("ticket").Peek(t.Context())
++	t.Run("neighbours without a filled redis leave no place for the lock", func(t *testing.T) {
++		t.Parallel()
++		_, storeA, storeB := twoReplicas(t)
++		require.NoError(t, storeA.Close())
++		require.NoError(t, storeB.Close())
++		storeB.own.set(false, false, "")
++		storeB.peerSnapshot()[0].set(false, false, "")
++
++		require.ErrorIs(t, storeB.Lock("ticket").Obtain(t.Context(), time.Minute), errNoLockHome)
++		assert.InDelta(t, 1, locks(storeB, homeMemory, lockError), 0)
++	})
++
++	t.Run("replicas that see different redis do not both take the lock", func(t *testing.T) {
++		t.Parallel()
++		_, storeA, storeB := twoReplicas(t)
++		// Without the loops of the stores, which would put the redis back into use.
++		require.NoError(t, storeA.Close())
++		require.NoError(t, storeB.Close())
++		// A has left its own redis after a stall that B did not see: the lowest filled redis is
++		// the redis of B for A and the redis of A for B.
++		storeA.own.set(false, false, storeA.own.id())
++		require.Equal(t, addrB, storeA.lockHome().addr)
++		require.Equal(t, addrA, storeB.lockHome().addr)
++
++		lockA, lockB := storeA.Lock("ticket"), storeB.Lock("ticket")
++		require.NoError(t, lockA.Obtain(t.Context(), time.Minute))
++		require.ErrorIs(t, lockB.Obtain(t.Context(), time.Minute), sessions.ErrLockNotObtained,
++			"B meets the lock of A in the redis of B")
++
++		require.NoError(t, lockA.Release(t.Context()))
++		require.NoError(t, lockB.Obtain(t.Context(), time.Minute))
++		require.ErrorIs(t, lockA.Obtain(t.Context(), time.Minute), sessions.ErrLockNotObtained,
++			"A meets the lock of B in the redis of B")
++	})
++
++	t.Run("a lock taken in part is given back", func(t *testing.T) {
++		t.Parallel()
++		_, storeA, storeB := twoReplicas(t)
++		// Someone holds the lock in the redis of B only.
++		other := storeB.own.node.Lock("ticket")
++		require.NoError(t, other.Obtain(t.Context(), time.Minute))
++
++		require.ErrorIs(t, storeA.Lock("ticket").Obtain(t.Context(), time.Minute), sessions.ErrLockNotObtained)
++		isHeld, err := storeA.own.node.Lock("ticket").Peek(t.Context())
 +		require.NoError(t, err)
-+		assert.True(t, isHeld)
-+		require.NoError(t, lock.Release(t.Context()))
++		assert.False(t, isHeld, "the lock taken in the redis of A is released")
 +	})
 +
 +	t.Run("without a redis the memory holds the locks", func(t *testing.T) {
@@ -3179,10 +3292,10 @@ index 00000000..b9a06ac49
 +}
 diff --git a/pkg/sessions/redispeers/metrics.go b/pkg/sessions/redispeers/metrics.go
 new file mode 100644
-index 00000000..a8354cbe
+index 00000000..5adae8ac
 --- /dev/null
 +++ b/pkg/sessions/redispeers/metrics.go
-@@ -0,0 +1,111 @@
+@@ -0,0 +1,113 @@
 +package redispeers
 +
 +import (
@@ -3197,6 +3310,8 @@ index 00000000..a8354cbe
 +	stepPeer   = "peer"
 +	stepMemory = "memory"
 +	stepCookie = "cookie"
++	// stepUnavailable: no filled Redis answered, and the request is answered 503.
++	stepUnavailable = "unavailable"
 +
 +	modeRedis  = "redis"
 +	modePeer   = "peer"
@@ -4537,10 +4652,10 @@ index 00000000..f865166a
 +}
 diff --git a/pkg/sessions/redispeers/store.go b/pkg/sessions/redispeers/store.go
 new file mode 100644
-index 00000000..d9e5bc62
+index 00000000..e708258b
 --- /dev/null
 +++ b/pkg/sessions/redispeers/store.go
-@@ -0,0 +1,682 @@
+@@ -0,0 +1,821 @@
 +// Package redispeers keeps the sessions in the Redis of every replica of the proxy (Deckhouse patch
 +// 019).
 +//
@@ -4564,6 +4679,7 @@ index 00000000..d9e5bc62
 +	"net/netip"
 +	"os"
 +	"slices"
++	"strings"
 +	"sync"
 +	"sync/atomic"
 +	"time"
@@ -4579,7 +4695,22 @@ index 00000000..d9e5bc62
 +const (
 +	// failuresToLeave is how many requests in a row a Redis has to fail before the store stops
 +	// asking it. Each of them is bounded by the timeout of a request.
-+	failuresToLeave = 3
++	failuresToLeave = 5
++
++	// failingToLeave is how long a Redis has to fail every request before the store stops asking
++	// it, besides failuresToLeave failures: under load a Redis that stalls for a moment fails many
++	// requests in a row within that moment. The probe asks every Redis every second, so a Redis
++	// that is down is left within a few seconds even without requests.
++	failingToLeave = 2 * time.Second
++
++	// answersToForgive is how many answers in a row clear the failures a Redis has collected: one
++	// quick answer between stalls does not keep a Redis that fails most requests in use.
++	answersToForgive = 3
++
++	// probesToReturn is how many probes in a row a Redis that was left has to answer before the
++	// store sends it requests again: a Redis that comes back for a moment between stalls is not
++	// taken back only to be left again.
++	probesToReturn = 3
 +
 +	// probeInterval is how often the store looks for its neighbours and asks every Redis for its
 +	// state. A Redis that was left is taken back by the probe.
@@ -4607,6 +4738,8 @@ index 00000000..d9e5bc62
 +	timeout       time.Duration
 +	seedTimeout   time.Duration
 +	probeInterval time.Duration
++	// failingToLeave: see the constant; zero leaves a Redis after failuresToLeave failures.
++	failingToLeave time.Duration
 +}
 +
 +type endpoint struct {
@@ -4615,6 +4748,12 @@ index 00000000..d9e5bc62
 +
 +	mu       sync.Mutex
 +	failures int
++	// failingSince is the time of the first of the failures in a row.
++	failingSince time.Time
++	// answers is how many requests in a row the Redis has answered since its last failure, and
++	// probeAnswers how many probes.
++	answers      int
++	probeAnswers int
 +	// isUp: the store sends requests to the Redis. The Redis of the replica is up once it is filled
 +	// and holds what the memory kept for it.
 +	isUp bool
@@ -4645,20 +4784,40 @@ index 00000000..d9e5bc62
 +	return e.runID
 +}
 +
++// succeeded counts an answer: answersToForgive of them in a row clear the failures.
 +func (e *endpoint) succeeded() {
 +	e.mu.Lock()
 +	defer e.mu.Unlock()
 +
-+	e.failures = 0
++	e.answers++
++	if e.answers >= answersToForgive {
++		e.failures = 0
++	}
 +}
 +
-+// failed counts a failed request and reports whether the Redis has just been left.
-+func (e *endpoint) failed() bool {
++// probeAnswered counts a probe the Redis has answered and reports whether it has answered
++// probesToReturn probes in a row, so that a Redis that was left can be taken back.
++func (e *endpoint) probeAnswered() bool {
 +	e.mu.Lock()
 +	defer e.mu.Unlock()
 +
++	e.probeAnswers++
++
++	return e.probeAnswers >= probesToReturn
++}
++
++// failed counts a failed request and reports whether the Redis has just been left: it has failed
++// failuresToLeave requests in a row, for at least failingFor.
++func (e *endpoint) failed(now time.Time, failingFor time.Duration) bool {
++	e.mu.Lock()
++	defer e.mu.Unlock()
++
++	e.answers, e.probeAnswers = 0, 0
++	if e.failures == 0 {
++		e.failingSince = now
++	}
 +	e.failures++
-+	if e.failures < failuresToLeave || (!e.isUp && !e.isSeeded) {
++	if e.failures < failuresToLeave || now.Sub(e.failingSince) < failingFor || (!e.isUp && !e.isSeeded) {
 +		return false
 +	}
 +	e.isUp, e.isSeeded = false, false
@@ -4666,16 +4825,25 @@ index 00000000..d9e5bc62
 +	return true
 +}
 +
-+// set records what a probe has found and reports whether the Redis went up or down.
++// set records what a probe has found and reports whether the Redis went up or down. A Redis that
++// is taken back starts without failures. For a Redis in use the probe is one answer, as a request
++// is: a probe between failed requests does not clear them, or a Redis that fails most requests but
++// answers the probe would never be left.
 +func (e *endpoint) set(isUp, isSeeded bool, runID string) bool {
 +	e.mu.Lock()
 +	defer e.mu.Unlock()
 +
 +	hasChanged := e.isUp != isUp
-+	e.isUp, e.isSeeded, e.runID = isUp, isSeeded, runID
-+	if isUp {
-+		e.failures = 0
++	switch {
++	case isUp && !e.isUp:
++		e.failures, e.answers = 0, 0
++	case isUp:
++		e.answers++
++		if e.answers >= answersToForgive {
++			e.failures = 0
++		}
 +	}
++	e.isUp, e.isSeeded, e.runID = isUp, isSeeded, runID
 +
 +	return hasChanged
 +}
@@ -4705,8 +4873,17 @@ index 00000000..d9e5bc62
 +	stop  context.CancelFunc
 +	done  chan struct{}
 +
-+	// isResolveFailing is used by the loop of the store only.
++	// discoverMu orders the lookups of the neighbours of the probes and of a filling, which runs
++	// apart from the probes; it guards isResolveFailing.
++	discoverMu       sync.Mutex
 +	isResolveFailing bool
++	// isRecovering: the Redis of the replica is being brought back into use apart from the probes
++	// (see recoverOwnApart), which go on probing the neighbours meanwhile.
++	isRecovering atomic.Bool
++	recoveries   sync.WaitGroup
++	// hasResolved: the neighbours have been looked up once at least, so an empty list means that the
++	// replica is alone.
++	hasResolved atomic.Bool
 +}
 +
 +var _ persistence.Store = (*Store)(nil)
@@ -4730,12 +4907,13 @@ index 00000000..d9e5bc62
 +	}
 +
 +	cfg := config{
-+		own:           newRedisNode(redisOpts, redisOpts.Addr, peers.Timeout),
-+		dial:          func(addr string) node { return newRedisNode(redisOpts, addr, peers.Timeout) },
-+		resolve:       func(context.Context) ([]string, error) { return nil, nil },
-+		timeout:       peers.Timeout,
-+		seedTimeout:   peers.SeedTimeout,
-+		probeInterval: probeInterval,
++		own:            newRedisNode(redisOpts, redisOpts.Addr, peers.Timeout),
++		dial:           func(addr string) node { return newRedisNode(redisOpts, addr, peers.Timeout) },
++		resolve:        func(context.Context) ([]string, error) { return nil, nil },
++		timeout:        peers.Timeout,
++		seedTimeout:    peers.SeedTimeout,
++		probeInterval:  probeInterval,
++		failingToLeave: failingToLeave,
 +	}
 +
 +	if peers.DNSName != "" {
@@ -4799,6 +4977,7 @@ index 00000000..d9e5bc62
 +func (s *Store) Close() error {
 +	s.stop()
 +	<-s.done
++	s.recoveries.Wait()
 +
 +	peers := s.peerSnapshot()
 +	errs := make([]error, 0, len(peers)+1)
@@ -4892,7 +5071,13 @@ index 00000000..d9e5bc62
 +}
 +
 +// Load looks for the session in the Redis of the replica, then in the Redis of each neighbour, then
-+// in the memory of the process.
++// in the memory of the process, which holds only what no Redis took.
++//
++// The session is missing (errNotFound) only when a filled Redis has answered that it does not have
++// it and no filled Redis failed the request: the cookie then restores the session through the
++// provider. Otherwise the session may well be in a Redis that did not answer, and Load returns
++// persistence.ErrStoreUnavailable: the request is answered 503, and the provider is not
++// asked to refresh every session of a replica whose Redis stall at once.
 +func (s *Store) Load(ctx context.Context, key string) ([]byte, error) {
 +	// A removal the Redis of the replica has not taken yet: the session is gone whatever Redis says.
 +	kept, isKept := s.memory.Peek(key)
@@ -4901,12 +5086,23 @@ index 00000000..d9e5bc62
 +		return nil, errNotFound
 +	}
 +
++	// isAnswered: a filled Redis has answered that it does not have the session. A neighbour that is
++	// being filled has not got everything yet, so its answer does not count. The Redis of the
++	// replica is in use only once it is filled. hasFailed: a filled Redis has failed the request, and
++	// it may be the one that has the session: one Redis took the writes while the other stalled,
++	// then the other came back and the first one stalls.
++	isAnswered, hasFailed := false, false
 +	if s.own.usable() {
 +		value, err := s.own.node.Get(ctx, key)
 +		s.observe(ctx, s.own, err)
-+		if err == nil {
++		switch {
++		case err == nil:
 +			s.metrics.loads.WithLabelValues(stepOwn).Inc()
 +			return value, nil
++		case errors.Is(err, errNotFound):
++			isAnswered = true
++		default:
++			hasFailed = true
 +		}
 +	}
 +
@@ -4916,9 +5112,15 @@ index 00000000..d9e5bc62
 +		}
 +		value, err := peer.node.Get(ctx, key)
 +		s.observe(ctx, peer, err)
-+		if err == nil {
++		switch {
++		case err == nil:
 +			s.metrics.loads.WithLabelValues(stepPeer).Inc()
 +			return value, nil
++		case !peer.seeded():
++		case errors.Is(err, errNotFound):
++			isAnswered = true
++		default:
++			hasFailed = true
 +		}
 +	}
 +
@@ -4931,6 +5133,10 @@ index 00000000..d9e5bc62
 +		}
 +	}
 +
++	if !isAnswered || hasFailed {
++		s.metrics.loads.WithLabelValues(stepUnavailable).Inc()
++		return nil, fmt.Errorf("%w: a filled redis did not answer", persistence.ErrStoreUnavailable)
++	}
 +	s.metrics.loads.WithLabelValues(stepCookie).Inc()
 +
 +	return nil, errNotFound
@@ -5007,7 +5213,7 @@ index 00000000..d9e5bc62
 +	}
 +}
 +
-+// Lock returns the refresh lock of a session. It is taken in the Redis lockHome names at that
++// Lock returns the refresh lock of a session. It is taken in every Redis lockNodes returns at that
 +// moment.
 +func (s *Store) Lock(key string) sessions.Lock {
 +	return &lock{store: s, key: key}
@@ -5035,7 +5241,7 @@ index 00000000..d9e5bc62
 +		ep.succeeded()
 +	case ctx.Err() != nil:
 +		// The request was given up, which says nothing about Redis.
-+	case ep.failed():
++	case ep.failed(time.Now(), s.cfg.failingToLeave):
 +		logger.Errorf("redis-peers: the redis at %s does not answer and is left until it does: %v", ep.addr, err)
 +		s.updateMode()
 +	}
@@ -5048,10 +5254,8 @@ index 00000000..d9e5bc62
 +	return s.peers
 +}
 +
-+// lockHome returns the Redis that holds the refresh locks: the one with the lowest address among
-+// those that answer and are filled. Every replica that sees the same Redis names the same home, so
-+// a session is refreshed once for all of them. Nil: no Redis, the memory of the process holds the
-+// locks.
++// lockHome returns the Redis a refresh lock is taken in first: the one with the lowest address among
++// those that answer and are filled. The metrics name it. Nil: no Redis.
 +func (s *Store) lockHome() *endpoint {
 +	var home *endpoint
 +	if s.own.seeded() {
@@ -5064,6 +5268,25 @@ index 00000000..d9e5bc62
 +	}
 +
 +	return home
++}
++
++// lockNodes returns every Redis that answers and is filled, by address, the own one included: a
++// refresh lock is taken in all of them (see lock). isAlone: there are none, and the replica has no
++// neighbours, so the memory of the process holds its locks.
++func (s *Store) lockNodes() ([]*endpoint, bool) {
++	peers := s.peerSnapshot()
++	nodes := make([]*endpoint, 0, len(peers)+1)
++	if s.own.seeded() {
++		nodes = append(nodes, s.own)
++	}
++	for _, peer := range peers {
++		if peer.seeded() {
++			nodes = append(nodes, peer)
++		}
++	}
++	slices.SortFunc(nodes, func(a, b *endpoint) int { return strings.Compare(a.addr, b.addr) })
++
++	return nodes, len(peers) == 0 && s.hasResolved.Load()
 +}
 +
 +func (s *Store) updateMode() {
@@ -5136,9 +5359,19 @@ index 00000000..d9e5bc62
 +			s.observe(ctx, peer, err)
 +			continue
 +		}
++		// A Redis that was left comes back after probesToReturn answers in a row.
++		if !peer.usable() && !peer.probeAnswered() {
++			continue
++		}
 +		if peer.set(true, state.isSeeded && !state.isReplica, state.runID) {
 +			logger.Printf("redis-peers: the redis at %s answers again", peer.addr)
 +		}
++	}
++
++	if s.isRecovering.Load() {
++		// The Redis of the replica is being brought back apart from the probes.
++		s.updateMode()
++		return
 +	}
 +
 +	state, err := s.own.node.State(ctx)
@@ -5147,13 +5380,15 @@ index 00000000..d9e5bc62
 +	case err != nil:
 +		s.observe(ctx, s.own, err)
 +	case !s.own.usable():
-+		s.recoverOwn(ctx, state)
++		if s.own.probeAnswered() {
++			s.recoverOwnApart(ctx, state)
++		}
 +	case isRestarted:
 +		logger.Printf("redis-peers: the redis of the replica has restarted and is empty")
 +		s.own.set(false, false, "")
 +		// The filling takes a while: the metrics say what the replica works on meanwhile.
 +		s.updateMode()
-+		s.recoverOwn(ctx, state)
++		s.recoverOwnApart(ctx, state)
 +	default:
 +		// A write the Redis has refused once is in the memory.
 +		s.moveMemory(ctx)
@@ -5162,9 +5397,27 @@ index 00000000..d9e5bc62
 +	s.updateMode()
 +}
 +
++// recoverOwnApart brings the Redis of the replica back into use in a goroutine of its own: a filling
++// takes up to the seed timeout, and the probes go on meanwhile, so that a neighbour that stalls is
++// noticed, and one that answers again is taken back. One recovery runs at a time.
++func (s *Store) recoverOwnApart(ctx context.Context, state nodeState) {
++	if !s.isRecovering.CompareAndSwap(false, true) {
++		return
++	}
++	s.recoveries.Go(func() {
++		defer s.isRecovering.Store(false)
++		defer s.updateMode()
++
++		s.recoverOwn(ctx, state)
++	})
++}
++
 +// discover brings the list of neighbours up to date and reports whether it did. A lookup that
 +// fails keeps the list.
 +func (s *Store) discover(ctx context.Context) bool {
++	s.discoverMu.Lock()
++	defer s.discoverMu.Unlock()
++
 +	ctx, cancel := context.WithTimeout(ctx, resolveTimeout)
 +	defer cancel()
 +
@@ -5203,6 +5456,7 @@ index 00000000..d9e5bc62
 +	s.mu.Lock()
 +	s.peers = next
 +	s.mu.Unlock()
++	s.hasResolved.Store(true)
 +
 +	for addr, gone := range known {
 +		logger.Printf("redis-peers: a neighbour is gone: %s", addr)
@@ -5225,10 +5479,10 @@ index 00000000..d9e5bc62
 +}
 diff --git a/pkg/sessions/redispeers/store_test.go b/pkg/sessions/redispeers/store_test.go
 new file mode 100644
-index 00000000..20095448
+index 00000000..ae98cfa3
 --- /dev/null
 +++ b/pkg/sessions/redispeers/store_test.go
-@@ -0,0 +1,657 @@
+@@ -0,0 +1,913 @@
 +package redispeers
 +
 +import (
@@ -5239,6 +5493,7 @@ index 00000000..20095448
 +
 +	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 +	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions/memory"
++	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions/persistence"
 +	"github.com/prometheus/client_golang/prometheus/testutil"
 +	"github.com/stretchr/testify/assert"
 +	"github.com/stretchr/testify/require"
@@ -5421,6 +5676,9 @@ index 00000000..20095448
 +		fakes := newFakeNet()
 +		a, b := fakes.add(addrA), fakes.add(addrB)
 +		store := newTestStore(t, fakes, addrA)
++		// The proxy of the neighbour marks its redis as filled, so its answers count.
++		newTestStore(t, fakes, addrB)
++		eventually(t, func() bool { return store.peerSnapshot()[0].seeded() }, "the neighbour is filled")
 +		a.setDown(true)
 +
 +		// The first saves find out that the redis does not answer; none of them fails.
@@ -5495,7 +5753,7 @@ index 00000000..20095448
 +		cancel()
 +		for range failuresToLeave + 2 {
 +			_, err := store.Load(ctx, "ticket")
-+			require.ErrorIs(t, err, errNotFound)
++			require.ErrorIs(t, err, persistence.ErrStoreUnavailable)
 +		}
 +		assert.True(t, store.own.usable(), "the redis is not left for requests their clients gave up")
 +	})
@@ -5533,7 +5791,7 @@ index 00000000..20095448
 +		a.setDown(true)
 +		for range failuresToLeave {
 +			_, err := store.Load(t.Context(), "ticket")
-+			require.ErrorIs(t, err, errNotFound)
++			require.ErrorIs(t, err, persistence.ErrStoreUnavailable, "the session may still be in the redis")
 +		}
 +
 +		require.NoError(t, store.Clear(t.Context(), "ticket"))
@@ -5684,8 +5942,9 @@ index 00000000..20095448
 +
 +		for range failuresToLeave {
 +			_, err := store.Load(t.Context(), "old")
-+			require.ErrorIs(t, err, errNotFound, "the session is restored from its cookie")
++			require.ErrorIs(t, err, persistence.ErrStoreUnavailable, "the session is not restored from its cookie while it may be in the redis")
 +		}
++		assert.InDelta(t, failuresToLeave, loads(store, stepUnavailable), 0)
 +		assert.Equal(t, modeMemory, mode(store))
 +		assert.Equal(t, homeMemory, home(store))
 +		assert.InDelta(t, 1, testutil.ToFloat64(store.metrics.modeSwitches.WithLabelValues(modeMemory)), 0)
@@ -5868,7 +6127,7 @@ index 00000000..20095448
 +	_, err = store.Load(t.Context(), "first")
 +	require.NoError(t, err, "the session that was read is kept")
 +	_, err = store.Load(t.Context(), "second")
-+	require.ErrorIs(t, err, errNotFound, "the session nobody asked for is dropped")
++	require.ErrorIs(t, err, persistence.ErrStoreUnavailable, "the session nobody asked for is dropped, and no redis can tell whether it has it")
 +}
 +
 +// A session the memory cannot hold is an error of the save and is not counted as saved.
@@ -5885,6 +6144,257 @@ index 00000000..20095448
 +
 +	require.Error(t, store.Save(t.Context(), "ticket", bytes.Repeat([]byte("s"), 2000), time.Hour))
 +	assert.Zero(t, testutil.ToFloat64(store.metrics.saves.WithLabelValues(stepMemory)))
++}
++
++// A session is missing only when a filled Redis says so: a Redis that fails, or one that is still
++// being filled, does not know.
++func TestStore_LoadTellsMissingFromUnanswered(t *testing.T) {
++	t.Parallel()
++
++	t.Run("the redis of the replica answers that it has no such session", func(t *testing.T) {
++		t.Parallel()
++		fakes := newFakeNet()
++		fakes.add(addrA)
++		store := newTestStore(t, fakes, addrA)
++
++		_, err := store.Load(t.Context(), "ticket")
++		require.ErrorIs(t, err, errNotFound)
++		require.NotErrorIs(t, err, persistence.ErrStoreUnavailable)
++		assert.InDelta(t, 1, loads(store, stepCookie), 0)
++	})
++
++	t.Run("a redis that fails a request before it is left does not know", func(t *testing.T) {
++		t.Parallel()
++		fakes := newFakeNet()
++		a := fakes.add(addrA)
++		store := newTestStore(t, fakes, addrA)
++		a.setDown(true)
++
++		_, err := store.Load(t.Context(), "ticket")
++		require.ErrorIs(t, err, persistence.ErrStoreUnavailable)
++		assert.True(t, store.own.usable(), "one failure does not leave the redis")
++		assert.InDelta(t, 1, loads(store, stepUnavailable), 0)
++	})
++
++	t.Run("a filled redis that fails the same load may have the session", func(t *testing.T) {
++		t.Parallel()
++		fakes := newFakeNet()
++		fakes.add(addrA)
++		b := fakes.add(addrB)
++		storeA := newTestStore(t, fakes, addrA)
++		newTestStore(t, fakes, addrB)
++		eventually(t, func() bool { return storeA.peerSnapshot()[0].seeded() }, "the neighbour is filled")
++		// The redis of the replica stalled while the session was saved, so only the neighbour has it;
++		// now the redis of the replica is back and the neighbour stalls.
++		b.put("ticket", "session")
++		b.setDown(true)
++
++		_, err := storeA.Load(t.Context(), "ticket")
++		require.ErrorIs(t, err, persistence.ErrStoreUnavailable, "the session is not restored from its cookie")
++	})
++
++	t.Run("a filled neighbour answers for a redis of the replica that has been left", func(t *testing.T) {
++		t.Parallel()
++		fakes := newFakeNet()
++		a := fakes.add(addrA)
++		fakes.add(addrB)
++		storeA := newTestStore(t, fakes, addrA)
++		newTestStore(t, fakes, addrB)
++		eventually(t, func() bool { return storeA.peerSnapshot()[0].seeded() }, "the neighbour is filled")
++		a.setDown(true)
++		eventually(t, func() bool { return !storeA.own.usable() }, "the redis of the replica is left")
++
++		_, err := storeA.Load(t.Context(), "ticket")
++		require.ErrorIs(t, err, errNotFound)
++	})
++
++	t.Run("a neighbour that is being filled does not answer for the session", func(t *testing.T) {
++		t.Parallel()
++		fakes := newFakeNet()
++		a := fakes.add(addrA)
++		fakes.add(addrB) // no proxy marks it: it has not been filled
++		store := newTestStore(t, fakes, addrA)
++		eventually(t, func() bool { return len(store.peerSnapshot()) == 1 }, "the neighbour is seen")
++		a.setDown(true)
++
++		_, err := store.Load(t.Context(), "ticket")
++		require.ErrorIs(t, err, persistence.ErrStoreUnavailable)
++	})
++
++	t.Run("what only the memory has is served while no redis answers", func(t *testing.T) {
++		t.Parallel()
++		fakes := newFakeNet()
++		a := fakes.add(addrA)
++		store := newTestStore(t, fakes, addrA)
++		a.setDown(true)
++		eventually(t, func() bool { return mode(store) == modeMemory }, "the store is in the memory")
++
++		require.NoError(t, store.Save(t.Context(), "new", []byte("signed in now"), time.Hour))
++		value, err := store.Load(t.Context(), "new")
++		require.NoError(t, err)
++		assert.Equal(t, "signed in now", string(value))
++
++		_, err = store.Load(t.Context(), "old")
++		require.ErrorIs(t, err, persistence.ErrStoreUnavailable)
++	})
++}
++
++// A Redis that stalls for a moment under load is not left: the store leaves it only after it has
++// failed every request for failingToLeave.
++func TestEndpoint_Failed(t *testing.T) {
++	t.Parallel()
++
++	start := time.Date(2026, time.November, 23, 0, 0, 0, 0, time.UTC)
++	tests := []struct {
++		name     string
++		failures int
++		spread   time.Duration
++		isLeft   bool
++	}{
++		{name: "a burst of failures within a moment", failures: 100, spread: 500 * time.Millisecond, isLeft: false},
++		{name: "fewer failures than needed over a long time", failures: failuresToLeave - 1, spread: time.Minute, isLeft: false},
++		{name: "failures for the whole time", failures: failuresToLeave, spread: failingToLeave, isLeft: true},
++	}
++	for _, tt := range tests {
++		t.Run(tt.name, func(t *testing.T) {
++			t.Parallel()
++			ep := &endpoint{isUp: true, isSeeded: true}
++
++			isLeft := false
++			for i := range tt.failures {
++				at := start
++				if tt.failures > 1 {
++					at = start.Add(tt.spread * time.Duration(i) / time.Duration(tt.failures-1))
++				}
++				isLeft = ep.failed(at, failingToLeave) || isLeft
++			}
++			assert.Equal(t, tt.isLeft, isLeft)
++			assert.Equal(t, !tt.isLeft, ep.usable())
++		})
++	}
++
++	t.Run("answers in a row start the count again", func(t *testing.T) {
++		t.Parallel()
++		ep := &endpoint{isUp: true, isSeeded: true}
++		for range failuresToLeave {
++			ep.failed(start, failingToLeave)
++		}
++		for range answersToForgive {
++			ep.succeeded()
++		}
++		assert.False(t, ep.failed(start.Add(failingToLeave), failingToLeave), "the failures before the answers do not count")
++	})
++
++	t.Run("an answer between failures does not", func(t *testing.T) {
++		t.Parallel()
++		ep := &endpoint{isUp: true, isSeeded: true}
++		isLeft := false
++		for i := range failuresToLeave {
++			ep.succeeded()
++			isLeft = ep.failed(start.Add(failingToLeave*time.Duration(i)/time.Duration(failuresToLeave-1)), failingToLeave) || isLeft
++		}
++		assert.True(t, isLeft, "a redis that fails most requests is left")
++	})
++
++	t.Run("a probe between failures does not clear them", func(t *testing.T) {
++		t.Parallel()
++		// A neighbour in use fails a request every 25 ms and answers the probe every second.
++		ep := &endpoint{isUp: true, isSeeded: true}
++		isLeft := false
++		for at := time.Duration(0); at < 10*time.Second && !isLeft; at += 25 * time.Millisecond {
++			if at%time.Second == 0 {
++				ep.set(true, true, "run")
++			}
++			isLeft = ep.failed(start.Add(at), failingToLeave)
++		}
++		assert.True(t, isLeft, "a redis that fails the requests and answers the probe is left")
++		assert.False(t, ep.usable())
++	})
++
++	t.Run("probes in a row clear the failures", func(t *testing.T) {
++		t.Parallel()
++		ep := &endpoint{isUp: true, isSeeded: true}
++		for range failuresToLeave {
++			ep.failed(start, failingToLeave)
++		}
++		for range answersToForgive {
++			ep.set(true, true, "run")
++		}
++		assert.False(t, ep.failed(start.Add(failingToLeave), failingToLeave), "the failures before the probes do not count")
++	})
++
++	t.Run("a redis taken back starts without failures", func(t *testing.T) {
++		t.Parallel()
++		ep := &endpoint{isUp: true, isSeeded: true}
++		for i := range failuresToLeave {
++			ep.failed(start.Add(failingToLeave*time.Duration(i)/time.Duration(failuresToLeave-1)), failingToLeave)
++		}
++		require.False(t, ep.usable())
++
++		assert.True(t, ep.set(true, true, "run"))
++		assert.False(t, ep.failed(start.Add(time.Hour), failingToLeave))
++		assert.True(t, ep.usable())
++	})
++}
++
++// A Redis that was left is taken back only after it has answered probesToReturn probes in a row.
++func TestStore_RedisReturnsAfterProbesInARow(t *testing.T) {
++	t.Parallel()
++	fakes := newFakeNet()
++	fakes.add(addrA)
++	b := fakes.add(addrB)
++	storeA := newTestStore(t, fakes, addrA)
++	newTestStore(t, fakes, addrB)
++	eventually(t, func() bool { return storeA.peerSnapshot()[0].seeded() }, "the neighbour is filled")
++	b.setDown(true)
++	eventually(t, func() bool { return !storeA.peerSnapshot()[0].usable() }, "the neighbour is left")
++	// The loop of the store would probe on its own; the test probes by hand.
++	require.NoError(t, storeA.Close())
++	peer := storeA.peerSnapshot()[0]
++
++	b.setDown(false)
++	for range probesToReturn - 1 {
++		storeA.probe(t.Context())
++	}
++	b.setDown(true)
++	storeA.probe(t.Context())
++	b.setDown(false)
++	storeA.probe(t.Context())
++	assert.False(t, peer.usable(), "a stall starts the count again")
++
++	for range probesToReturn - 1 {
++		storeA.probe(t.Context())
++	}
++	assert.True(t, peer.usable(), "the neighbour is back after probes in a row")
++	assert.True(t, peer.seeded())
++}
++
++// The Redis of the replica is filled apart from the probes, which keep watching the neighbours.
++func TestStore_ProbesGoOnWhileTheRedisIsFilled(t *testing.T) {
++	t.Parallel()
++	fakes := newFakeNet()
++	a := fakes.add(addrA)
++	fakes.add(addrB)
++	c := fakes.add(addrC)
++	storeA := startTestStore(t, fakes, addrA, time.Minute)
++	eventually(t, func() bool { return storeA.VerifyConnection(t.Context()) == nil }, "the replica is ready")
++	newTestStore(t, fakes, addrB)
++	newTestStore(t, fakes, addrC)
++	eventually(t, func() bool {
++		peers := storeA.peerSnapshot()
++		return len(peers) == 2 && peers[0].seeded() && peers[1].seeded()
++	}, "the neighbours are seen as filled")
++
++	// The copy takes the whole minute of the filling.
++	fakes.mu.Lock()
++	a.pollsToCopy = 1 << 30
++	fakes.mu.Unlock()
++	a.restart()
++	eventually(t, func() bool { return storeA.isRecovering.Load() }, "the redis of the replica is being filled")
++
++	c.setDown(true)
++	eventually(t, func() bool { return !storeA.peerSnapshot()[1].usable() }, "a neighbour that stalls is left meanwhile")
++	assert.True(t, storeA.isRecovering.Load())
 +}
 diff --git a/pkg/sessions/session_store.go b/pkg/sessions/session_store.go
 index 3d4b8d97..a394f33b 100644

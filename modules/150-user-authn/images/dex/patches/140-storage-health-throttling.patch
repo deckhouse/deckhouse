@@ -1,0 +1,180 @@
+diff --git a/storage/health.go b/storage/health.go
+index fe75a2da..1d91934f 100644
+--- a/storage/health.go
++++ b/storage/health.go
+@@ -3,30 +3,64 @@ package storage
+ import (
+ 	"context"
+ 	"crypto"
++	"errors"
+ 	"fmt"
++	"net/http"
+ 	"time"
+ )
+ 
+ // NewCustomHealthCheckFunc returns a new health check function.
++//
++// The check writes and removes an auth request. A storage that answers
++// 429 Too Many Requests, as the Kubernetes API does when the priority level
++// of Dex is full, counts as working (Deckhouse): it has answered, and it
++// throttles every replica of Dex alike. Failing the check then took the
++// readiness of all the replicas at once, so the throttling of the storage
++// requests turned into an outage of everything Dex serves, the signing keys
++// and the sign-in pages included, until the level emptied.
++//
++// The check does not wait for the limit of requests in flight (130): with
++// every slot taken by the requests of a refresh storm, the wait would end in
++// errNoSlot and fail the check of every replica the same way. Its two
++// requests every 15 seconds go to the API server at once, which answers them
++// or throttles them; a throttled one is sent again within the budget of a
++// request and then returned as 429.
+ func NewCustomHealthCheckFunc(s Storage, now func() time.Time) func(context.Context) (details interface{}, err error) {
+ 	return func(ctx context.Context) (details interface{}, err error) {
+-		a := AuthRequest{
+-			ID:       NewID(),
+-			ClientID: NewID(),
+-
+-			// Set a short expiry so if the delete fails this will be cleaned up quickly by garbage collection.
+-			Expiry:  now().Add(time.Minute),
+-			HMACKey: NewHMACKey(crypto.SHA256),
++		err = checkStorage(WithoutRequestLimit(ctx), s, now)
++		if isThrottled(err) {
++			return fmt.Sprintf("the storage throttles the requests of Dex: %v", err), nil
+ 		}
+ 
+-		if err := s.CreateAuthRequest(ctx, a); err != nil {
+-			return nil, fmt.Errorf("create auth request: %v", err)
+-		}
++		return nil, err
++	}
++}
+ 
+-		if err := s.DeleteAuthRequest(ctx, a.ID); err != nil {
+-			return nil, fmt.Errorf("delete auth request: %v", err)
+-		}
++func checkStorage(ctx context.Context, s Storage, now func() time.Time) error {
++	a := AuthRequest{
++		ID:       NewID(),
++		ClientID: NewID(),
++
++		// Set a short expiry so if the delete fails this will be cleaned up quickly by garbage collection.
++		Expiry:  now().Add(time.Minute),
++		HMACKey: NewHMACKey(crypto.SHA256),
++	}
++
++	if err := s.CreateAuthRequest(ctx, a); err != nil {
++		return fmt.Errorf("create auth request: %w", err)
++	}
+ 
+-		return nil, nil
++	if err := s.DeleteAuthRequest(ctx, a.ID); err != nil {
++		return fmt.Errorf("delete auth request: %w", err)
+ 	}
++
++	return nil
++}
++
++// isThrottled reports whether the storage answered 429 Too Many Requests.
++// The Kubernetes storage reports the status of an answer it does not expect
++// through StatusCode.
++func isThrottled(err error) bool {
++	var withStatus interface{ StatusCode() int }
++	return errors.As(err, &withStatus) && withStatus.StatusCode() == http.StatusTooManyRequests
+ }
+diff --git a/storage/health_test.go b/storage/health_test.go
+new file mode 100644
+index 00000000..63e8b5e8
+--- /dev/null
++++ b/storage/health_test.go
+@@ -0,0 +1,91 @@
++package storage
++
++import (
++	"context"
++	"errors"
++	"net/http"
++	"testing"
++	"time"
++)
++
++type statusError int
++
++func (e statusError) Error() string   { return http.StatusText(int(e)) }
++func (e statusError) StatusCode() int { return int(e) }
++
++// healthStorage answers the requests of the health check with createErr and
++// deleteErr.
++type healthStorage struct {
++	Storage
++
++	createErr error
++	deleteErr error
++	// waitsForSlots counts the requests that would wait for the limit of
++	// requests in flight.
++	waitsForSlots int
++}
++
++func (s *healthStorage) CreateAuthRequest(ctx context.Context, _ AuthRequest) error {
++	if !RequestLimitSkipped(ctx) {
++		s.waitsForSlots++
++	}
++	return s.createErr
++}
++
++func (s *healthStorage) DeleteAuthRequest(ctx context.Context, _ string) error {
++	if !RequestLimitSkipped(ctx) {
++		s.waitsForSlots++
++	}
++	return s.deleteErr
++}
++
++func TestHealthCheckUnderThrottling(t *testing.T) {
++	tests := []struct {
++		name        string
++		storage     *healthStorage
++		wantErr     bool
++		wantDetails bool
++	}{
++		{name: "the storage works", storage: &healthStorage{}},
++		{
++			name:        "the Kubernetes API throttles the create",
++			storage:     &healthStorage{createErr: statusError(http.StatusTooManyRequests)},
++			wantDetails: true,
++		},
++		{
++			name:        "the Kubernetes API throttles the delete",
++			storage:     &healthStorage{deleteErr: statusError(http.StatusTooManyRequests)},
++			wantDetails: true,
++		},
++		{
++			name:    "the Kubernetes API fails",
++			storage: &healthStorage{createErr: statusError(http.StatusInternalServerError)},
++			wantErr: true,
++		},
++		{
++			name:    "the Kubernetes API refuses the requests of Dex",
++			storage: &healthStorage{createErr: statusError(http.StatusForbidden)},
++			wantErr: true,
++		},
++		{
++			name:    "the Kubernetes API does not answer",
++			storage: &healthStorage{createErr: errors.New("dial tcp 10.99.0.1:443: connect: connection refused")},
++			wantErr: true,
++		},
++	}
++	for _, tt := range tests {
++		t.Run(tt.name, func(t *testing.T) {
++			check := NewCustomHealthCheckFunc(tt.storage, time.Now)
++			details, err := check(t.Context())
++			if (err != nil) != tt.wantErr {
++				t.Fatalf("got error %v, want an error: %t", err, tt.wantErr)
++			}
++			if (details != nil) != tt.wantDetails {
++				t.Fatalf("got details %v, want details: %t", details, tt.wantDetails)
++			}
++			if tt.storage.waitsForSlots != 0 {
++				t.Fatalf("%d requests of the check wait for the limit of requests in flight", tt.storage.waitsForSlots)
++			}
++		})
++	}
++}

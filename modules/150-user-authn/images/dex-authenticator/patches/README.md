@@ -20,17 +20,35 @@ into the image. To run them, apply the patches to a clone of the tag and run `go
 - **What it does:** the session cookie carries the session ticket and the refresh token as JSON. When the store has
   no data for the ticket, the proxy gets a stub session with the refresh token of the cookie, the placeholder user
   `Does not found in Redis` and a creation time far in the past. With `--cookie-refresh` above zero the stub is
-  refreshed through dex at once instead of being trusted. Any error of the store produces the stub, an unreachable
-  Redis included: the proxy clears the cookie on a load error, and the cookie holds the only copy of the refresh
-  token. A session the ticket secret cannot decrypt, or a cookie without a refresh token, is an error. The stub
-  refreshes under the lock of its ticket in Redis, as a stored session does, so parallel requests with one cookie
-  make one refresh through dex per replica.
+  refreshed through dex at once instead of being trusted. Any other error of the store than the one below produces
+  the stub, an unreachable Redis of the `redis` store included: the proxy clears the cookie on a load error, and the
+  cookie holds the only copy of the refresh token. A session the ticket secret cannot decrypt, or a cookie without a
+  refresh token, is an error. The stub refreshes under the lock of its ticket in Redis, as a stored session does, so
+  parallel requests with one cookie make one refresh through dex per replica.
+- **When the store does not answer:** a store that cannot tell whether it has the session returns
+  `persistence.ErrStoreUnavailable` (the `redis-peers` store of patch 017 does when no filled Redis answered). The
+  stub of such a session is marked and never refreshed: the request is answered 503 as below, the cookie is kept,
+  and the window of a dex that does not answer does not start. When every Redis of a replica stalled at once, the
+  refresh of every session through dex overloaded the API priority level of dex, and two replicas refreshed the
+  same refresh token, which dex refuses the second time and ends the session. The mark is checked again under the
+  lock of the session, so a store that stops answering after the first load does not let the stub be refreshed in
+  place of the stored session either. A refresh dex answers late is saved although the store does not answer the
+  check whether the session has ended meanwhile; the save goes where the store can put it. A sign-out still
+  revokes the refresh token of the cookie through the marked stub (patch 011).
+- **Restores at once:** a process refreshes at most 32 stubs at once. A stub that gets no slot within 2 seconds is
+  answered 503 as below and keeps its cookie, and the window of a dex that does not answer does not start. The slot
+  is held until dex answers, also when the request has stopped waiting (see the late refresh below), so a slow dex
+  gets no more of them at once. dex refreshes a session through the Kubernetes API, 7 to 9 requests one after
+  another: two replicas keep at most 64 requests of dex in flight for the stubs, and at about 0.1 second a refresh
+  a replica restores about 300 sessions a second. The refresh of a stored session takes no slot.
 - **When dex cannot answer:** a refresh that gets no answer from dex (connection refused, TLS error, timeout) or gets
   429 or a 5xx status does not end a session that cannot be trusted without the refresh: the stub, or a session in
   Redis whose ID token has expired. The session and its cookie are kept, `/auth`, `/oauth2/userinfo` and the proxied
-  requests answer 503 with `Retry-After: 10`, and the same cookie works again once dex answers. A lock that cannot be
-  taken within 5 seconds, or an unreachable Redis, is answered the same way instead of clearing the session; the pod
-  is not ready without Redis anyway. A refresh dex refuses (`invalid_grant`, `invalid_client`, or `access_denied`,
+  requests answer 503 with `Retry-After` of a random 5 to 15 seconds, so that the clients answered at once do not
+  come back in the same second, and the same cookie works again once dex answers. A lock that cannot be taken within
+  5 seconds, or an unreachable Redis, is answered the same way instead of clearing the session; the pod of the
+  `redis` store is not ready without Redis anyway. A refresh dex refuses (`invalid_grant`, `invalid_client`, or
+  `access_denied`,
   which dex answers with 429 for a locked account) still clears the session and the cookie, and so does any other 4xx
   answer for such a session. Sign-out does not need dex and clears
   the cookie.
@@ -392,12 +410,19 @@ The security events of `templates/security-events.yaml` are built from these lin
 
 - **Zone:** a new session store, `pkg/sessions/redispeers`, chosen with `--session-store-type=redis-peers`, and the
   memory of the process it falls back to, `pkg/sessions/memory`. The stores `cookie` and `redis` are not changed.
-- **Consumer in Deckhouse:** none yet: the shared DexAuthenticator, whose replicas each have a Redis without a disk
-  in the pod. Nothing in the module sets the store type.
+- **Consumer in Deckhouse:** the shared DexAuthenticator (`templates/shared-dex-authenticator`), whose replicas
+  each have a Redis without a disk in the pod.
 - **What it does:** every replica of the proxy has a Redis of its own, and none of them is a master for long. A
   replica writes each session to its own Redis and then to the Redis of its neighbours, and reads it from its own
-  Redis, then from a neighbour, then from the memory of the process; a session none of them has is restored from
-  its cookie (patch 002). The store sits behind the same `persistence.Manager` and ticket cookie as `redis`.
+  Redis, then from a neighbour, then from the memory of the process; a session a filled Redis says it does not have
+  is restored from its cookie (patch 002), but only when no other filled Redis failed the same load. Otherwise the
+  session may well be in a Redis that did not answer: one Redis took the writes while the other stalled, then the
+  other came back and the first one stalls. The load then returns `persistence.ErrStoreUnavailable`, and the
+  request is answered 503 without a refresh (patch 002); so it is when no filled Redis is in use at all. Once the
+  failing Redis has been left, the answer of the others counts again, and a session only the left Redis had costs
+  one refresh, under the lock taken in every filled Redis. A neighbour that is being filled does not answer
+  for a session. The memory serves only what no Redis took. The store sits behind the same `persistence.Manager`
+  and ticket cookie as `redis`.
   - **Neighbours:** `--redis-peers-dns-name` resolves to the address of every replica, as a headless Service with
     `publishNotReadyAddresses` does; `--redis-peers-self-address` is the address of the replica itself. The own
     Redis, its password and the port of every Redis are those of `--redis-connection-url` and `--redis-password`.
@@ -423,9 +448,22 @@ The security events of `templates/security-events.yaml` are built from these lin
     fails, are waited for. The replica is not ready (`/ready`) until this is over or
     `--redis-peers-seed-timeout` (default `15s`) has passed. Redis needs `--repl-diskless-sync-delay 0` and
     `--repl-diskless-load swapdb`; the Redis image of the module pins the 7.4 line this was measured on.
-  - **Without Redis:** a Redis that fails three requests in a row (each bounded by `--redis-peers-timeout`, default
-    `200ms`) is left and probed every second; `/ready` does not depend on Redis. A session no Redis took is kept
-    in the memory of the process. A removal the own Redis did not take is kept there too and hides the session at
+  - **Without Redis:** a Redis that fails five requests in a row, for at least 2 seconds, is left and probed every
+    second; `/ready` does not depend on Redis. Each request is bounded by `--redis-peers-timeout`, default `500ms`:
+    far above the time Redis takes, it is the time a Redis may stall before a request goes on to the next one. A
+    loaded node delays a process by hundreds of milliseconds now and then, and with `200ms` and three failures
+    every Redis of such a node was left at once, again and again. A Redis that is down is left within a few seconds
+    without requests too, since the probe asks it every second. The failures of a Redis are cleared by three
+    answers in a row, requests or probes, not by one answer between stalls: a neighbour that fails most requests
+    but answers the probe every second is left all the same. A Redis that was left is taken back after it has
+    answered three probes in a row, and starts without failures. The Redis of the replica is filled and brought back apart from the probes, which
+    go on watching the neighbours meanwhile.
+  - **Fail-closed:** while no filled Redis answers, the replica answers 503 to every request with a session cookie,
+    for as long as that lasts: nothing restores such a session from its cookie, and a new sign-in does not help
+    either, since the cookie is kept. There is no switch for the former behaviour. A new sign-in during that time
+    is kept in the memory of the replica that made it, so the next request of the user that reaches another
+    replica gets 503 there too. A session no Redis took is kept in the memory of the process. A removal the own
+    Redis did not take is kept there too and hides the session at
     once. Both are given to the own Redis when it takes writes again: on its return before it is read, and by
     every probe. A session a neighbour took is not kept in the memory: the own Redis is left with its older copy,
     which costs one refresh. A move waits for the requests only while they write to the own Redis, not while they
@@ -435,17 +473,24 @@ The security events of `templates/security-events.yaml` are built from these lin
     of overhead. `--session-store-memory-ttl` (default `0`, off) caps the life of a record, which is otherwise
     `--cookie-expire`. A record the memory has dropped costs one refresh through dex, never a sign-in. The memory
     is not a store type of its own.
-  - **Refresh lock:** lives in the Redis with the lowest address among those that answer and carry their mark, the
-    own one included, so every replica takes it in the same place; in the memory of the process when no Redis
-    answers.
+  - **Refresh lock:** taken in every Redis that answers and carries its mark, the own one included, in the order of
+    their addresses; busy in one of them is busy. A Redis that stalls is left by each replica on its own, so for a
+    while the replicas see different Redis: with the lock in the lowest of them only, each replica took it in
+    another Redis and both refreshed the same refresh token. Taken in all, the locks of two replicas meet in every
+    Redis both of them see. A Redis that fails the lock fails the request, which is answered 503, and the locks
+    taken so far are released. The memory of the process holds the locks only of a replica without neighbours; a
+    replica with neighbours and no filled Redis answers 503 to the requests that need a refresh.
 - **Metrics:** `oauth2_proxy_session_store_redis_peers_`: `loads_total` by `step` (`own`, `peer`, `memory`,
   `cookie`), `saves_total` by `target` (`own`, `peer`, `memory`), `peer_writes_total` by `operation` and `result`
   (`ok`, `readonly`, `timeout`, `error`), `moved_total`, `seed_duration_seconds` by `outcome` (`copied`, `empty`,
   `kept`, `timeout`, `error`), `mode` and `mode_switches_total` (`redis`, `peer`, `memory`), `lock_home` by
-  `address`, `locks_total` by `home` and `result`, `peers` by `state`. Of the memory:
+  `address` (the Redis a lock is taken in first), `locks_total` by `home` and `result`, `peers` by `state`.
+  `loads_total` with `step="unavailable"` counts the loads no filled Redis answered. Of the memory:
   `oauth2_proxy_session_store_memory_entries`, `_bytes`, `_evictions_total` by `reason` (`size`, `expired`),
   `_loads_total` by `result` (`hit`, `miss`). No metric carries a client, a host or a user.
-- **Limits:** no TLS between the Redis of the replicas; a write a neighbour has missed is not sent again: a save
+- **Limits:** two replicas that each have left the Redis the other one uses, and see no other (a network split
+  between the pods), take the refresh lock in different Redis; no TLS between the Redis of the replicas; a write a
+  neighbour has missed is not sent again: a save
   costs one refresh there; a removal leaves the session there, and the session can come back on every replica, the
   one of the sign-out included, until its next refresh (after a sign-out only a copy of the cookie gets that far,
   and the sign-out has revoked its refresh token, patch 011); a session a replica keeps in its memory comes back on
@@ -604,6 +649,56 @@ The security events of `templates/security-events.yaml` are built from these lin
 - **Order:** after 016 and 017: it chooses the client with the host parsing of 016 and shares the store of 017. It
   moves the body of `NewOAuthProxy` into `newOAuthProxy`, so a patch below it that changes `NewOAuthProxy` moves its
   hunks.
+
+### 019-provider-http1.patch
+
+- **Zone:** `pkg/requests` (a new file, `deckhouse_provider_transport.go`), the TLS settings of the provider in
+  `pkg/validation`, and the HTTP client the OIDC provider (`providers/oidc.go`) and its key set
+  (`pkg/providers/oidc`) put into the context of `go-oidc` and `golang.org/x/oauth2`.
+- **Consumer in Deckhouse:** the shared dex-authenticator: its requests to the token endpoint of Dex (the code
+  exchange and the refresh) and to its keys.
+- **What it does:** the OIDC provider gets a client and a transport of its own, `requests.ProviderHTTPClient` over
+  `requests.ProviderTransport`, a copy of the default transport that speaks HTTP/1.1 only.
+  - **Why HTTP/1.1:** Dex is reached through its Service, and a Service balances connections, not requests. Over
+    HTTP/2 every request to Dex goes over the one connection a process keeps to it, so the processes of the shared
+    dex-authenticator hold a few connections, and the pod of Dex that got most of them gets most of the refreshes
+    of a wave. Over HTTP/1.1 a connection carries one request at a time: a wave opens as many connections as it
+    has requests in flight, and the Service spreads them over the pods of Dex.
+  - **HTTP/2 off:** `Protocols` is HTTP/1 only, `ForceAttemptHTTP2` is false and `TLSNextProto` is an empty map,
+    so the TLS handshake does not offer `h2` and a later change of the protocols does not turn it on.
+  - **Pool:** `MaxConnsPerHost` 64: twice the 32 restores of a session from its cookie a process runs at a time
+    (patch 002), with room for the logins and the refreshes of stored sessions. Four processes open at most 256
+    connections to Dex, and a request over the bound waits for a free connection within its context.
+    `MaxIdleConnsPerHost` 32 keeps the connections of the restores between two waves, so a steady load does not
+    open a TLS connection per request; the default of `net/http` is 2. `IdleConnTimeout` 30 s: Dex sets no idle
+    timeout of its own and keeps an idle connection open, so the timeout is the choice of the proxy. A connection
+    idle for 30 s is closed, and the next wave opens new ones that the Service spreads over the pods of Dex as they
+    are then. Under a steady low load the transport reuses the connection used last, so a few busy connections stay
+    on the pods they went to until a wave or an idle pause.
+  - **TLS:** `--provider-ca-file` and `--ssl-insecure-skip-verify` set the TLS of both transports, the default one
+    and that of the provider.
+  - **Metrics** of the pool, no label with an address, a client or a user:
+    `oauth2_proxy_provider_connections_open` (open connections, idle ones included),
+    `oauth2_proxy_provider_connections_in_use` (connections that carry a request, until its answer is read),
+    `oauth2_proxy_provider_connection_waiting_requests` (requests that wait for a free connection of the pool or for
+    a new one), `oauth2_proxy_provider_connection_wait_seconds` by `connection` (`reused` from the pool, or `new`,
+    whose wait includes the TLS handshake), and `oauth2_proxy_provider_connection_wait_failures_total` by `reason`:
+    `timeout` (the deadline of the request passed while it waited), `canceled`, or `error` (the connection could not
+    be opened). The transport has no wait timeout of its own: a request waits within its context. A full pool shows
+    as `connections_in_use` at 64 with `connection_waiting_requests` above zero. The open connections are counted
+    at the dialer, the rest through `net/http/httptrace`; the metrics are on the default registry of the process.
+  - **Not changed:** every other outgoing client of the proxy: the upstreams, the revocation of a refresh token at
+    sign-out (patch 011), the revocation feed (patch 010), the other providers. They keep the default transport and
+    HTTP/2.
+- **Tests:** `pkg/requests/deckhouse_provider_transport_test.go`: a TLS server that offers HTTP/2 gets HTTP/1.1
+  from the transport, parallel requests take a connection each, the pool settings, and the default transport is
+  not changed. `pkg/requests/deckhouse_provider_metrics_test.go`: with the pool full the metrics show the
+  requests that wait, the connections in use and open, and the wait of each request; a request that gives up
+  waiting is counted by its reason; a closed connection is no longer counted. `providers/deckhouse_provider_transport_test.go`: the code exchange and the refresh go over the
+  transport of the provider. `pkg/validation/deckhouse_provider_transport_test.go`: the TLS of the provider reaches
+  both transports.
+- **Upstream:** not proposed.
+- **Order:** after 018, whose `configureProviderTransport` it changes.
 
 ### 998-fix-cve.patch
 

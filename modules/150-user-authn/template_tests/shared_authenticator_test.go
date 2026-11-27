@@ -21,6 +21,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/tidwall/gjson"
 
 	. "github.com/deckhouse/deckhouse/testing/helm"
 )
@@ -118,7 +119,7 @@ dex-authenticator: dh-test-secret-0123456789abcdef1
 					hec.HelmRender()
 				})
 
-				It("runs two replicas of each instance that may share a node", func() {
+				It("runs two replicas of each instance on two nodes where there are two", func() {
 					Expect(hec.RenderError).ShouldNot(HaveOccurred())
 
 					for _, instance := range instances {
@@ -126,12 +127,21 @@ dex-authenticator: dh-test-secret-0123456789abcdef1
 						Expect(deployment.Exists()).To(BeTrue(), instance)
 						Expect(deployment.Field("spec.replicas").Int()).To(BeEquivalentTo(2))
 
-						affinity := deployment.Field("spec.template.spec.affinity.podAntiAffinity")
-						Expect(affinity.Get("requiredDuringSchedulingIgnoredDuringExecution").Exists()).To(BeFalse(),
-							"two replicas must fit a cluster of one node")
-						preferred := affinity.Get("preferredDuringSchedulingIgnoredDuringExecution").Array()
-						Expect(preferred).To(HaveLen(1))
-						Expect(preferred[0].Get("podAffinityTerm.labelSelector.matchLabels.instance").String()).To(Equal(instance))
+						Expect(deployment.Field("spec.template.spec.affinity.podAntiAffinity").Exists()).To(BeFalse(),
+							"a required anti-affinity would not fit a cluster of one node, a preferred one does not spread")
+						spread := deployment.Field("spec.template.spec.topologySpreadConstraints").Array()
+						Expect(spread).To(HaveLen(1))
+						Expect(spread[0].Get("topologyKey").String()).To(Equal("kubernetes.io/hostname"))
+						Expect(spread[0].Get("maxSkew").Int()).To(BeEquivalentTo(1))
+						Expect(spread[0].Get("whenUnsatisfiable").String()).To(Equal("DoNotSchedule"))
+						Expect(spread[0].Get("nodeTaintsPolicy").String()).To(Equal("Honor"),
+							"a cordoned node is no domain that the second replica has to go to")
+						Expect(spread[0].Get("minDomains").Exists()).To(BeFalse(), "one node is enough")
+						Expect(spread[0].Get("labelSelector.matchLabels.app").String()).To(Equal("shared-dex-authenticator"))
+						Expect(spread[0].Get("labelSelector.matchLabels.instance").String()).To(Equal(instance))
+						Expect(spread[0].Get("matchLabelKeys").Array()).To(HaveLen(1))
+						Expect(spread[0].Get("matchLabelKeys.0").String()).To(Equal("pod-template-hash"),
+							"each revision is spread on its own")
 
 						pdb := hec.KubernetesResource("PodDisruptionBudget", namespace, instance)
 						Expect(pdb.Exists()).To(BeTrue())
@@ -330,6 +340,40 @@ dex-authenticator: dh-test-secret-0123456789abcdef1
 						}
 					}
 					Expect(containerArgs(instance, "redis")).To(Equal([]string{"/etc/redis/redis.conf"}))
+				}
+			})
+
+			It("gives Redis the CPU it needs on a busy node and checks that it takes connections", func() {
+				Expect(hec.RenderError).ShouldNot(HaveOccurred())
+
+				for _, instance := range instances {
+					deployment := hec.KubernetesResource("Deployment", namespace, instance)
+					var redis gjson.Result
+					for _, c := range deployment.Field("spec.template.spec.containers").Array() {
+						if c.Get("name").String() == "redis" {
+							redis = c
+						}
+					}
+					Expect(redis.Exists()).To(BeTrue(), instance)
+					Expect(redis.Get("resources.requests.cpu").String()).To(Equal("100m"))
+					Expect(redis.Get("resources.requests.memory").String()).To(Equal("64Mi"))
+					Expect(redis.Get("resources.limits").Exists()).To(BeFalse(),
+						"a CPU limit throttles Redis under load, a memory limit kills it with every session")
+					Expect(redis.Get("livenessProbe.tcpSocket.port").String()).To(Equal("redis"))
+					Expect(redis.Get("livenessProbe.failureThreshold").Int()).To(BeEquivalentTo(6))
+					Expect(redis.Get("readinessProbe").Exists()).To(BeFalse(),
+						"the proxy serves through the Redis of its neighbour while its own one is away")
+
+					vpa := hec.KubernetesResource("VerticalPodAutoscaler", namespace, instance)
+					Expect(vpa.Exists()).To(BeTrue(), instance)
+					var floor gjson.Result
+					for _, policy := range vpa.Field("spec.resourcePolicy.containerPolicies").Array() {
+						if policy.Get("containerName").String() == "redis" {
+							floor = policy.Get("minAllowed")
+						}
+					}
+					Expect(floor.Get("cpu").String()).To(Equal("100m"), "the VPA does not take the CPU of Redis below the request")
+					Expect(floor.Get("memory").String()).To(Equal("64Mi"))
 				}
 			})
 

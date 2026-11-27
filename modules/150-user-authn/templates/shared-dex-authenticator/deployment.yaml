@@ -81,16 +81,23 @@ spec:
       {{- include "helm_lib_node_selector" (tuple $context "system") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple $context "system") | nindent 6 }}
       {{- include "helm_lib_priority_class" (tuple $context "cluster-low") | nindent 6 }}
-      {{- /* Preferred, not required: two replicas must fit a cluster of one node. */}}
-      affinity:
-        podAntiAffinity:
-          preferredDuringSchedulingIgnoredDuringExecution:
-          - weight: 100
-            podAffinityTerm:
-              labelSelector:
-                matchLabels:
-                  {{- include "shared_dex_authenticator_pod_labels" $instance | nindent 18 }}
-              topologyKey: kubernetes.io/hostname
+      {{- /* The two replicas on two nodes wherever the cluster has two: a preferred anti-affinity let both land on one
+             node, whose load then stalled both Redis at once. The skew is counted over the nodes the pod may run on:
+             its node selector, and without the nodes whose taints it does not tolerate, a cordoned one included. A
+             cluster of one such node is one domain, where the skew is always zero, so both replicas still start there.
+             Each revision is spread on its own: counted together with the pods of the old one, the rolling update can
+             end with both new pods on one node. A replica that has no second node to go to waits, and the old pod it
+             replaces keeps serving (maxUnavailable: 0). */}}
+      topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: kubernetes.io/hostname
+        whenUnsatisfiable: DoNotSchedule
+        nodeTaintsPolicy: Honor
+        labelSelector:
+          matchLabels:
+            {{- include "shared_dex_authenticator_pod_labels" $instance | nindent 12 }}
+        matchLabelKeys:
+        - pod-template-hash
       {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" $context | nindent 6 }}
       serviceAccountName: {{ $instance }}
       automountServiceAccountToken: false
@@ -295,6 +302,20 @@ spec:
           preStop:
             sleep:
               seconds: 7
+        # The probe opens a TCP connection to the port and closes it, nothing more. The kernel accepts the connection
+        # for a Redis that is hung or slow as long as its socket listens and the backlog has room, so the probe
+        # restarts only a Redis whose process no longer listens, or one so stuck that the backlog stays full for a
+        # minute; it comes back empty and copies a neighbour. PING with the password would need a shell or redis-cli,
+        # which the image does not have, and a probe that fails under load would restart a Redis that is only slow,
+        # which empties it. No readiness: it would be the readiness of the whole pod, and the proxy serves through
+        # the Redis of its neighbour while its own one is away.
+        livenessProbe:
+          tcpSocket:
+            port: redis
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 6
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" $context | nindent 12 }}

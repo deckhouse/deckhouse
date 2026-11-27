@@ -191,7 +191,7 @@ index 00000000..7300c355
 +	})
 +}
 diff --git a/oauthproxy.go b/oauthproxy.go
-index e7d646de..f402d13b 100644
+index eb81f70a..cb186f40 100644
 --- a/oauthproxy.go
 +++ b/oauthproxy.go
 @@ -27,6 +27,7 @@ import (
@@ -3180,10 +3180,10 @@ index 00000000..375f80a4
 +	}
 +}
 diff --git a/pkg/middleware/stored_session.go b/pkg/middleware/stored_session.go
-index b4da5555..0b639450 100644
+index 7750d118..36a3b602 100644
 --- a/pkg/middleware/stored_session.go
 +++ b/pkg/middleware/stored_session.go
-@@ -89,6 +89,10 @@ type StoredSessionLoaderOptions struct {
+@@ -88,6 +88,10 @@ type StoredSessionLoaderOptions struct {
  	// If the sesssion is older than `RefreshPeriod` but the provider doesn't
  	// refresh it, we must re-validate using this validation.
  	ValidateSession func(context.Context, *sessionsapi.SessionState) bool
@@ -3194,7 +3194,7 @@ index b4da5555..0b639450 100644
  }
  
  // NewStoredSessionLoader creates a new storedSessionLoader which loads
-@@ -105,6 +109,7 @@ func newStoredSessionLoader(opts *StoredSessionLoaderOptions) *storedSessionLoad
+@@ -104,6 +108,7 @@ func newStoredSessionLoader(opts *StoredSessionLoaderOptions) *storedSessionLoad
  		refreshPeriod:    opts.RefreshPeriod,
  		sessionRefresher: opts.RefreshSession,
  		sessionValidator: opts.ValidateSession,
@@ -3202,7 +3202,7 @@ index b4da5555..0b639450 100644
  		unavailable:      newUnavailableSince(),
  		refreshTimeout:   sessionRefreshTimeout,
  	}
-@@ -117,6 +122,7 @@ type storedSessionLoader struct {
+@@ -116,6 +121,7 @@ type storedSessionLoader struct {
  	refreshPeriod    time.Duration
  	sessionRefresher func(context.Context, *sessionsapi.SessionState) (bool, error)
  	sessionValidator func(context.Context, *sessionsapi.SessionState) bool
@@ -3210,7 +3210,7 @@ index b4da5555..0b639450 100644
  	// unavailable bounds how long a session whose refresh the provider does not answer is kept
  	// (Deckhouse patch 002).
  	unavailable *unavailableSince
-@@ -151,7 +157,9 @@ func (s *storedSessionLoader) loadSession(next http.Handler) http.Handler {
+@@ -158,7 +164,9 @@ func (s *storedSessionLoader) loadSession(next http.Handler) http.Handler {
  		case err != nil && !errors.Is(err, http.ErrNoCookie):
  			// In the case when there was an error loading the session,
  			// we should clear the session
@@ -3221,7 +3221,7 @@ index b4da5555..0b639450 100644
  			err = s.store.Clear(rw, req)
  			if err != nil {
  				logger.Errorf("Error removing session: %v", err)
-@@ -173,11 +181,22 @@ func (s *storedSessionLoader) getValidatedSession(rw http.ResponseWriter, req *h
+@@ -184,11 +192,22 @@ func (s *storedSessionLoader) getValidatedSession(rw http.ResponseWriter, req *h
  		return nil, err
  	}
  
@@ -3244,10 +3244,10 @@ index b4da5555..0b639450 100644
  	return session, nil
  }
  
-@@ -185,7 +204,10 @@ func (s *storedSessionLoader) getValidatedSession(rw http.ResponseWriter, req *h
- // is older than the refresh period.
- // Success or fail, we will then validate the session.
- func (s *storedSessionLoader) refreshSessionIfNeeded(rw http.ResponseWriter, req *http.Request, session *sessionsapi.SessionState) error {
+@@ -201,7 +220,10 @@ func (s *storedSessionLoader) refreshSessionIfNeeded(rw http.ResponseWriter, req
+ 		// known against the session, and nothing proves it either (Deckhouse patch 002).
+ 		return fmt.Errorf("%w: %w", errRefreshUnavailable, errStoreUnavailable)
+ 	}
 -	if !needsRefresh(s.refreshPeriod, session) {
 +	// While the revocation feed is not fresh, an older session is refreshed
 +	// through the provider, which refuses the revoked refresh tokens.
@@ -3256,7 +3256,7 @@ index b4da5555..0b639450 100644
  		// Refresh is disabled or the session is not old enough, do nothing
  		return nil
  	}
-@@ -245,7 +267,7 @@ func (s *storedSessionLoader) refreshSessionIfNeeded(rw http.ResponseWriter, req
+@@ -268,7 +290,7 @@ func (s *storedSessionLoader) refreshSessionIfNeeded(rw http.ResponseWriter, req
  	// Loading from the session store creates a new lock in the session.
  	session.Lock = lock
  
