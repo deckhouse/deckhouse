@@ -1,11 +1,11 @@
 diff --git a/storage/kubernetes/client.go b/storage/kubernetes/client.go
-index 86d88cf7..6c86a42d 100644
+index 761b4802..f588728e 100644
 --- a/storage/kubernetes/client.go
 +++ b/storage/kubernetes/client.go
-@@ -73,6 +73,9 @@ type client struct {
- 	// This is called once the client's Close method is called to signal goroutines,
- 	// such as the one creating third party resources, to stop.
- 	cancel context.CancelFunc
+@@ -76,6 +76,9 @@ type client struct {
+ 	// requests limits the requests in flight and sends the throttled ones again
+ 	// (Deckhouse, requests.go).
+ 	requests *requestLimiter
 +
 +	// legacyLocks are the old locks of local users (transitional.go).
 +	legacyLocks legacyLockIndex
@@ -13,56 +13,56 @@ index 86d88cf7..6c86a42d 100644
  
  // idToName maps an arbitrary ID, such as an email or client ID to a Kubernetes object name.
 diff --git a/storage/kubernetes/storage.go b/storage/kubernetes/storage.go
-index 5b2984ff..5942565c 100644
+index 9cb8a6df..ba3cacd5 100644
 --- a/storage/kubernetes/storage.go
 +++ b/storage/kubernetes/storage.go
-@@ -532,6 +532,7 @@ func (cli *client) UpdatePassword(ctx context.Context, email string, updater fun
+@@ -533,6 +533,7 @@ func (cli *client) UpdatePassword(ctx context.Context, email string, updater fun
  
  	newPassword := cli.fromStoragePassword(updated)
  	newPassword.ObjectMeta = p.ObjectMeta
 +	newPassword.legacyPassword = p.legacyPassword
- 	return cli.put(resourcePassword, p.ObjectMeta.Name, newPassword)
+ 	return cli.put(ctx, resourcePassword, p.ObjectMeta.Name, newPassword)
  }
  
-@@ -549,6 +550,7 @@ func (cli *client) UpdateOfflineSessions(ctx context.Context, userID string, con
+@@ -550,6 +551,7 @@ func (cli *client) UpdateOfflineSessions(ctx context.Context, userID string, con
  
  		newOfflineSessions := cli.fromStorageOfflineSessions(updated)
  		newOfflineSessions.ObjectMeta = o.ObjectMeta
 +		newOfflineSessions.legacyOfflineSessions = o.legacyOfflineSessions
- 		return cli.put(resourceOfflineSessions, o.ObjectMeta.Name, newOfflineSessions)
+ 		return cli.put(ctx, resourceOfflineSessions, o.ObjectMeta.Name, newOfflineSessions)
  	})
  }
-@@ -769,14 +771,24 @@ func (cli *client) UpdateDeviceToken(ctx context.Context, deviceCode string, upd
+@@ -770,14 +772,24 @@ func (cli *client) UpdateDeviceToken(ctx context.Context, deviceCode string, upd
  }
  
  func (cli *client) CreateUserIdentity(ctx context.Context, u storage.UserIdentity) error {
--	return cli.post(resourceUserIdentity, cli.fromStorageUserIdentity(u))
+-	return cli.post(ctx, resourceUserIdentity, cli.fromStorageUserIdentity(u))
 +	newUserIdentity := cli.fromStorageUserIdentity(u)
-+	if err := cli.addLegacyState(&newUserIdentity); err != nil {
++	if err := cli.addLegacyState(ctx, &newUserIdentity); err != nil {
 +		return err
 +	}
-+	return cli.post(resourceUserIdentity, newUserIdentity)
++	return cli.post(ctx, resourceUserIdentity, newUserIdentity)
  }
  
  func (cli *client) GetUserIdentity(ctx context.Context, userID, connectorID string) (storage.UserIdentity, error) {
- 	u, err := cli.getUserIdentity(userID, connectorID)
+ 	u, err := cli.getUserIdentity(ctx, userID, connectorID)
 +	if errors.Is(err, storage.ErrNotFound) {
-+		return cli.legacyUserIdentity(userID, connectorID)
++		return cli.legacyUserIdentity(ctx, userID, connectorID)
 +	}
  	if err != nil {
  		return storage.UserIdentity{}, err
  	}
-+	if err := cli.addLegacyState(&u); err != nil {
++	if err := cli.addLegacyState(ctx, &u); err != nil {
 +		return storage.UserIdentity{}, err
 +	}
  	return toStorageUserIdentity(u)
  }
  
-@@ -797,6 +809,9 @@ func (cli *client) UpdateUserIdentity(ctx context.Context, userID, connectorID s
+@@ -798,6 +810,9 @@ func (cli *client) UpdateUserIdentity(ctx context.Context, userID, connectorID s
  		if err != nil {
  			return err
  		}
-+		if err := cli.addLegacyState(&u); err != nil {
++		if err := cli.addLegacyState(ctx, &u); err != nil {
 +			return err
 +		}
  		old, err := toStorageUserIdentity(u)
@@ -70,10 +70,10 @@ index 5b2984ff..5942565c 100644
  			return err
 diff --git a/storage/kubernetes/transitional.go b/storage/kubernetes/transitional.go
 new file mode 100644
-index 00000000..d17473e9
+index 00000000..8af2705f
 --- /dev/null
 +++ b/storage/kubernetes/transitional.go
-@@ -0,0 +1,224 @@
+@@ -0,0 +1,225 @@
 +package kubernetes
 +
 +// transitional.go keeps the storage of the v2.44-based Deckhouse dex readable for
@@ -97,6 +97,7 @@ index 00000000..d17473e9
 +// The file and its hooks in storage.go and types.go go away in Deckhouse 1.79.
 +
 +import (
++	"context"
 +	"errors"
 +	"fmt"
 +	"sync"
@@ -138,13 +139,13 @@ index 00000000..d17473e9
 +// has in the old fields into u, unless the controller has already migrated u.
 +// A storage error fails the read: a lock that could not be read must not let the
 +// user in.
-+func (cli *client) addLegacyState(u *UserIdentity) error {
++func (cli *client) addLegacyState(ctx context.Context, u *UserIdentity) error {
 +	if _, migrated := u.Annotations[migratedAnnotation]; migrated {
 +		return nil
 +	}
 +
 +	var lockedUntil time.Time
-+	session, err := cli.getOfflineSessions(u.UserID, u.ConnectorID)
++	session, err := cli.getOfflineSessions(ctx, u.UserID, u.ConnectorID)
 +	switch {
 +	case err == nil:
 +		addLegacyTOTP(u, session)
@@ -154,7 +155,7 @@ index 00000000..d17473e9
 +	}
 +
 +	if u.ConnectorID == localConnectorID {
-+		passwordLock, err := cli.legacyPasswordLock(u.UserID, u.Claims.Email)
++		passwordLock, err := cli.legacyPasswordLock(ctx, u.UserID, u.Claims.Email)
 +		if err != nil {
 +			return fmt.Errorf("read password for the legacy state of the user identity: %w", err)
 +		}
@@ -177,9 +178,9 @@ index 00000000..d17473e9
 +// stored; the first write of the identity creates the object, and
 +// CreateUserIdentity fills the same values in. A pair with neither has no
 +// identity: storage.ErrNotFound.
-+func (cli *client) legacyUserIdentity(userID, connectorID string) (storage.UserIdentity, error) {
++func (cli *client) legacyUserIdentity(ctx context.Context, userID, connectorID string) (storage.UserIdentity, error) {
 +	u := UserIdentity{UserID: userID, ConnectorID: connectorID, Claims: Claims{UserID: userID}}
-+	if err := cli.addLegacyState(&u); err != nil {
++	if err := cli.addLegacyState(ctx, &u); err != nil {
 +		return storage.UserIdentity{}, err
 +	}
 +	if len(u.MFASecrets) == 0 && u.BlockedUntil.IsZero() {
@@ -193,12 +194,12 @@ index 00000000..d17473e9
 +// Password by its email claim. A pair without an identity knows only the user
 +// ID, and Password objects are named after the email, so then the lock comes
 +// from the index of all Password objects (legacyLockIndex).
-+func (cli *client) legacyPasswordLock(userID, email string) (time.Time, error) {
++func (cli *client) legacyPasswordLock(ctx context.Context, userID, email string) (time.Time, error) {
 +	if email == "" {
-+		return cli.legacyLocks.lockOf(userID, cli.listLegacyPasswordLocks)
++		return cli.legacyLocks.lockOf(userID, func() (map[string]time.Time, error) { return cli.listLegacyPasswordLocks(ctx) })
 +	}
 +
-+	p, err := cli.getPassword(email)
++	p, err := cli.getPassword(ctx, email)
 +	switch {
 +	case errors.Is(err, storage.ErrNotFound):
 +		return time.Time{}, nil
@@ -213,9 +214,9 @@ index 00000000..d17473e9
 +
 +// listLegacyPasswordLocks lists every Password object and returns the old locks
 +// they hold, by user ID.
-+func (cli *client) listLegacyPasswordLocks() (map[string]time.Time, error) {
++func (cli *client) listLegacyPasswordLocks(ctx context.Context) (map[string]time.Time, error) {
 +	var list PasswordList
-+	err := cli.list(resourcePassword, &list)
++	err := cli.list(ctx, resourcePassword, &list)
 +	switch {
 +	case errors.Is(err, storage.ErrNotFound):
 +		return map[string]time.Time{}, nil

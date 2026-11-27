@@ -2950,11 +2950,11 @@ index b848c8bc..45d56734 100644
  
  func (t *Templates) WebAuthnVerify(r *http.Request, w http.ResponseWriter, mode, authenticatorID string) error {
 diff --git a/storage/kubernetes/storage.go b/storage/kubernetes/storage.go
-index f226d3bf..5649c728 100644
+index 9ebf72ab..45114b89 100644
 --- a/storage/kubernetes/storage.go
 +++ b/storage/kubernetes/storage.go
-@@ -933,6 +933,29 @@ func (cli *client) CreateRevocation(ctx context.Context, r storage.Revocation) e
- 	return cli.post(resourceRevocation, revocation)
+@@ -968,6 +968,29 @@ func (cli *client) CreateRevocation(ctx context.Context, r storage.Revocation) e
+ 	return cli.post(ctx, resourceRevocation, revocation)
  }
  
 +// RevocationExists reads the Revocation object of a browser session or a grant,
@@ -2970,7 +2970,7 @@ index f226d3bf..5649c728 100644
 +		return false, fmt.Errorf("revocations of type %q are not looked up by id", typ)
 +	}
 +	var r Revocation
-+	err := cli.get(resourceRevocation, name, &r)
++	err := cli.get(ctx, resourceRevocation, name, &r)
 +	if errors.Is(err, storage.ErrNotFound) {
 +		return false, nil
 +	}

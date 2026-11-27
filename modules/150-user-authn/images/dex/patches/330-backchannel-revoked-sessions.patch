@@ -380,10 +380,10 @@ index 71bd12c3..48387fc5 100644
  }
  
 diff --git a/storage/kubernetes/storage.go b/storage/kubernetes/storage.go
-index 1ce25a82..4aeeea64 100644
+index 1baa7934..fa205bc5 100644
 --- a/storage/kubernetes/storage.go
 +++ b/storage/kubernetes/storage.go
-@@ -8,6 +8,7 @@ import (
+@@ -9,6 +9,7 @@ import (
  	"math/rand"
  	"net/http"
  	"net/url"
@@ -391,7 +391,7 @@ index 1ce25a82..4aeeea64 100644
  	"strconv"
  	"strings"
  	"time"
-@@ -56,6 +57,7 @@ const (
+@@ -57,6 +58,7 @@ const (
  var (
  	_ storage.Storage           = (*client)(nil)
  	_ storage.RevocationCreator = (*client)(nil)
@@ -399,12 +399,10 @@ index 1ce25a82..4aeeea64 100644
  )
  
  const (
-@@ -981,8 +983,63 @@ func (cli *client) RevocationExists(ctx context.Context, typ storage.RevocationT
- 		return false, fmt.Errorf("get revocation %s: %w", name, err)
- 	}
+@@ -1018,6 +1020,61 @@ func (cli *client) RevocationExists(ctx context.Context, typ storage.RevocationT
  	return true, nil
-+}
-+
+ }
+ 
 +// PendingSessionRevocations lists the Revocation objects of browser sessions without
 +// the claimed label, oldest first (Deckhouse). The handle is the object name.
 +// Every replica lists every few seconds, so the list is served from the cache of
@@ -418,7 +416,7 @@ index 1ce25a82..4aeeea64 100644
 +		return nil, err
 +	}
 +	var list RevocationList
-+	if err := cli.getURL(u, &list); err != nil {
++	if err := cli.getURL(ctx, u, &list); err != nil {
 +		return nil, fmt.Errorf("list revocations: %w", err)
 +	}
 +	pending := make([]storage.PendingRevocation, 0, len(list.Revocations))
@@ -429,14 +427,14 @@ index 1ce25a82..4aeeea64 100644
 +		return a.CreatedAt.Compare(b.CreatedAt)
 +	})
 +	return pending, nil
- }
- 
++}
++
 +// ClaimRevocation sets the claimed label on the Revocation object handle (Deckhouse).
 +// The write carries the resourceVersion that was read: of two replicas claiming at
 +// once, one gets a conflict and leaves the revocation to the other.
 +func (cli *client) ClaimRevocation(ctx context.Context, handle string) (bool, error) {
 +	var r Revocation
-+	err := cli.get(resourceRevocation, handle, &r)
++	err := cli.get(ctx, resourceRevocation, handle, &r)
 +	if errors.Is(err, storage.ErrNotFound) {
 +		return false, nil
 +	}
@@ -450,7 +448,7 @@ index 1ce25a82..4aeeea64 100644
 +		r.Labels = map[string]string{}
 +	}
 +	r.Labels[revocationClaimedLabel] = "true"
-+	err = cli.put(resourceRevocation, handle, r)
++	err = cli.put(ctx, resourceRevocation, handle, r)
 +	if errors.Is(err, storage.ErrNotFound) || isKubernetesAPIConflictError(err) {
 +		return false, nil
 +	}

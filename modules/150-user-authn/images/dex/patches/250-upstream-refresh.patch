@@ -1815,10 +1815,21 @@ index d75716c3..7ca59e75 100644
  	return auth, shouldIssueRefreshToken(conn, authCode.Scopes), nil
  }
 diff --git a/server/grants/grants.go b/server/grants/grants.go
-index aef60db4..7e439800 100644
+index aef60db4..cbab1b10 100644
 --- a/server/grants/grants.go
 +++ b/server/grants/grants.go
-@@ -343,6 +343,9 @@ func (h *Handler) resolveConnector(ctx context.Context, connID string, client st
+@@ -225,7 +225,9 @@ func (h *Handler) dispatch(w http.ResponseWriter, r *http.Request, grantType str
+ 		return false
+ 	}
+ 
+-	ctx := r.Context()
++	// The refresh grant reads its refresh token to check it and updates it
++	// right after: the update starts from that copy (Deckhouse).
++	ctx := storage.ReuseReads(r.Context())
+ 	req, oerr := parseRequest(r)
+ 	if oerr != nil {
+ 		h.writeError(ctx, w, oerr)
+@@ -343,6 +345,9 @@ func (h *Handler) resolveConnector(ctx context.Context, connID string, client st
  	conn, err := h.Connectors.Get(ctx, connID)
  	if err != nil {
  		h.Logger.ErrorContext(ctx, "failed to get connector", "connector_id", connID, "err", err)
@@ -2000,6 +2011,254 @@ index e3448e69..5b33fc93 100644
  // newTestServer serves one mock connector with every implemented grant enabled.
  func newTestServer(t *testing.T, updateConfig func(c *Config)) (*httptest.Server, *Server) {
  	return newTestServerWith(t, []storage.Connector{mockConnector("mock")}, func(c *Config) {
+diff --git a/server/kubernetes_fake_test.go b/server/kubernetes_fake_test.go
+index b9cc60b4..321f39b9 100644
+--- a/server/kubernetes_fake_test.go
++++ b/server/kubernetes_fake_test.go
+@@ -29,6 +29,14 @@ type fakeKubernetesAPI struct {
+ 	mu      sync.Mutex
+ 	objects map[string]map[string]any // by path
+ 	version int
++	// requests counts the requests by method and resource, as "GET refreshtokens".
++	requests map[string]int
++	// refuse holds, by resource, how many creates to refuse with the 409
++	// Conflict of the ResourceQuota admission whose update of the quota
++	// conflicted, without storing the object.
++	refuse map[string]int
++	// conflicts counts the PUTs refused with 409 Conflict, by resource.
++	conflicts map[string]int
+ }
+ 
+ // The path of an object is /apis/<group>/<version>/namespaces/<ns>/<resource>/<name>;
+@@ -45,6 +53,12 @@ func (f *fakeKubernetesAPI) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+ 
+ 	f.mu.Lock()
+ 	defer f.mu.Unlock()
++	if len(segments) >= fakeKubernetesObjectSegments-1 {
++		if f.requests == nil {
++			f.requests = map[string]int{}
++		}
++		f.requests[r.Method+" "+segments[fakeKubernetesObjectSegments-2]]++
++	}
+ 
+ 	switch {
+ 	case r.Method == http.MethodGet && isObject:
+@@ -61,6 +75,15 @@ func (f *fakeKubernetesAPI) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+ 		if !ok {
+ 			return
+ 		}
++		if resource := segments[len(segments)-1]; f.refuse[resource] > 0 {
++			f.refuse[resource]--
++			writeFakeKubernetesJSON(w, http.StatusConflict, map[string]any{
++				"kind": "Status", "apiVersion": "v1", "status": "Failure", "code": http.StatusConflict, "reason": "Conflict",
++				"message": `Operation cannot be fulfilled on resourcequotas "quota": the object has been modified; please apply your changes to the latest version and try again`,
++				"details": map[string]any{"name": "quota", "kind": "resourcequotas"},
++			})
++			return
++		}
+ 		p := r.URL.Path + "/" + fakeKubernetesMetadata(obj)["name"].(string)
+ 		if _, exists := f.objects[p]; exists {
+ 			writeFakeKubernetesJSON(w, http.StatusConflict, map[string]any{})
+@@ -79,6 +102,10 @@ func (f *fakeKubernetesAPI) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+ 			return
+ 		}
+ 		if fakeKubernetesMetadata(obj)["resourceVersion"] != fakeKubernetesMetadata(stored)["resourceVersion"] {
++			if f.conflicts == nil {
++				f.conflicts = map[string]int{}
++			}
++			f.conflicts[segments[fakeKubernetesObjectSegments-2]]++
+ 			writeFakeKubernetesJSON(w, http.StatusConflict, map[string]any{})
+ 			return
+ 		}
+@@ -157,7 +184,13 @@ func writeFakeKubernetesJSON(w http.ResponseWriter, status int, v any) {
+ // fakeKubernetesAPI.
+ func newFakeKubernetesStorage(t *testing.T) storage.Storage {
+ 	t.Helper()
+-	api := httptest.NewServer(&fakeKubernetesAPI{objects: map[string]map[string]any{}})
++	return newFakeKubernetesStorageOn(t, &fakeKubernetesAPI{objects: map[string]map[string]any{}})
++}
++
++// newFakeKubernetesStorageOn returns the kubernetes storage of dex on fake.
++func newFakeKubernetesStorageOn(t *testing.T, fake *fakeKubernetesAPI) storage.Storage {
++	t.Helper()
++	api := httptest.NewServer(fake)
+ 	t.Cleanup(api.Close)
+ 
+ 	kubeconfig := filepath.Join(t.TempDir(), "kubeconfig")
+diff --git a/server/server_grant_refresh_requests_test.go b/server/server_grant_refresh_requests_test.go
+new file mode 100644
+index 00000000..c0317bcd
+--- /dev/null
++++ b/server/server_grant_refresh_requests_test.go
+@@ -0,0 +1,168 @@
++package server
++
++import (
++	"context"
++	"encoding/json"
++	"fmt"
++	"net/http"
++	"net/http/httptest"
++	"net/url"
++	"strings"
++	"sync"
++	"testing"
++	"time"
++
++	"github.com/stretchr/testify/require"
++
++	"github.com/dexidp/dex/server/internal"
++	"github.com/dexidp/dex/server/oauth2"
++	"github.com/dexidp/dex/storage"
++)
++
++// A refresh on the kubernetes storage writes its refresh token once and reads
++// it twice (Deckhouse): to check it, and again under the lease of the upstream
++// credential the mock connector keeps. The update starts from the last read
++// instead of reading the token a third time, through the wrappers of the
++// storage the server runs on.
++func TestRefreshUpdatesTheTokenItRead(t *testing.T) {
++	api := &fakeKubernetesAPI{objects: map[string]map[string]any{}}
++	_, s := newLockTestServerWith(t, newFakeKubernetesStorageOn(t, api))
++
++	rr := passwordGrant(t, s)
++	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
++	var tokens struct {
++		RefreshToken string `json:"refresh_token"`
++	}
++	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &tokens))
++	require.NotEmpty(t, tokens.RefreshToken)
++
++	api.mu.Lock()
++	api.requests = nil
++	api.mu.Unlock()
++	rr = postToken(t, s, url.Values{"grant_type": {oauth2.GrantTypeRefreshToken}, "refresh_token": {tokens.RefreshToken}})
++	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
++
++	api.mu.Lock()
++	gets, puts := api.requests["GET refreshtokens"], api.requests["PUT refreshtokens"]
++	api.mu.Unlock()
++	require.Equal(t, 2, gets, "the update reads no token")
++	require.Equal(t, 1, puts, "and written once")
++}
++
++// A sign-in whose creates the ResourceQuota admission refuses with 409
++// Conflict (Deckhouse) sends them again and succeeds: the API server did not
++// store the objects.
++func TestSignInWithCreatesRefusedByTheQuota(t *testing.T) {
++	api := &fakeKubernetesAPI{
++		objects: map[string]map[string]any{},
++		refuse:  map[string]int{"refreshtokens": 1, "offlinesessionses": 1},
++	}
++	_, s := newLockTestServerWith(t, newFakeKubernetesStorageOn(t, api))
++
++	rr := passwordGrant(t, s)
++	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
++
++	api.mu.Lock()
++	defer api.mu.Unlock()
++	require.Zero(t, api.refuse["refreshtokens"]+api.refuse["offlinesessionses"], "both creates were refused")
++	require.Equal(t, 2, api.requests["POST refreshtokens"])
++	require.Equal(t, 2, api.requests["POST offlinesessionses"])
++}
++
++// Parallel refreshes of the grants of one user and connector write their
++// offline session in batches (Deckhouse): in one replica, none of the writes
++// conflicts. Each refresh keeps its own outcome: a grant revoked meanwhile is
++// still refused.
++func TestParallelRefreshesShareOfflineSessionWrites(t *testing.T) {
++	api := &fakeKubernetesAPI{objects: map[string]map[string]any{}}
++	_, s := newLockTestServerWith(t, newFakeKubernetesStorageOn(t, api))
++	// The refreshes take the lease of the upstream credential of the mock
++	// connector in turn, and wait for it as long as a lease lasts: by the
++	// clock, not by a count of looks that the noSleep of the test server
++	// spends at once.
++	s.issuer.Refresh.Sleep = func(ctx context.Context, d time.Duration) error {
++		select {
++		case <-time.After(d):
++			return nil
++		case <-ctx.Done():
++			return ctx.Err()
++		}
++	}
++
++	// A user signed in to n clients, as to n DexAuthenticators: one grant each.
++	const n = 10
++	clients := make([]string, n)
++	tokens := make([]string, n)
++	for i := range tokens {
++		clients[i] = fmt.Sprintf("client-%d", i)
++		require.NoError(t, s.storage.CreateClient(t.Context(), storage.Client{
++			ID: clients[i], Secret: "secret", RedirectURIs: []string{"https://" + clients[i] + ".example.com/callback"},
++		}))
++		rr := postTokenAs(t, s, clients[i], url.Values{
++			"grant_type": {oauth2.GrantTypePassword},
++			"scope":      {"openid email offline_access"},
++			"username":   {"test"},
++			"password":   {"test"},
++		})
++		require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
++		var got struct {
++			RefreshToken string `json:"refresh_token"`
++		}
++		require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &got))
++		tokens[i] = got.RefreshToken
++	}
++	var revoked internal.RefreshToken
++	require.NoError(t, internal.Unmarshal(tokens[n-1], &revoked))
++	require.NoError(t, s.storage.UpdateOfflineSessions(t.Context(), mockUserID, "test", func(o storage.OfflineSessions) (storage.OfflineSessions, error) {
++		require.Contains(t, o.Grants, revoked.RefreshId)
++		delete(o.Grants, revoked.RefreshId)
++		for clientID, ref := range o.Refresh {
++			if ref.ID == revoked.RefreshId {
++				delete(o.Refresh, clientID)
++			}
++		}
++		return o, nil
++	}))
++
++	api.mu.Lock()
++	api.requests, api.conflicts = nil, nil
++	api.mu.Unlock()
++	codes := make([]int, n)
++	bodies := make([]string, n)
++	start := make(chan struct{})
++	var wg sync.WaitGroup
++	for i, token := range tokens {
++		wg.Add(1)
++		go func() {
++			defer wg.Done()
++			<-start
++			rr := postTokenAs(t, s, clients[i], url.Values{"grant_type": {oauth2.GrantTypeRefreshToken}, "refresh_token": {token}})
++			codes[i], bodies[i] = rr.Code, rr.Body.String()
++		}()
++	}
++	close(start)
++	wg.Wait()
++
++	for i := range n - 1 {
++		require.Equal(t, http.StatusOK, codes[i], bodies[i])
++	}
++	require.Equal(t, http.StatusInternalServerError, codes[n-1], "the refresh of the revoked grant is refused: %s", bodies[n-1])
++
++	api.mu.Lock()
++	defer api.mu.Unlock()
++	t.Logf("offline session: %d gets, %d puts", api.requests["GET offlinesessionses"], api.requests["PUT offlinesessionses"])
++	require.Zero(t, api.conflicts["offlinesessionses"], "no write of the offline session conflicts in one replica")
++	require.Positive(t, api.requests["PUT offlinesessionses"])
++}
++
++// postTokenAs posts form to the token endpoint as clientID, with the secret
++// "secret".
++func postTokenAs(t *testing.T, s *Server, clientID string, form url.Values) *httptest.ResponseRecorder {
++	t.Helper()
++	req := httptest.NewRequest(http.MethodPost, s.issuerURL.String()+"/token", strings.NewReader(form.Encode()))
++	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
++	req.SetBasicAuth(clientID, "secret")
++	rr := httptest.NewRecorder()
++	s.ServeHTTP(rr, req)
++	return rr
++}
 diff --git a/server/server_grant_refresh_upstream_claimed_test.go b/server/server_grant_refresh_upstream_claimed_test.go
 new file mode 100644
 index 00000000..a08d0d77
@@ -6062,7 +6321,7 @@ index 00000000..4897502c
 +	})
 +}
 diff --git a/server/tokens/refresh_store.go b/server/tokens/refresh_store.go
-index 0201e4ab..31c852ab 100644
+index 0201e4ab..2ed550c4 100644
 --- a/server/tokens/refresh_store.go
 +++ b/server/tokens/refresh_store.go
 @@ -19,17 +19,65 @@ type RefreshStore struct {
@@ -6100,8 +6359,8 @@ index 0201e4ab..31c852ab 100644
 +		UpstreamPollPeriod: DefaultUpstreamPollPeriod,
 +		Sleep:              sleep,
 +	}
- }
- 
++}
++
 +// sleep waits d or until ctx ends.
 +func sleep(ctx context.Context, d time.Duration) error {
 +	timer := time.NewTimer(d)
@@ -6112,8 +6371,8 @@ index 0201e4ab..31c852ab 100644
 +	case <-ctx.Done():
 +		return ctx.Err()
 +	}
-+}
-+
+ }
+ 
  // Create issues a new refresh token for the authorization and records it in the
  // user's offline session. On any offline-session failure the refresh token is
  // rolled back so no orphaned token is left behind.
@@ -6221,7 +6480,7 @@ index 0201e4ab..31c852ab 100644
  		// Refresh the stored claims. UserID intentionally left untouched.
  		old.Claims.Username = ident.Username
  		old.Claims.PreferredUsername = ident.PreferredUsername
-@@ -209,11 +274,17 @@ func (rt *RefreshStore) Rotate(ctx context.Context, storageToken *storage.Refres
+@@ -209,12 +274,29 @@ func (rt *RefreshStore) Rotate(ctx context.Context, storageToken *storage.Refres
  	}
  
  	if err := rt.storage.UpdateRefreshToken(ctx, storageToken.ID, refreshTokenUpdater); err != nil {
@@ -6235,18 +6494,35 @@ index 0201e4ab..31c852ab 100644
  	}
  
 -	if err := rt.updateOfflineSession(ctx, storageToken, ident, lastUsed); err != nil {
+-		return "", ident, err
++	// The token is written: a failure past this point must not fail the refresh
++	// (Deckhouse). The client keeps the token it presented and offers it again,
++	// and once the reuse interval has passed since this refresh that token is
++	// claimed twice: invalid_grant, and the client ends the session of the user.
++	// A storage that failed to record the refresh on the offline session (the
++	// Kubernetes API throttling dex, a conflict that did not clear) only leaves
++	// the last use of the grant behind, and its lease to expire; a grant that is
++	// gone from the session, or a session that is gone, is revoked and refused.
 +	if err := rt.updateOfflineSession(ctx, storageToken, src, lastUsed); err != nil {
 +		rt.persistRotatedCredential(ctx, storageToken, src)
- 		return "", ident, err
++		if errors.Is(err, errGrantRevoked) || errors.Is(err, storage.ErrNotFound) {
++			return "", ident, err
++		}
++		rt.logger.ErrorContext(ctx, "failed to record a refresh on the offline session; the refresh token is rotated, so the refresh succeeds", "err", err)
  	}
  
-@@ -225,20 +296,23 @@ func (rt *RefreshStore) Rotate(ctx context.Context, storageToken *storage.Refres
+ 	rawToken, err := internal.Marshal(newToken)
+@@ -225,20 +307,27 @@ func (rt *RefreshStore) Rotate(ctx context.Context, storageToken *storage.Refres
  	return rawToken, ident, nil
  }
  
 -// updateOfflineSession records the refresh token's new last-used time, and any
 -// updated connector data, on the user's offline session.
 -func (rt *RefreshStore) updateOfflineSession(ctx context.Context, refresh *storage.RefreshToken, ident connector.Identity, lastUsed time.Time) error {
++// errGrantRevoked is the refusal of a refresh whose grant is gone from the
++// offline session.
++var errGrantRevoked = errors.New("refresh token invalid")
++
 +// updateOfflineSession records the refresh token's new last-used time, and a
 +// rotated shared credential, on the user's offline session, and releases the
 +// lease the credential was spent under.
@@ -6256,9 +6532,10 @@ index 0201e4ab..31c852ab 100644
 +
  	offlineSessionUpdater := func(old storage.OfflineSessions) (storage.OfflineSessions, error) {
 -		if old.Refresh[refresh.ClientID].ID != refresh.ID {
+-			return old, errors.New("refresh token invalid")
 +		ref, ok := old.Refresh[refresh.ClientID]
 +		if !ok || ref.ID != refresh.ID {
- 			return old, errors.New("refresh token invalid")
++			return old, errGrantRevoked
  		}
  
 -		old.Refresh[refresh.ClientID].LastUsed = lastUsed
@@ -6273,7 +6550,7 @@ index 0201e4ab..31c852ab 100644
  		return old, nil
  	}
  
-@@ -246,6 +320,9 @@ func (rt *RefreshStore) updateOfflineSession(ctx context.Context, refresh *stora
+@@ -246,6 +335,9 @@ func (rt *RefreshStore) updateOfflineSession(ctx context.Context, refresh *stora
  		rt.logger.ErrorContext(ctx, "failed to update offline session", "err", err)
  		return err
  	}
@@ -6284,10 +6561,18 @@ index 0201e4ab..31c852ab 100644
  	return nil
  }
 diff --git a/server/tokens/refresh_store_test.go b/server/tokens/refresh_store_test.go
-index 67a9693b..bff272e7 100644
+index 67a9693b..421af6be 100644
 --- a/server/tokens/refresh_store_test.go
 +++ b/server/tokens/refresh_store_test.go
-@@ -34,10 +34,14 @@ func TestRefreshStoreCreate(t *testing.T) {
+@@ -2,6 +2,7 @@ package tokens
+ 
+ import (
+ 	"context"
++	"errors"
+ 	"log/slog"
+ 	"testing"
+ 	"time"
+@@ -34,10 +35,14 @@ func TestRefreshStoreCreate(t *testing.T) {
  	stored, err := store.GetRefresh(ctx, firstTok.RefreshId)
  	require.NoError(t, err)
  	require.Equal(t, "client-1", stored.ClientID)
@@ -6303,6 +6588,79 @@ index 67a9693b..bff272e7 100644
  	require.Contains(t, sess.Refresh, "client-1")
  
  	// A second create for the same client replaces the old token.
+@@ -94,6 +99,72 @@ func TestRefreshStoreRotate(t *testing.T) {
+ 	require.Error(t, err)
+ }
+ 
++// offlineSessionWriteFailure fails the writes of offline sessions, as the
++// Kubernetes API does when it throttles dex.
++type offlineSessionWriteFailure struct {
++	storage.Storage
++	failures int
++}
++
++func (s *offlineSessionWriteFailure) UpdateOfflineSessions(ctx context.Context, userID, connID string, updater func(storage.OfflineSessions) (storage.OfflineSessions, error)) error {
++	if s.failures > 0 {
++		s.failures--
++		return errors.New("Too Many Requests")
++	}
++	return s.Storage.UpdateOfflineSessions(ctx, userID, connID, updater)
++}
++
++// A refresh whose token is rotated succeeds even when the offline session
++// cannot record it (Deckhouse): failed, the client would offer the token it had
++// again, and past the reuse interval that token is claimed twice, which signs
++// the user out. A grant gone from the session is still refused.
++func TestRefreshStoreRotateWhenTheOfflineSessionFails(t *testing.T) {
++	ctx := context.Background()
++	now := time.Now()
++	clock := func() time.Time { return now }
++	newStore := func(t *testing.T, failures int, grants map[string]*storage.RefreshTokenRef) (*RefreshStore, *offlineSessionWriteFailure, storage.RefreshToken) {
++		t.Helper()
++		store := memory.New(slog.New(slog.DiscardHandler))
++		failing := &offlineSessionWriteFailure{Storage: store, failures: failures}
++		rt := NewRefreshStore(failing, clock, slog.New(slog.DiscardHandler))
++		require.NoError(t, store.CreateRefresh(ctx, storage.RefreshToken{
++			ID: "r1", Token: "t1", ClientID: "client-1", ConnectorID: "mock",
++			Claims: storage.Claims{UserID: "u1"}, CreatedAt: now, LastUsed: now.Add(-time.Hour),
++		}))
++		require.NoError(t, store.CreateOfflineSessions(ctx, storage.OfflineSessions{UserID: "u1", ConnID: "mock", Refresh: grants}))
++		stored, err := store.GetRefresh(ctx, "r1")
++		require.NoError(t, err)
++		return rt, failing, stored
++	}
++	strategy := NewRefreshStrategy(true, 0, 0, 2*time.Minute, clock) // rotation on, reuse for 2m
++	ident := connector.Identity{UserID: "u1"}
++	stored := func(context.Context) (connector.Identity, error) { return ident, nil }
++
++	t.Run("rotated", func(t *testing.T) {
++		rt, failing, token := newStore(t, 1, map[string]*storage.RefreshTokenRef{"client-1": {ID: "r1", ClientID: "client-1"}})
++
++		raw, _, err := rt.Rotate(ctx, &token, &internal.RefreshToken{RefreshId: "r1", Token: "t1"}, strategy, stored)
++		require.NoError(t, err)
++		var next internal.RefreshToken
++		require.NoError(t, internal.Unmarshal(raw, &next))
++		after, err := failing.GetRefresh(ctx, "r1")
++		require.NoError(t, err)
++		require.Equal(t, after.Token, next.Token, "the client gets the token that is stored")
++		require.Equal(t, "t1", after.ObsoleteToken)
++
++		// Past the reuse interval the new token refreshes; the old one would not.
++		now = now.Add(10 * time.Minute)
++		_, _, err = rt.Rotate(ctx, &after, &next, strategy, stored)
++		require.NoError(t, err)
++	})
++
++	t.Run("grant revoked", func(t *testing.T) {
++		rt, _, token := newStore(t, 0, map[string]*storage.RefreshTokenRef{})
++		_, _, err := rt.Rotate(ctx, &token, &internal.RefreshToken{RefreshId: "r1", Token: "t1"}, strategy, stored)
++		require.ErrorIs(t, err, errGrantRevoked)
++	})
++}
++
+ func TestRefreshStoreRevoke(t *testing.T) {
+ 	ctx := context.Background()
+ 	rt, store := newTestStore(t)
 diff --git a/server/tokens/refresh_upstream.go b/server/tokens/refresh_upstream.go
 new file mode 100644
 index 00000000..2d7b1c87
@@ -7610,10 +7968,21 @@ index 00000000..8d89a0ea
 +	assert.Equal(t, []byte("successor"), session.ConnectorData)
 +}
 diff --git a/storage/kubernetes/client.go b/storage/kubernetes/client.go
-index 6c86a42d..127b9c70 100644
+index fbbca7ce..ca48041f 100644
 --- a/storage/kubernetes/client.go
 +++ b/storage/kubernetes/client.go
-@@ -108,6 +108,11 @@ const kubeResourceMaxLen = 253
+@@ -79,6 +79,10 @@ type client struct {
+ 
+ 	// legacyLocks are the old locks of local users (transitional.go).
+ 	legacyLocks legacyLockIndex
++
++	// offlineWrites are the batches of updates of the offline sessions
++	// (Deckhouse, offline_batch.go).
++	offlineWrites offlineSessionsBatches
+ }
+ 
+ // idToName maps an arbitrary ID, such as an email or client ID to a Kubernetes object name.
+@@ -111,6 +115,11 @@ const kubeResourceMaxLen = 253
  
  var kubeResourceNameRegex = regexp.MustCompile(`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`)
  
@@ -7625,7 +7994,7 @@ index 6c86a42d..127b9c70 100644
  func (cli *client) urlForWithParams(
  	apiVersion, namespace, resource, name string, params url.Values,
  ) (string, error) {
-@@ -116,7 +121,7 @@ func (cli *client) urlForWithParams(
+@@ -119,7 +128,7 @@ func (cli *client) urlForWithParams(
  		basePath = "api/"
  	}
  
@@ -7636,13 +8005,14 @@ index 6c86a42d..127b9c70 100644
  			"invalid kubernetes resource name: must match the pattern %s and be no longer than %d characters",
 diff --git a/storage/kubernetes/lock.go b/storage/kubernetes/lock.go
 deleted file mode 100644
-index 092f6d0e..00000000
+index 22de01f4..00000000
 --- a/storage/kubernetes/lock.go
 +++ /dev/null
-@@ -1,147 +0,0 @@
+@@ -1,148 +0,0 @@
 -package kubernetes
 -
 -import (
+-	"context"
 -	"fmt"
 -	"time"
 -)
@@ -7685,9 +8055,9 @@ index 092f6d0e..00000000
 -
 -// Lock polls until the lock annotation can be set on the refresh token resource.
 -// Returns nil when the lock is acquired, or an error on timeout (200 attempts × 100ms).
--func (l *refreshTokenLock) Lock(id string) error {
+-func (l *refreshTokenLock) Lock(ctx context.Context, id string) error {
 -	for i := 0; i <= 200; i++ {
--		ok, err := l.setLockAnnotation(id)
+-		ok, err := l.setLockAnnotation(ctx, id)
 -		if err != nil {
 -			return err
 -		}
@@ -7701,21 +8071,21 @@ index 092f6d0e..00000000
 -
 -// Unlock removes the lock annotation from the refresh token resource.
 -// Only the holder of the lock (waitingState == false) performs the removal.
--func (l *refreshTokenLock) Unlock(id string) {
+-func (l *refreshTokenLock) Unlock(ctx context.Context, id string) {
 -	if l.waitingState {
 -		// This goroutine never successfully wrote the annotation, so there's
 -		// nothing to remove. Another goroutine holds (or held) the lock.
 -		return
 -	}
 -
--	r, err := l.cli.getRefreshToken(id)
+-	r, err := l.cli.getRefreshToken(ctx, id)
 -	if err != nil {
 -		l.cli.logger.Debug("failed to get resource to release lock for refresh token", "token_id", id, "err", err)
 -		return
 -	}
 -
 -	r.Annotations = nil
--	err = l.cli.put(resourceRefreshToken, r.ObjectMeta.Name, r)
+-	err = l.cli.put(ctx, resourceRefreshToken, r.ObjectMeta.Name, r)
 -	if err != nil {
 -		l.cli.logger.Debug("failed to release lock for refresh token", "token_id", id, "err", err)
 -	}
@@ -7728,8 +8098,8 @@ index 092f6d0e..00000000
 -// The locking protocol relies on Kubernetes optimistic concurrency: every put
 -// includes the resource's current resourceVersion, so concurrent writes to the
 -// same object result in a 409 Conflict for all but one writer.
--func (l *refreshTokenLock) setLockAnnotation(id string) (bool, error) {
--	r, err := l.cli.getRefreshToken(id)
+-func (l *refreshTokenLock) setLockAnnotation(ctx context.Context, id string) (bool, error) {
+-	r, err := l.cli.getRefreshToken(ctx, id)
 -	if err != nil {
 -		return false, err
 -	}
@@ -7746,7 +8116,7 @@ index 092f6d0e..00000000
 -		// the annotation. The put uses the current resourceVersion, so only one
 -		// writer succeeds; the rest get a 409 Conflict and go back to polling.
 -		r.Annotations = lockData
--		err := l.cli.put(resourceRefreshToken, r.ObjectMeta.Name, r)
+-		err := l.cli.put(ctx, resourceRefreshToken, r.ObjectMeta.Name, r)
 -		if err == nil {
 -			l.waitingState = false
 -			return false, nil
@@ -7775,7 +8145,7 @@ index 092f6d0e..00000000
 -	// can win the compare-and-swap race.
 -	r.Annotations = lockData
 -
--	err = l.cli.put(resourceRefreshToken, r.ObjectMeta.Name, r)
+-	err = l.cli.put(ctx, resourceRefreshToken, r.ObjectMeta.Name, r)
 -	if err == nil {
 -		return false, nil
 -	}
@@ -7787,6 +8157,1066 @@ index 092f6d0e..00000000
 -	}
 -	return false, err
 -}
+diff --git a/storage/kubernetes/offline_batch.go b/storage/kubernetes/offline_batch.go
+new file mode 100644
+index 00000000..58833607
+--- /dev/null
++++ b/storage/kubernetes/offline_batch.go
+@@ -0,0 +1,363 @@
++package kubernetes
++
++import (
++	"bytes"
++	"context"
++	"errors"
++	"fmt"
++	"runtime/debug"
++	"sync"
++	"sync/atomic"
++	"time"
++
++	"github.com/dexidp/dex/storage"
++)
++
++// The updates of one offline session are written in batches (Deckhouse).
++//
++// One OfflineSessions object holds every grant of a user signed in through a
++// connector, and each refresh of each of them updates it: the grant is checked
++// and its LastUsed set, a rotated upstream credential is published, the
++// upstream lease is taken and released. A user signed in to twenty
++// DexAuthenticators refreshes twenty grants at once after a pause, and each
++// update is a read and a write of the same object: all but one of the writes
++// that read the same version get 409 Conflict, read the object again and write
++// again. On a stand with 50 such users, a refresh made 3.8 writes of the
++// offline session, 77% of them conflicts, and the requests of the conflicts
++// were 43% of all the requests of Dex to the API server.
++//
++// In one replica, the updates of one offline session wait for the write of the
++// one before them, and the updates that waited together are written at once:
++// one read, the updaters one after another, each on its own copy of what the
++// one before it returned, and one write. An updater that fails gets its error
++// at once and leaves the state as it was before it; the others are written. A
++// conflict, with another replica, reads the object again and runs again the
++// updaters not answered yet. Every update keeps its own result and runs before
++// its call returns, as before; only the requests are shared. A call waiting
++// for the next batch leaves it when its context ends; once its batch is being
++// written, it waits for the outcome, which the end of its context does not
++// change.
++
++// offlineSessionsUpdater is the updater of UpdateOfflineSessions.
++type offlineSessionsUpdater = func(storage.OfflineSessions) (storage.OfflineSessions, error)
++
++// offlineSessionsUpdate is one call of UpdateOfflineSessions.
++type offlineSessionsUpdate struct {
++	ctx     context.Context
++	updater offlineSessionsUpdater
++	// signal receives the outcome of the update, or the turn of the call to
++	// write the next batch. A call gets exactly one signal.
++	signal chan updateSignal
++
++	// answered and err are the outcome, set by the call writing the batch.
++	answered bool
++	err      error
++}
++
++type updateSignal struct {
++	lead bool
++	err  error
++	// panicked is the panic of the updater, raised again in its own call.
++	panicked any
++}
++
++// offlineSessionsQueue holds the calls waiting for the next batch of one
++// offline session.
++type offlineSessionsQueue struct {
++	waiting []*offlineSessionsUpdate
++	// next is the waiting call told to write the next batch: it no longer
++	// leaves the queue when its context ends.
++	next *offlineSessionsUpdate
++}
++
++// offlineSessionsBatches are the queues of the offline sessions of a client,
++// by the name of the object. The zero value is ready to use.
++type offlineSessionsBatches struct {
++	mu sync.Mutex
++	// queues holds a queue while a batch of the offline session is written.
++	queues map[string]*offlineSessionsQueue
++}
++
++// errBatchAborted is the outcome of an update whose batch ended with a panic
++// of the call writing it before the update was answered.
++var errBatchAborted = errors.New("the batch of updates of the offline session was aborted")
++
++// join adds u to the queue of the offline session name and reports whether u
++// writes the next batch itself: no batch of the session is being written.
++func (b *offlineSessionsBatches) join(name string, u *offlineSessionsUpdate) bool {
++	b.mu.Lock()
++	defer b.mu.Unlock()
++	if b.queues == nil {
++		b.queues = make(map[string]*offlineSessionsQueue)
++	}
++	q, ok := b.queues[name]
++	if !ok {
++		b.queues[name] = &offlineSessionsQueue{}
++		return true
++	}
++	q.waiting = append(q.waiting, u)
++	return false
++}
++
++// wait waits for the outcome of the queued update u, or for its turn to write
++// the next batch. It returns when the context of u ends while u is still
++// queued, and u never runs then.
++func (b *offlineSessionsBatches) wait(name string, u *offlineSessionsUpdate) (lead bool, err error) {
++	select {
++	case s := <-u.signal:
++		return s.received()
++	case <-u.ctx.Done():
++		if b.leave(name, u) {
++			return false, fmt.Errorf("wait for the update of the offline session: %w", context.Cause(u.ctx))
++		}
++		return (<-u.signal).received()
++	}
++}
++
++func (s updateSignal) received() (lead bool, err error) {
++	if s.panicked != nil {
++		panic(s.panicked)
++	}
++	return s.lead, s.err
++}
++
++// leave takes u out of the queue of name, unless a batch has taken it or it is
++// told to write the next one.
++func (b *offlineSessionsBatches) leave(name string, u *offlineSessionsUpdate) bool {
++	b.mu.Lock()
++	defer b.mu.Unlock()
++	q := b.queues[name]
++	if q == nil || q.next == u {
++		return false
++	}
++	for i, w := range q.waiting {
++		if w == u {
++			q.waiting = append(q.waiting[:i], q.waiting[i+1:]...)
++			return true
++		}
++	}
++	return false
++}
++
++// take returns the next batch of name: self, the call writing it, and the
++// calls waiting.
++func (b *offlineSessionsBatches) take(name string, self *offlineSessionsUpdate) []*offlineSessionsUpdate {
++	b.mu.Lock()
++	defer b.mu.Unlock()
++	q := b.queues[name]
++	batch := make([]*offlineSessionsUpdate, 0, 1+len(q.waiting))
++	batch = append(batch, self)
++	for _, w := range q.waiting {
++		if w != self {
++			batch = append(batch, w)
++		}
++	}
++	q.waiting, q.next = nil, nil
++	return batch
++}
++
++// finish ends a batch of name: the first call waiting writes the next one, or
++// the queue goes.
++func (b *offlineSessionsBatches) finish(name string) {
++	b.mu.Lock()
++	defer b.mu.Unlock()
++	q := b.queues[name]
++	if len(q.waiting) == 0 {
++		delete(b.queues, name)
++		return
++	}
++	q.next = q.waiting[0]
++	q.next.signal <- updateSignal{lead: true}
++}
++
++// answer sets the outcome of u and sends it to its call, unless u is the call
++// writing the batch.
++func (u *offlineSessionsUpdate) answer(self *offlineSessionsUpdate, err error, panicked any) {
++	u.answered, u.err = true, err
++	if u != self {
++		u.signal <- updateSignal{err: err, panicked: panicked}
++	}
++}
++
++// UpdateOfflineSessions runs updater on the offline session of the user and
++// the connector and writes the result, in a batch with the updates of the same
++// offline session that wait for it (Deckhouse, offline_batch.go).
++func (cli *client) UpdateOfflineSessions(ctx context.Context, userID string, connID string, updater func(old storage.OfflineSessions) (storage.OfflineSessions, error)) error {
++	name := cli.offlineTokenName(userID, connID)
++	u := &offlineSessionsUpdate{ctx: ctx, updater: updater, signal: make(chan updateSignal, 1)}
++	if !cli.offlineWrites.join(name, u) {
++		lead, err := cli.offlineWrites.wait(name, u)
++		if !lead {
++			return err
++		}
++	}
++	return cli.writeOfflineSessions(name, userID, connID, u)
++}
++
++// writeOfflineSessions writes the next batch of name, with self in it, and
++// returns the outcome of self.
++func (cli *client) writeOfflineSessions(name, userID, connID string, self *offlineSessionsUpdate) error {
++	batch := cli.offlineWrites.take(name, self)
++	defer cli.offlineWrites.finish(name)
++	// On a panic outside the updaters, the calls not answered yet are answered.
++	defer func() {
++		for _, u := range batch {
++			if !u.answered {
++				u.answer(self, errBatchAborted, nil)
++			}
++		}
++	}()
++
++	ctx, cancel := batchContext(batch)
++	defer cancel()
++
++	var selfPanic any
++	err := retryOnConflict(ctx, func() error {
++		o, err := cli.getOfflineSessions(ctx, userID, connID)
++		if err != nil {
++			return err
++		}
++		state := toStorageOfflineSessions(o)
++		pending := 0
++		for _, u := range batch {
++			if !u.answered {
++				pending++
++			}
++		}
++		var written []*offlineSessionsUpdate
++		for _, u := range batch {
++			if u.answered {
++				continue
++			}
++			in := state
++			if pending > 1 {
++				// An updater may change the maps it got and fail.
++				in = cloneOfflineSessions(state)
++			}
++			updated, err, panicked := runUpdater(u.updater, in)
++			switch {
++			case panicked != nil:
++				if u == self {
++					selfPanic = panicked
++				}
++				u.answer(self, errBatchAborted, panicked)
++			case err != nil:
++				u.answer(self, err, nil)
++			default:
++				state = updated
++				written = append(written, u)
++			}
++		}
++		if len(written) == 0 {
++			return nil
++		}
++
++		newOfflineSessions := cli.fromStorageOfflineSessions(state)
++		newOfflineSessions.ObjectMeta = o.ObjectMeta
++		newOfflineSessions.legacyOfflineSessions = o.legacyOfflineSessions
++		if err := cli.put(ctx, resourceOfflineSessions, o.ObjectMeta.Name, newOfflineSessions); err != nil {
++			return err
++		}
++		for _, u := range written {
++			u.answer(self, nil, nil)
++		}
++		return nil
++	})
++	for _, u := range batch {
++		if !u.answered {
++			u.answer(self, err, nil)
++		}
++	}
++	if selfPanic != nil {
++		panic(selfPanic)
++	}
++	return self.err
++}
++
++// runUpdater runs updater on s and returns its panic, if any, with the stack
++// where it happened: the panic is raised again in the call of the update, on
++// another goroutine.
++func runUpdater(updater offlineSessionsUpdater, s storage.OfflineSessions) (updated storage.OfflineSessions, err error, panicked any) {
++	defer func() {
++		if r := recover(); r != nil {
++			panicked = fmt.Sprintf("update of the offline session: %v\n%s", r, debug.Stack())
++		}
++	}()
++	updated, err = updater(s)
++	return updated, err, nil
++}
++
++// batchContext is the context a batch is written in. A batch of one call is
++// written in its context, as before. A batch of several is not ended by the
++// end of the context of one of them, which would fail the others: it ends at
++// the latest of their deadlines, or once all of their contexts end.
++func batchContext(batch []*offlineSessionsUpdate) (context.Context, context.CancelFunc) {
++	if len(batch) == 1 {
++		return batch[0].ctx, func() {}
++	}
++	ctx := context.WithoutCancel(batch[0].ctx)
++	cancelDeadline := context.CancelFunc(func() {})
++	if deadline, ok := latestDeadline(batch); ok {
++		ctx, cancelDeadline = context.WithDeadline(ctx, deadline)
++	}
++	ctx, cancel := context.WithCancelCause(ctx)
++	var left atomic.Int64
++	left.Store(int64(len(batch)))
++	stops := make([]func() bool, 0, len(batch))
++	for _, u := range batch {
++		stops = append(stops, context.AfterFunc(u.ctx, func() {
++			if left.Add(-1) == 0 {
++				cancel(fmt.Errorf("every caller of the batch is gone: %w", context.Cause(u.ctx)))
++			}
++		}))
++	}
++	return ctx, func() {
++		for _, stop := range stops {
++			stop()
++		}
++		cancel(nil)
++		cancelDeadline()
++	}
++}
++
++// latestDeadline returns the latest deadline of the contexts of batch, and
++// false if one of them has none.
++func latestDeadline(batch []*offlineSessionsUpdate) (latest time.Time, ok bool) {
++	for _, u := range batch {
++		deadline, ok := u.ctx.Deadline()
++		if !ok {
++			return time.Time{}, false
++		}
++		if deadline.After(latest) {
++			latest = deadline
++		}
++	}
++	return latest, true
++}
++
++// cloneOfflineSessions returns a copy of s that shares nothing with it, as a
++// read of the object would: two references to one RefreshTokenRef become two
++// copies.
++func cloneOfflineSessions(s storage.OfflineSessions) storage.OfflineSessions {
++	c := s
++	c.Refresh = cloneRefreshTokenRefs(s.Refresh)
++	c.Grants = cloneRefreshTokenRefs(s.Grants)
++	c.ConnectorData = bytes.Clone(s.ConnectorData)
++	return c
++}
++
++func cloneRefreshTokenRefs(refs map[string]*storage.RefreshTokenRef) map[string]*storage.RefreshTokenRef {
++	if refs == nil {
++		return nil
++	}
++	c := make(map[string]*storage.RefreshTokenRef, len(refs))
++	for k, ref := range refs {
++		if ref == nil {
++			c[k] = nil
++			continue
++		}
++		copied := *ref
++		c[k] = &copied
++	}
++	return c
++}
+diff --git a/storage/kubernetes/offline_batch_test.go b/storage/kubernetes/offline_batch_test.go
+new file mode 100644
+index 00000000..1f792017
+--- /dev/null
++++ b/storage/kubernetes/offline_batch_test.go
+@@ -0,0 +1,685 @@
++package kubernetes
++
++import (
++	"context"
++	"encoding/json"
++	"errors"
++	"fmt"
++	"hash"
++	"hash/fnv"
++	"net/http"
++	"reflect"
++	"runtime"
++	"slices"
++	"strconv"
++	"strings"
++	"sync"
++	"testing"
++	"time"
++
++	"github.com/stretchr/testify/require"
++
++	"github.com/dexidp/dex/storage"
++)
++
++// offlineSessionsAPI is an API server that keeps one OfflineSessions object as
++// the real one does: a put must carry the resourceVersion of the object it
++// replaces, anything else is a 409 conflict, and every write moves the version
++// on. It counts the requests by method, can hold a get until the test lets it
++// go, and can answer a put or a get with an error.
++type offlineSessionsAPI struct {
++	mu        sync.Mutex
++	object    OfflineSessions
++	version   int
++	requests  map[string]int
++	conflicts int
++	puts      []OfflineSessions
++
++	// held holds the get of that number (1 is the first) until its channel is
++	// closed; arrived gets the number of each get that came.
++	held    map[int]chan struct{}
++	arrived chan int
++
++	putStatus int // answers every put, when set
++	getStatus int // answers every get, when set
++}
++
++func newOfflineSessionsAPI(s storage.OfflineSessions) *offlineSessionsAPI {
++	f := &offlineSessionsAPI{
++		requests: map[string]int{},
++		held:     map[int]chan struct{}{},
++		arrived:  make(chan int, 64),
++	}
++	f.object = newRequestsCodec().fromStorageOfflineSessions(s)
++	f.version = 1
++	f.object.ResourceVersion = "1"
++	return f
++}
++
++// newRequestsCodec is a client that only converts objects, with the hash of
++// newRequestsClient.
++func newRequestsCodec() *client {
++	return &client{namespace: "dex", apiVersion: "dex.coreos.com/v1", hash: func() hash.Hash { return fnv.New64() }}
++}
++
++// hold makes the get of number n wait until the returned function is called,
++// or the test ends.
++func (f *offlineSessionsAPI) hold(t *testing.T, n int) (release func()) {
++	ch := make(chan struct{})
++	f.mu.Lock()
++	f.held[n] = ch
++	f.mu.Unlock()
++	var once sync.Once
++	release = func() { once.Do(func() { close(ch) }) }
++	t.Cleanup(release)
++	return release
++}
++
++func (f *offlineSessionsAPI) ServeHTTP(w http.ResponseWriter, r *http.Request) {
++	f.mu.Lock()
++	f.requests[r.Method]++
++	switch r.Method {
++	case http.MethodGet:
++		n := f.requests[http.MethodGet]
++		hold := f.held[n]
++		// A held get answers the version it found when it came.
++		obj := f.object
++		f.mu.Unlock()
++		f.arrived <- n
++		if hold != nil {
++			<-hold
++		}
++		f.mu.Lock()
++		status := f.getStatus
++		f.mu.Unlock()
++		if status != 0 {
++			w.WriteHeader(status)
++			return
++		}
++		w.Header().Set("Content-Type", "application/json")
++		_ = json.NewEncoder(w).Encode(obj)
++	case http.MethodPut:
++		defer f.mu.Unlock()
++		if f.putStatus != 0 {
++			w.WriteHeader(f.putStatus)
++			return
++		}
++		var obj OfflineSessions
++		if err := json.NewDecoder(r.Body).Decode(&obj); err != nil {
++			w.WriteHeader(http.StatusBadRequest)
++			return
++		}
++		if obj.ResourceVersion != f.object.ResourceVersion {
++			f.conflicts++
++			w.WriteHeader(http.StatusConflict)
++			_, _ = w.Write([]byte(`{"kind":"Status","reason":"Conflict","code":409}`))
++			return
++		}
++		f.version++
++		obj.ResourceVersion = strconv.Itoa(f.version)
++		f.object = obj
++		f.puts = append(f.puts, obj)
++		w.Header().Set("Content-Type", "application/json")
++		_ = json.NewEncoder(w).Encode(obj)
++	default:
++		f.mu.Unlock()
++		w.WriteHeader(http.StatusMethodNotAllowed)
++	}
++}
++
++func (f *offlineSessionsAPI) counts() (gets, puts, conflicts int) {
++	f.mu.Lock()
++	defer f.mu.Unlock()
++	return f.requests[http.MethodGet], f.requests[http.MethodPut], f.conflicts
++}
++
++func (f *offlineSessionsAPI) stored() storage.OfflineSessions {
++	f.mu.Lock()
++	defer f.mu.Unlock()
++	return toStorageOfflineSessions(f.object)
++}
++
++const (
++	batchUser      = "user"
++	batchConnector = "local"
++)
++
++func batchSession(grants ...string) storage.OfflineSessions {
++	s := storage.OfflineSessions{
++		UserID:  batchUser,
++		ConnID:  batchConnector,
++		Refresh: map[string]*storage.RefreshTokenRef{},
++		Grants:  map[string]*storage.RefreshTokenRef{},
++	}
++	for _, id := range grants {
++		s.Grants[id] = &storage.RefreshTokenRef{ID: id, ClientID: "client-" + id}
++	}
++	return s
++}
++
++var errTestGrantRevoked = errors.New("the grant was revoked")
++
++// useGrant is an updater as the one of a refresh: it refuses a grant that is
++// gone and sets LastUsed of the grant otherwise.
++func useGrant(id string, at time.Time) offlineSessionsUpdater {
++	return func(old storage.OfflineSessions) (storage.OfflineSessions, error) {
++		ref, ok := old.Grants[id]
++		if !ok {
++			return old, errTestGrantRevoked
++		}
++		ref.LastUsed = at
++		return old, nil
++	}
++}
++
++// waitQueued waits until n calls wait for the next batch of the offline
++// session of the test.
++func waitQueued(t *testing.T, cli *client, n int) {
++	t.Helper()
++	name := cli.offlineTokenName(batchUser, batchConnector)
++	require.Eventually(t, func() bool {
++		cli.offlineWrites.mu.Lock()
++		defer cli.offlineWrites.mu.Unlock()
++		q := cli.offlineWrites.queues[name]
++		return q != nil && len(q.waiting) == n
++	}, 2*time.Second, time.Millisecond, "%d calls queued", n)
++}
++
++// requireNoBatchesLeft checks that no queue and no goroutine of the batches is
++// left behind.
++func requireNoBatchesLeft(t *testing.T, cli *client) {
++	t.Helper()
++	cli.offlineWrites.mu.Lock()
++	queues := len(cli.offlineWrites.queues)
++	cli.offlineWrites.mu.Unlock()
++	require.Zero(t, queues, "queues left")
++	require.Eventually(t, func() bool {
++		buf := make([]byte, 1<<20)
++		stacks := string(buf[:runtime.Stack(buf, true)])
++		return !strings.Contains(stacks, "kubernetes.batchContext") &&
++			!strings.Contains(stacks, "kubernetes.(*client).UpdateOfflineSessions") &&
++			!strings.Contains(stacks, "kubernetes.(*offlineSessionsBatches)")
++	}, 5*time.Second, time.Millisecond, "goroutines of the batches left")
++}
++
++type updateCall struct {
++	name    string
++	ctx     context.Context
++	updater offlineSessionsUpdater
++}
++
++// startUpdates starts the calls one after another, each once the one before it
++// is queued (the first one once its get arrived), and returns their errors by
++// name once all are done.
++func startUpdates(cli *client, calls []updateCall) <-chan map[string]error {
++	var (
++		mu   sync.Mutex
++		errs = map[string]error{}
++		wg   sync.WaitGroup
++	)
++	for _, c := range calls {
++		wg.Add(1)
++		go func() {
++			defer wg.Done()
++			ctx := c.ctx
++			if ctx == nil {
++				ctx = context.Background()
++			}
++			err := cli.UpdateOfflineSessions(ctx, batchUser, batchConnector, c.updater)
++			mu.Lock()
++			errs[c.name] = err
++			mu.Unlock()
++		}()
++	}
++	done := make(chan map[string]error, 1)
++	go func() {
++		wg.Wait()
++		done <- errs
++	}()
++	return done
++}
++
++func waitUpdates(t *testing.T, done <-chan map[string]error) map[string]error {
++	t.Helper()
++	select {
++	case errs := <-done:
++		return errs
++	case <-time.After(10 * time.Second):
++		t.Fatal("the updates did not end")
++		return nil
++	}
++}
++
++// The updates of one offline session that wait for a write are written
++// together: one get and one put for all of them, and no conflict. Each update
++// runs on the state the one before it wrote.
++func TestOfflineSessionsUpdatesInOneBatch(t *testing.T) {
++	const n = 8
++	grants := make([]string, n)
++	for i := range grants {
++		grants[i] = fmt.Sprintf("grant-%d", i)
++	}
++	api := newOfflineSessionsAPI(batchSession(grants...))
++	cli := newRequestsClient(t, api, 16, time.Millisecond, 5*time.Second)
++	release := api.hold(t, 1)
++	at := time.Date(2026, 11, 24, 12, 0, 0, 0, time.UTC)
++
++	first := startUpdates(cli, []updateCall{{name: grants[0], updater: useGrant(grants[0], at)}})
++	require.Equal(t, 1, <-api.arrived)
++	rest := make([]updateCall, 0, n-1)
++	for _, id := range grants[1:] {
++		rest = append(rest, updateCall{name: id, updater: useGrant(id, at)})
++	}
++	others := startUpdates(cli, rest)
++	waitQueued(t, cli, n-1)
++	release()
++
++	for name, err := range waitUpdates(t, first) {
++		require.NoError(t, err, name)
++	}
++	for name, err := range waitUpdates(t, others) {
++		require.NoError(t, err, name)
++	}
++	gets, puts, conflicts := api.counts()
++	require.Equal(t, 2, gets, "a get for the first update and one for the batch of the others")
++	require.Equal(t, 2, puts)
++	require.Zero(t, conflicts)
++	for _, id := range grants {
++		require.True(t, api.stored().Grants[id].LastUsed.Equal(at), id)
++	}
++	requireNoBatchesLeft(t, cli)
++}
++
++// A refused update in a batch gets its own error, and what it changed before
++// it failed is not written; the updates before and after it are, and each one
++// sees what the ones before it wrote.
++func TestOfflineSessionsBatchKeepsEachOutcome(t *testing.T) {
++	api := newOfflineSessionsAPI(batchSession("grant-a", "grant-b"))
++	cli := newRequestsClient(t, api, 16, time.Millisecond, 5*time.Second)
++	release := api.hold(t, 1)
++	at := time.Date(2026, 11, 24, 12, 0, 0, 0, time.UTC)
++
++	first := startUpdates(cli, []updateCall{{name: "first", updater: useGrant("grant-a", at)}})
++	<-api.arrived
++	batch := startUpdates(cli, []updateCall{
++		{name: "a", updater: useGrant("grant-a", at.Add(time.Minute))},
++		{name: "revoked", updater: func(old storage.OfflineSessions) (storage.OfflineSessions, error) {
++			// Changes its copy, then fails: nothing of it may be written.
++			old.Grants["grant-b"].LastUsed = at.Add(time.Hour)
++			old.ConnectorData = []byte("written by a refused update")
++			return old, errTestGrantRevoked
++		}},
++		{name: "b", updater: func(old storage.OfflineSessions) (storage.OfflineSessions, error) { return old, nil }},
++	})
++	waitQueued(t, cli, 3)
++	release()
++	require.NoError(t, waitUpdates(t, first)["first"])
++	errs := waitUpdates(t, batch)
++	require.NoError(t, errs["a"])
++	require.NoError(t, errs["b"])
++	require.ErrorIs(t, errs["revoked"], errTestGrantRevoked)
++	require.Equal(t, errTestGrantRevoked, errs["revoked"], "the error of the updater, as it is")
++
++	stored := api.stored()
++	require.True(t, stored.Grants["grant-a"].LastUsed.Equal(at.Add(time.Minute)))
++	require.True(t, stored.Grants["grant-b"].LastUsed.IsZero(), "the change of the refused update is not written")
++	require.Empty(t, stored.ConnectorData)
++	_, puts, conflicts := api.counts()
++	require.Equal(t, 2, puts)
++	require.Zero(t, conflicts)
++	requireNoBatchesLeft(t, cli)
++}
++
++// Each update of a batch runs on what the updates before it returned, as if
++// they ran one after another: a second lease sees the first.
++func TestOfflineSessionsBatchRunsUpdatesInTurn(t *testing.T) {
++	api := newOfflineSessionsAPI(batchSession())
++	cli := newRequestsClient(t, api, 16, time.Millisecond, 5*time.Second)
++	release := api.hold(t, 1)
++	errLeaseHeld := errors.New("the lease is held")
++	acquire := func(holder string) offlineSessionsUpdater {
++		return func(old storage.OfflineSessions) (storage.OfflineSessions, error) {
++			if !old.UpstreamLease.IsZero() {
++				return old, errLeaseHeld
++			}
++			old.UpstreamLease = storage.UpstreamLease{Holder: holder, Expiry: time.Now().Add(time.Minute)}
++			return old, nil
++		}
++	}
++
++	first := startUpdates(cli, []updateCall{{name: "first", updater: func(old storage.OfflineSessions) (storage.OfflineSessions, error) { return old, nil }}})
++	<-api.arrived
++	batch := startUpdates(cli, []updateCall{
++		{name: "one", updater: acquire("one")},
++		{name: "two", updater: acquire("two")},
++	})
++	waitQueued(t, cli, 2)
++	release()
++	require.NoError(t, waitUpdates(t, first)["first"])
++	errs := waitUpdates(t, batch)
++
++	holder := api.stored().UpstreamLease.Holder
++	require.Contains(t, []string{"one", "two"}, holder)
++	other := map[string]string{"one": "two", "two": "one"}[holder]
++	require.NoError(t, errs[holder])
++	require.ErrorIs(t, errs[other], errLeaseHeld)
++	requireNoBatchesLeft(t, cli)
++}
++
++// A failed get or put of a batch is the outcome of every update in it, as it
++// is: a missing offline session is storage.ErrNotFound to each.
++func TestOfflineSessionsBatchFailureReachesEveryUpdate(t *testing.T) {
++	for _, tc := range []struct {
++		name    string
++		setup   func(*offlineSessionsAPI)
++		require func(*testing.T, error)
++		ran     bool
++	}{
++		{
++			name:  "get 404",
++			setup: func(f *offlineSessionsAPI) { f.getStatus = http.StatusNotFound },
++			require: func(t *testing.T, err error) {
++				require.Equal(t, storage.ErrNotFound, err, "compared with == by the gRPC API")
++			},
++		},
++		{
++			name:  "put 500",
++			setup: func(f *offlineSessionsAPI) { f.putStatus = http.StatusInternalServerError },
++			ran:   true,
++			require: func(t *testing.T, err error) {
++				require.Error(t, err)
++				require.Contains(t, err.Error(), "Internal Server Error")
++			},
++		},
++	} {
++		t.Run(tc.name, func(t *testing.T) {
++			api := newOfflineSessionsAPI(batchSession("grant-a", "grant-b", "grant-c"))
++			cli := newRequestsClient(t, api, 16, time.Millisecond, 5*time.Second)
++			releaseFirst := api.hold(t, 1)
++			releaseBatch := api.hold(t, 2)
++			ran := map[string]bool{}
++			var mu sync.Mutex
++			updater := func(id string) offlineSessionsUpdater {
++				return func(old storage.OfflineSessions) (storage.OfflineSessions, error) {
++					mu.Lock()
++					ran[id] = true
++					mu.Unlock()
++					return old, nil
++				}
++			}
++
++			first := startUpdates(cli, []updateCall{{name: "first", updater: updater("first")}})
++			<-api.arrived
++			batch := startUpdates(cli, []updateCall{
++				{name: "a", updater: updater("a")},
++				{name: "b", updater: updater("b")},
++				{name: "c", updater: updater("c")},
++			})
++			waitQueued(t, cli, 3)
++			releaseFirst()
++			require.NoError(t, waitUpdates(t, first)["first"])
++			require.Equal(t, 2, <-api.arrived, "the get of the batch")
++			tc.setup(api)
++			releaseBatch()
++			errs := waitUpdates(t, batch)
++			require.Len(t, errs, 3)
++			for name, err := range errs {
++				t.Run(name, func(t *testing.T) { tc.require(t, err) })
++			}
++			require.Equal(t, errs["a"], errs["b"], "the same error to each")
++			require.Equal(t, errs["a"], errs["c"], "the same error to each")
++			gets, _, _ := api.counts()
++			require.Equal(t, 2, gets, "one get for the batch")
++			mu.Lock()
++			for _, id := range []string{"a", "b", "c"} {
++				require.Equal(t, tc.ran, ran[id], id)
++			}
++			mu.Unlock()
++			requireNoBatchesLeft(t, cli)
++		})
++	}
++}
++
++// A call whose context ends while it waits for the next batch leaves it: its
++// updater never runs, and the others are written.
++func TestOfflineSessionsCallLeavesTheQueue(t *testing.T) {
++	api := newOfflineSessionsAPI(batchSession("grant-a", "grant-b"))
++	cli := newRequestsClient(t, api, 16, time.Millisecond, 5*time.Second)
++	release := api.hold(t, 1)
++	at := time.Date(2026, 11, 24, 12, 0, 0, 0, time.UTC)
++
++	first := startUpdates(cli, []updateCall{{name: "first", updater: useGrant("grant-a", at)}})
++	<-api.arrived
++	stay := startUpdates(cli, []updateCall{{name: "stays", updater: useGrant("grant-a", at.Add(time.Minute))}})
++	waitQueued(t, cli, 1)
++	ctx, cancel := context.WithCancel(context.Background())
++	ran := make(chan struct{}, 1)
++	gone := startUpdates(cli, []updateCall{{name: "gone", ctx: ctx, updater: func(old storage.OfflineSessions) (storage.OfflineSessions, error) {
++		ran <- struct{}{}
++		old.Grants["grant-b"].LastUsed = at
++		return old, nil
++	}}})
++	waitQueued(t, cli, 2)
++	cancel()
++	err := waitUpdates(t, gone)["gone"]
++	require.ErrorIs(t, err, context.Canceled)
++	waitQueued(t, cli, 1)
++	release()
++
++	require.NoError(t, waitUpdates(t, first)["first"])
++	require.NoError(t, waitUpdates(t, stay)["stays"])
++	require.Empty(t, ran, "the updater of the call that left never runs")
++	stored := api.stored()
++	require.True(t, stored.Grants["grant-a"].LastUsed.Equal(at.Add(time.Minute)))
++	require.True(t, stored.Grants["grant-b"].LastUsed.IsZero())
++	requireNoBatchesLeft(t, cli)
++}
++
++// The end of the context of a call whose batch is being written, the one that
++// writes it or another, neither fails the others nor its own update: it waits
++// for the outcome.
++func TestOfflineSessionsBatchOutlivesOneContext(t *testing.T) {
++	for _, gone := range []string{"writer", "other"} {
++		t.Run(gone, func(t *testing.T) {
++			api := newOfflineSessionsAPI(batchSession("grant-a", "grant-b"))
++			cli := newRequestsClient(t, api, 16, time.Millisecond, 5*time.Second)
++			releaseFirst := api.hold(t, 1)
++			releaseBatch := api.hold(t, 2)
++			at := time.Date(2026, 11, 24, 12, 0, 0, 0, time.UTC)
++
++			first := startUpdates(cli, []updateCall{{name: "first", updater: func(old storage.OfflineSessions) (storage.OfflineSessions, error) { return old, nil }}})
++			<-api.arrived
++			writerCtx, cancelWriter := context.WithCancel(context.Background())
++			otherCtx, cancelOther := context.WithCancel(context.Background())
++			defer cancelWriter()
++			defer cancelOther()
++			// The first call queued writes the next batch.
++			writer := startUpdates(cli, []updateCall{{name: "writer", ctx: writerCtx, updater: useGrant("grant-a", at)}})
++			waitQueued(t, cli, 1)
++			other := startUpdates(cli, []updateCall{{name: "other", ctx: otherCtx, updater: useGrant("grant-b", at)}})
++			waitQueued(t, cli, 2)
++			releaseFirst()
++			require.Equal(t, 2, <-api.arrived, "the get of the batch")
++			if gone == "writer" {
++				cancelWriter()
++			} else {
++				cancelOther()
++			}
++			releaseBatch()
++
++			require.NoError(t, waitUpdates(t, first)["first"])
++			require.NoError(t, waitUpdates(t, writer)["writer"])
++			require.NoError(t, waitUpdates(t, other)["other"])
++			stored := api.stored()
++			require.True(t, stored.Grants["grant-a"].LastUsed.Equal(at))
++			require.True(t, stored.Grants["grant-b"].LastUsed.Equal(at))
++			requireNoBatchesLeft(t, cli)
++		})
++	}
++}
++
++// A batch ends once the contexts of all of its calls end.
++func TestOfflineSessionsBatchEndsWithAllContexts(t *testing.T) {
++	ctxA, cancelA := context.WithCancel(context.Background())
++	ctxB, cancelB := context.WithCancel(context.Background())
++	batch := []*offlineSessionsUpdate{{ctx: ctxA}, {ctx: ctxB}}
++	ctx, cancel := batchContext(batch)
++	defer cancel()
++
++	cancelA()
++	select {
++	case <-ctx.Done():
++		t.Fatal("the batch ended with one context")
++	case <-time.After(20 * time.Millisecond):
++	}
++	cancelB()
++	select {
++	case <-ctx.Done():
++	case <-time.After(5 * time.Second):
++		t.Fatal("the batch did not end with all contexts")
++	}
++	require.ErrorIs(t, context.Cause(ctx), context.Canceled)
++}
++
++// The deadline of a batch is the latest of its calls, none if one has none.
++func TestOfflineSessionsBatchDeadline(t *testing.T) {
++	now := time.Now()
++	early, cancelEarly := context.WithDeadline(context.Background(), now.Add(time.Minute))
++	defer cancelEarly()
++	late, cancelLate := context.WithDeadline(context.Background(), now.Add(time.Hour))
++	defer cancelLate()
++
++	ctx, cancel := batchContext([]*offlineSessionsUpdate{{ctx: early}, {ctx: late}})
++	deadline, ok := ctx.Deadline()
++	cancel()
++	require.True(t, ok)
++	require.WithinDuration(t, now.Add(time.Hour), deadline, time.Second)
++
++	ctx, cancel = batchContext([]*offlineSessionsUpdate{{ctx: early}, {ctx: context.Background()}})
++	_, ok = ctx.Deadline()
++	cancel()
++	require.False(t, ok)
++
++	ctx, cancel = batchContext([]*offlineSessionsUpdate{{ctx: early}})
++	cancel()
++	require.Equal(t, early, ctx, "a batch of one call is written in its context")
++}
++
++// A panic of an updater is raised again in its own call, and the others of the
++// batch are written.
++func TestOfflineSessionsBatchUpdaterPanics(t *testing.T) {
++	api := newOfflineSessionsAPI(batchSession("grant-a"))
++	cli := newRequestsClient(t, api, 16, time.Millisecond, 5*time.Second)
++	release := api.hold(t, 1)
++	at := time.Date(2026, 11, 24, 12, 0, 0, 0, time.UTC)
++
++	first := startUpdates(cli, []updateCall{{name: "first", updater: func(old storage.OfflineSessions) (storage.OfflineSessions, error) { return old, nil }}})
++	<-api.arrived
++	writer := startUpdates(cli, []updateCall{{name: "writer", updater: useGrant("grant-a", at)}})
++	waitQueued(t, cli, 1)
++	panicked := make(chan any, 1)
++	go func() {
++		defer func() { panicked <- recover() }()
++		_ = cli.UpdateOfflineSessions(context.Background(), batchUser, batchConnector, func(storage.OfflineSessions) (storage.OfflineSessions, error) {
++			panic("updater failed")
++		})
++	}()
++	waitQueued(t, cli, 2)
++	release()
++
++	require.NoError(t, waitUpdates(t, first)["first"])
++	require.NoError(t, waitUpdates(t, writer)["writer"])
++	select {
++	case p := <-panicked:
++		require.NotNil(t, p)
++		require.Contains(t, fmt.Sprint(p), "updater failed")
++	case <-time.After(5 * time.Second):
++		t.Fatal("the panicking call did not end")
++	}
++	require.True(t, api.stored().Grants["grant-a"].LastUsed.Equal(at))
++	requireNoBatchesLeft(t, cli)
++}
++
++// Two replicas: a put of a batch that conflicts reads the object again and
++// runs again the updates not answered yet.
++func TestOfflineSessionsBatchConflict(t *testing.T) {
++	api := newOfflineSessionsAPI(batchSession("grant-a", "grant-b"))
++	cli := newRequestsClient(t, api, 16, time.Millisecond, 5*time.Second)
++	release := api.hold(t, 1)
++	at := time.Date(2026, 11, 24, 12, 0, 0, 0, time.UTC)
++
++	runs := map[string]int{}
++	var mu sync.Mutex
++	counted := func(name string, u offlineSessionsUpdater) offlineSessionsUpdater {
++		return func(old storage.OfflineSessions) (storage.OfflineSessions, error) {
++			mu.Lock()
++			runs[name]++
++			mu.Unlock()
++			return u(old)
++		}
++	}
++	done := startUpdates(cli, []updateCall{{name: "a", updater: counted("a", useGrant("grant-a", at))}})
++	<-api.arrived
++	// The other replica writes while the get of the batch is held.
++	api.mu.Lock()
++	api.version++
++	api.object.ResourceVersion = strconv.Itoa(api.version)
++	api.mu.Unlock()
++	release()
++	require.NoError(t, waitUpdates(t, done)["a"])
++	gets, puts, conflicts := api.counts()
++	require.Equal(t, 2, gets)
++	require.Equal(t, 2, puts)
++	require.Equal(t, 1, conflicts)
++	require.Equal(t, 2, runs["a"])
++	require.True(t, api.stored().Grants["grant-a"].LastUsed.Equal(at))
++	requireNoBatchesLeft(t, cli)
++}
++
++// A copy of an offline session shares nothing with it. The test fails when a
++// field that holds a reference is added and the copy does not know it.
++func TestCloneOfflineSessions(t *testing.T) {
++	known := map[string]bool{"UserID": true, "ConnID": true, "Refresh": true, "Grants": true, "ConnectorData": true, "UpstreamLease": true}
++	typ := reflect.TypeOf(storage.OfflineSessions{})
++	for i := range typ.NumField() {
++		require.True(t, known[typ.Field(i).Name], "cloneOfflineSessions does not know OfflineSessions.%s", typ.Field(i).Name)
++	}
++	requireValueFields(t, reflect.TypeOf(storage.RefreshTokenRef{}))
++	requireValueFields(t, reflect.TypeOf(storage.UpstreamLease{}))
++
++	ref := &storage.RefreshTokenRef{ID: "grant-a", ClientID: "client"}
++	s := storage.OfflineSessions{
++		UserID:        batchUser,
++		ConnID:        batchConnector,
++		Refresh:       map[string]*storage.RefreshTokenRef{"client": ref},
++		Grants:        map[string]*storage.RefreshTokenRef{"grant-a": ref, "nil": nil},
++		ConnectorData: []byte("data"),
++	}
++	c := cloneOfflineSessions(s)
++	require.Equal(t, s, c)
++	c.Grants["grant-a"].LastUsed = time.Now()
++	c.Refresh["client"].ID = "changed"
++	c.Grants["new"] = &storage.RefreshTokenRef{}
++	c.ConnectorData[0] = 'X'
++	require.True(t, ref.LastUsed.IsZero())
++	require.Equal(t, "grant-a", ref.ID)
++	require.NotContains(t, s.Grants, "new")
++	require.Equal(t, "data", string(s.ConnectorData))
++	require.Nil(t, cloneOfflineSessions(storage.OfflineSessions{}).Grants)
++}
++
++// requireValueFields checks that a struct holds no references: a copy of it
++// shares nothing.
++func requireValueFields(t *testing.T, typ reflect.Type) {
++	t.Helper()
++	references := []reflect.Kind{reflect.Map, reflect.Slice, reflect.Pointer, reflect.UnsafePointer, reflect.Interface, reflect.Chan, reflect.Func}
++	for i := range typ.NumField() {
++		f := typ.Field(i)
++		if slices.Contains(references, f.Type.Kind()) {
++			t.Fatalf("%s.%s holds a reference: cloneOfflineSessions must copy it", typ.Name(), f.Name)
++		}
++		if f.Type.Kind() == reflect.Struct && f.Type != reflect.TypeOf(time.Time{}) {
++			requireValueFields(t, f.Type)
++		}
++	}
++}
 diff --git a/storage/kubernetes/refresh_name_test.go b/storage/kubernetes/refresh_name_test.go
 new file mode 100644
 index 00000000..e0ba0506
@@ -7829,10 +9259,10 @@ index 00000000..e0ba0506
 +}
 diff --git a/storage/kubernetes/refresh_update_test.go b/storage/kubernetes/refresh_update_test.go
 new file mode 100644
-index 00000000..4dba24e4
+index 00000000..83ac8486
 --- /dev/null
 +++ b/storage/kubernetes/refresh_update_test.go
-@@ -0,0 +1,196 @@
+@@ -0,0 +1,302 @@
 +package kubernetes
 +
 +import (
@@ -7861,6 +9291,8 @@ index 00000000..4dba24e4
 +	version   int
 +	requests  map[string]int
 +	conflicts int
++	// deleted makes the object gone: 404 to every request.
++	deleted bool
 +
 +	// heldGets, when set, holds the first gets until that many arrived: the
 +	// requests read the same version before any of them writes.
@@ -7880,6 +9312,11 @@ index 00000000..4dba24e4
 +func (f *refreshTokenAPI) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 +	f.mu.Lock()
 +	f.requests[r.Method]++
++	if f.deleted {
++		f.mu.Unlock()
++		w.WriteHeader(http.StatusNotFound)
++		return
++	}
 +	switch r.Method {
 +	case http.MethodGet:
 +		if f.arrived < f.heldGets {
@@ -7981,6 +9418,105 @@ index 00000000..4dba24e4
 +	require.Equal(t, "c", got.Token)
 +}
 +
++// A refresh reads its token to check it and updates it right after: in a
++// context of storage.ReuseReads the update starts from that read (Deckhouse),
++// and a refresh is one get and one put of the token. The put carries the
++// version read, so a token changed or deleted since is refused, and the update
++// reads it again.
++func TestUpdateRefreshTokenStartsFromTheRead(t *testing.T) {
++	t.Run("one get", func(t *testing.T) {
++		api := newRefreshTokenAPI(storage.RefreshToken{ID: "token-id", Token: "a"})
++		cli := newRefreshTokenClient(t, api)
++		ctx := storage.ReuseReads(t.Context())
++
++		read, err := cli.GetRefresh(ctx, "token-id")
++		require.NoError(t, err)
++		runs := 0
++		err = cli.UpdateRefreshToken(ctx, "token-id", func(old storage.RefreshToken) (storage.RefreshToken, error) {
++			runs++
++			require.Equal(t, read, old)
++			old.Token = "b"
++			return old, nil
++		})
++		require.NoError(t, err)
++		require.Equal(t, map[string]int{http.MethodGet: 1, http.MethodPut: 1}, api.requests)
++		require.Zero(t, api.conflicts)
++		require.Equal(t, 1, runs)
++
++		// The read served one update: the next one reads the token.
++		err = cli.UpdateRefreshToken(ctx, "token-id", func(old storage.RefreshToken) (storage.RefreshToken, error) {
++			require.Equal(t, "b", old.Token)
++			old.Token = "c"
++			return old, nil
++		})
++		require.NoError(t, err)
++		require.Equal(t, map[string]int{http.MethodGet: 2, http.MethodPut: 2}, api.requests)
++	})
++
++	t.Run("changed after the read", func(t *testing.T) {
++		api := newRefreshTokenAPI(storage.RefreshToken{ID: "token-id", Token: "a"})
++		cli := newRefreshTokenClient(t, api)
++		ctx := storage.ReuseReads(t.Context())
++
++		_, err := cli.GetRefresh(ctx, "token-id")
++		require.NoError(t, err)
++		// Another replica rotates the token meanwhile.
++		require.NoError(t, cli.UpdateRefreshToken(t.Context(), "token-id", func(old storage.RefreshToken) (storage.RefreshToken, error) {
++			old.Token = "x"
++			return old, nil
++		}))
++		api.mu.Lock()
++		api.requests = map[string]int{}
++		api.mu.Unlock()
++
++		var seen []string
++		err = cli.UpdateRefreshToken(ctx, "token-id", func(old storage.RefreshToken) (storage.RefreshToken, error) {
++			seen = append(seen, old.Token)
++			old.Token += "y"
++			return old, nil
++		})
++		require.NoError(t, err)
++		require.Equal(t, []string{"a", "x"}, seen, "the updater runs on the read, then on the token as stored")
++		require.Equal(t, map[string]int{http.MethodGet: 1, http.MethodPut: 2}, api.requests)
++		require.Equal(t, 1, api.conflicts)
++
++		got, err := cli.GetRefresh(t.Context(), "token-id")
++		require.NoError(t, err)
++		require.Equal(t, "xy", got.Token)
++	})
++
++	t.Run("deleted after the read", func(t *testing.T) {
++		api := newRefreshTokenAPI(storage.RefreshToken{ID: "token-id", Token: "a"})
++		cli := newRefreshTokenClient(t, api)
++		ctx := storage.ReuseReads(t.Context())
++
++		_, err := cli.GetRefresh(ctx, "token-id")
++		require.NoError(t, err)
++		api.mu.Lock()
++		api.deleted = true
++		api.mu.Unlock()
++
++		err = cli.UpdateRefreshToken(ctx, "token-id", func(old storage.RefreshToken) (storage.RefreshToken, error) {
++			old.Token = "b"
++			return old, nil
++		})
++		require.ErrorIs(t, err, storage.ErrNotFound)
++	})
++
++	t.Run("outside ReuseReads", func(t *testing.T) {
++		api := newRefreshTokenAPI(storage.RefreshToken{ID: "token-id", Token: "a"})
++		cli := newRefreshTokenClient(t, api)
++
++		_, err := cli.GetRefresh(t.Context(), "token-id")
++		require.NoError(t, err)
++		require.NoError(t, cli.UpdateRefreshToken(t.Context(), "token-id", func(old storage.RefreshToken) (storage.RefreshToken, error) {
++			old.Token = "b"
++			return old, nil
++		}))
++		require.Equal(t, map[string]int{http.MethodGet: 2, http.MethodPut: 1}, api.requests)
++	})
++}
++
 +// Two refreshes of one token at once (two replicas, no lock): both read the
 +// same version and rotate it, the API server takes the first put and refuses
 +// the second as a conflict, and the second reads the token again and finds it
@@ -8030,26 +9566,80 @@ index 00000000..4dba24e4
 +	require.Contains(t, []string{"b", "c"}, got.Token)
 +}
 diff --git a/storage/kubernetes/storage.go b/storage/kubernetes/storage.go
-index 5942565c..f226d3bf 100644
+index ba3cacd5..bf9c4739 100644
 --- a/storage/kubernetes/storage.go
 +++ b/storage/kubernetes/storage.go
-@@ -365,6 +365,14 @@ func (cli *client) GetRefresh(ctx context.Context, id string) (storage.RefreshTo
+@@ -2,6 +2,7 @@ package kubernetes
+ 
+ import (
+ 	"context"
++	"encoding/json"
+ 	"errors"
+ 	"fmt"
+ 	"log/slog"
+@@ -357,17 +358,56 @@ func (cli *client) GetKeys(ctx context.Context) (storage.Keys, error) {
+ 	return toStorageKeys(keys), nil
  }
  
- func (cli *client) getRefreshToken(id string) (r RefreshToken, err error) {
++// GetRefresh keeps the token it read for the next update of it in ctx
++// (Deckhouse, storage.ReuseReads).
+ func (cli *client) GetRefresh(ctx context.Context, id string) (storage.RefreshToken, error) {
+-	r, err := cli.getRefreshToken(ctx, id)
++	r, raw, err := cli.readRefreshToken(ctx, id)
+ 	if err != nil {
+ 		return storage.RefreshToken{}, err
+ 	}
++	storage.RememberRead(ctx, kindRefreshToken, id, raw)
+ 	return toStorageRefreshToken(r), nil
+ }
+ 
+-func (cli *client) getRefreshToken(ctx context.Context, id string) (r RefreshToken, err error) {
+-	err = cli.get(ctx, resourceRefreshToken, id, &r)
+-	return
++func (cli *client) getRefreshToken(ctx context.Context, id string) (RefreshToken, error) {
++	r, _, err := cli.readRefreshToken(ctx, id)
++	return r, err
++}
++
++// readRefreshToken reads the refresh token id, and returns it with the JSON it
++// was read as.
++func (cli *client) readRefreshToken(ctx context.Context, id string) (r RefreshToken, raw json.RawMessage, err error) {
 +	// The ID comes from the refresh token a client presents: one that no object
 +	// can be named after names no stored token, as with the other storages
 +	// (Deckhouse). Asked for anyway, the client refuses the name with an error
 +	// that is no ErrNotFound, and the refresh answered 500 instead of
 +	// invalid_grant.
 +	if !validResourceName(id) {
-+		return r, storage.ErrNotFound
++		return r, nil, storage.ErrNotFound
 +	}
- 	err = cli.get(resourceRefreshToken, id, &r)
- 	return
++	if err := cli.get(ctx, resourceRefreshToken, id, &raw); err != nil {
++		return r, nil, err
++	}
++	if err := json.Unmarshal(raw, &r); err != nil {
++		return r, nil, fmt.Errorf("decode refresh token: %w", err)
++	}
++	return r, raw, nil
++}
++
++// refreshTokenToUpdate returns the refresh token id as GetRefresh last read it
++// in ctx, once (Deckhouse, storage.ReuseReads), and reads it otherwise. The
++// refresh grant reads the token to check it just before it updates it, and the
++// second read was one of the requests of every refresh; the put carries the
++// resourceVersion of the copy, so a copy that changed since is refused as a
++// conflict, and the next attempt of the update reads the token.
++func (cli *client) refreshTokenToUpdate(ctx context.Context, id string) (RefreshToken, error) {
++	if raw, ok := storage.TakeRead(ctx, kindRefreshToken, id); ok {
++		var r RefreshToken
++		if err := json.Unmarshal(raw, &r); err == nil {
++			return r, nil
++		}
++	}
++	return cli.getRefreshToken(ctx, id)
  }
-@@ -474,14 +482,15 @@ func (cli *client) DeleteConnector(ctx context.Context, id string) error {
- 	return cli.delete(resourceConnector, id)
+ 
+ func (cli *client) GetOfflineSessions(ctx context.Context, userID string, connID string) (storage.OfflineSessions, error) {
+@@ -475,16 +515,19 @@ func (cli *client) DeleteConnector(ctx context.Context, id string) error {
+ 	return cli.delete(ctx, resourceConnector, id)
  }
  
 +// UpdateRefreshToken takes no lock of the token (Deckhouse). Upstream locks it
@@ -8059,18 +9649,49 @@ index 5942565c..f226d3bf 100644
 +// updater only decides on what it read; the resourceVersion of the put refuses
 +// a write over another one, and retryOnConflict runs the updater again on the
 +// token as it is now. The lock cost four requests of every refresh, two of
-+// them writes: a get and a put to take it and to release it.
++// them writes: a get and a put to take it and to release it. The first attempt
++// starts from the token as GetRefresh read it in ctx, when ctx keeps it
++// (refreshTokenToUpdate).
  func (cli *client) UpdateRefreshToken(ctx context.Context, id string, updater func(old storage.RefreshToken) (storage.RefreshToken, error)) error {
 -	lock := newRefreshTokenLock(cli)
 -
--	if err := lock.Lock(id); err != nil {
+-	if err := lock.Lock(ctx, id); err != nil {
 -		return err
 -	}
--	defer lock.Unlock(id)
+-	defer lock.Unlock(ctx, id)
 -
  	return retryOnConflict(ctx, func() error {
- 		r, err := cli.getRefreshToken(id)
+-		r, err := cli.getRefreshToken(ctx, id)
++		r, err := cli.refreshTokenToUpdate(ctx, id)
  		if err != nil {
+ 			return err
+ 		}
+@@ -537,25 +580,6 @@ func (cli *client) UpdatePassword(ctx context.Context, email string, updater fun
+ 	return cli.put(ctx, resourcePassword, p.ObjectMeta.Name, newPassword)
+ }
+ 
+-func (cli *client) UpdateOfflineSessions(ctx context.Context, userID string, connID string, updater func(old storage.OfflineSessions) (storage.OfflineSessions, error)) error {
+-	return retryOnConflict(ctx, func() error {
+-		o, err := cli.getOfflineSessions(ctx, userID, connID)
+-		if err != nil {
+-			return err
+-		}
+-
+-		updated, err := updater(toStorageOfflineSessions(o))
+-		if err != nil {
+-			return err
+-		}
+-
+-		newOfflineSessions := cli.fromStorageOfflineSessions(updated)
+-		newOfflineSessions.ObjectMeta = o.ObjectMeta
+-		newOfflineSessions.legacyOfflineSessions = o.legacyOfflineSessions
+-		return cli.put(ctx, resourceOfflineSessions, o.ObjectMeta.Name, newOfflineSessions)
+-	})
+-}
+-
+ func (cli *client) UpdateKeys(ctx context.Context, updater func(old storage.Keys) (storage.Keys, error)) error {
+ 	firstUpdate := false
+ 	var keys Keys
 diff --git a/storage/kubernetes/storage_test.go b/storage/kubernetes/storage_test.go
 index 08c07d14..b6de0631 100644
 --- a/storage/kubernetes/storage_test.go
@@ -8262,6 +9883,119 @@ index df6f8b0d..cf969479 100644
 +			require.Equal(t, want, toStorageOfflineSessions(decoded))
 +		})
 +	}
++}
+diff --git a/storage/reads.go b/storage/reads.go
+new file mode 100644
+index 00000000..49cfd352
+--- /dev/null
++++ b/storage/reads.go
+@@ -0,0 +1,58 @@
++package storage
++
++import (
++	"context"
++	"sync"
++)
++
++// ReuseReads returns a context in which a storage may start the next update of
++// an object from the copy it read last in that context, instead of reading the
++// object again (Deckhouse). The refresh grant reads the refresh token to check
++// it and updates it right after; the copy saves the Kubernetes storage one of
++// the requests of every refresh.
++//
++// The copy may have changed since: a storage reuses it only when its write
++// replaces the version it read and nothing newer (the Kubernetes storage puts
++// the resourceVersion of the copy), so a stale copy costs a conflict, and the
++// update reads the object again and runs its updater on it.
++func ReuseReads(ctx context.Context) context.Context {
++	return context.WithValue(ctx, readsKey{}, &reads{objects: map[readKey][]byte{}})
++}
++
++// RememberRead keeps data, the object kind/id as a storage read it, in a
++// context of ReuseReads, in place of any copy kept before. Elsewhere it does
++// nothing.
++func RememberRead(ctx context.Context, kind, id string, data []byte) {
++	r, ok := ctx.Value(readsKey{}).(*reads)
++	if !ok {
++		return
++	}
++	r.mu.Lock()
++	defer r.mu.Unlock()
++	r.objects[readKey{kind: kind, id: id}] = data
++}
++
++// TakeRead returns the copy of the object kind/id that RememberRead keeps in
++// ctx, and forgets it: the copy serves one attempt of one update.
++func TakeRead(ctx context.Context, kind, id string) ([]byte, bool) {
++	r, ok := ctx.Value(readsKey{}).(*reads)
++	if !ok {
++		return nil, false
++	}
++	r.mu.Lock()
++	defer r.mu.Unlock()
++	key := readKey{kind: kind, id: id}
++	data, ok := r.objects[key]
++	delete(r.objects, key)
++	return data, ok
++}
++
++type readsKey struct{}
++
++type readKey struct{ kind, id string }
++
++// reads are the copies of the objects read in one context of ReuseReads.
++type reads struct {
++	mu      sync.Mutex
++	objects map[readKey][]byte
++}
+diff --git a/storage/reads_test.go b/storage/reads_test.go
+new file mode 100644
+index 00000000..cf7df0b9
+--- /dev/null
++++ b/storage/reads_test.go
+@@ -0,0 +1,43 @@
++package storage
++
++import (
++	"context"
++	"testing"
++
++	"github.com/stretchr/testify/require"
++)
++
++func TestReuseReads(t *testing.T) {
++	t.Run("a copy serves one update", func(t *testing.T) {
++		ctx := ReuseReads(t.Context())
++		RememberRead(ctx, "RefreshToken", "a", []byte("v1"))
++
++		_, ok := TakeRead(ctx, "RefreshToken", "b")
++		require.False(t, ok, "another object")
++		_, ok = TakeRead(ctx, "AuthCode", "a")
++		require.False(t, ok, "another kind")
++
++		data, ok := TakeRead(ctx, "RefreshToken", "a")
++		require.True(t, ok)
++		require.Equal(t, []byte("v1"), data)
++		_, ok = TakeRead(ctx, "RefreshToken", "a")
++		require.False(t, ok, "taken once")
++	})
++
++	t.Run("the last read wins", func(t *testing.T) {
++		ctx := ReuseReads(t.Context())
++		RememberRead(ctx, "RefreshToken", "a", []byte("v1"))
++		RememberRead(context.WithoutCancel(ctx), "RefreshToken", "a", []byte("v2"))
++
++		data, ok := TakeRead(ctx, "RefreshToken", "a")
++		require.True(t, ok)
++		require.Equal(t, []byte("v2"), data)
++	})
++
++	t.Run("nothing is kept without ReuseReads", func(t *testing.T) {
++		ctx := t.Context()
++		RememberRead(ctx, "RefreshToken", "a", []byte("v1"))
++		_, ok := TakeRead(ctx, "RefreshToken", "a")
++		require.False(t, ok)
++	})
 +}
 diff --git a/storage/storage.go b/storage/storage.go
 index 262f47b0..877b5053 100644

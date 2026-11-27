@@ -100,7 +100,7 @@ index f96f34b..b671bf1 100644
 +	}
 +}
 diff --git a/server/connectors/connectors.go b/server/connectors/connectors.go
-index 8a5b865..95428b0 100644
+index 8a5b8653..836db1f4 100644
 --- a/server/connectors/connectors.go
 +++ b/server/connectors/connectors.go
 @@ -5,7 +5,9 @@ import (
@@ -113,7 +113,7 @@ index 8a5b865..95428b0 100644
  	"golang.org/x/sync/singleflight"
  
  	"github.com/dexidp/dex/connector"
-@@ -41,15 +43,70 @@ type ResolveFunc func(storage.Connector) (connector.Connector, error)
+@@ -41,15 +43,72 @@ type ResolveFunc func(storage.Connector) (connector.Connector, error)
  type Cache struct {
  	mu      sync.Mutex
  	conns   map[string]Connector
@@ -151,7 +151,9 @@ index 8a5b865..95428b0 100644
 +	result, err, _ := c.listing.Do("connectors", func() (any, error) {
 +		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 +		defer cancel()
-+		return c.storage.ListConnectors(ctx)
++		// Not behind the requests of the users: a list failed for want of a slot
++		// would report a failed collection exactly while Dex throttles itself.
++		return c.storage.ListConnectors(storage.WithoutRequestLimit(ctx))
 +	})
 +	if err != nil {
 +		ch <- prometheus.MustNewConstMetric(connectorCollectionDesc, prometheus.GaugeValue, 0)
@@ -184,7 +186,7 @@ index 8a5b865..95428b0 100644
  		storage: storage,
  		resolve: resolve,
  	}
-@@ -59,7 +116,10 @@ func NewCache(storage storage.Storage, resolve ResolveFunc) *Cache {
+@@ -59,7 +118,10 @@ func NewCache(storage storage.Storage, resolve ResolveFunc) *Cache {
  // cache, replacing any existing entry for the same ID.
  func (c *Cache) Open(conn storage.Connector) (Connector, error) {
  	impl, err := c.resolve(conn)
@@ -195,7 +197,7 @@ index 8a5b865..95428b0 100644
  		return Connector{}, fmt.Errorf("failed to open connector: %v", err)
  	}
  
-@@ -70,9 +130,10 @@ func (c *Cache) Open(conn storage.Connector) (Connector, error) {
+@@ -70,9 +132,10 @@ func (c *Cache) Open(conn storage.Connector) (Connector, error) {
  		GrantTypes:      conn.GrantTypes,
  	}
  
@@ -208,7 +210,7 @@ index 8a5b865..95428b0 100644
  
  	return opened, nil
  }
-@@ -83,6 +144,7 @@ func (c *Cache) Open(conn storage.Connector) (Connector, error) {
+@@ -83,6 +146,7 @@ func (c *Cache) Open(conn storage.Connector) (Connector, error) {
  func (c *Cache) Set(id string, conn Connector) {
  	c.mu.Lock()
  	c.conns[id] = conn
@@ -216,7 +218,7 @@ index 8a5b865..95428b0 100644
  	c.mu.Unlock()
  }
  
-@@ -105,6 +167,7 @@ func (c *Cache) Len() int {
+@@ -105,6 +169,7 @@ func (c *Cache) Len() int {
  func (c *Cache) Close(id string) {
  	c.mu.Lock()
  	delete(c.conns, id)
@@ -225,7 +227,7 @@ index 8a5b865..95428b0 100644
  }
  
 diff --git a/server/connectors/connectors_test.go b/server/connectors/connectors_test.go
-index a625ce7..6294c54 100644
+index a625ce70..e6b02bab 100644
 --- a/server/connectors/connectors_test.go
 +++ b/server/connectors/connectors_test.go
 @@ -4,10 +4,18 @@ import (
@@ -247,7 +249,7 @@ index a625ce7..6294c54 100644
  	"github.com/stretchr/testify/require"
  
  	"github.com/dexidp/dex/connector"
-@@ -19,6 +27,155 @@ import (
+@@ -19,6 +27,180 @@ import (
  // the version it was resolved from, so tests can tell reopens apart.
  type stubConn struct{ version string }
  
@@ -349,6 +351,31 @@ index a625ce7..6294c54 100644
 +	require.Contains(t, response.Body.String(), "dex_connector_metrics_collection_success 0")
 +}
 +
++// unlimitedConnectorList refuses a list that would wait for the limit of
++// requests in flight of the storage.
++type unlimitedConnectorList struct{ storage.Storage }
++
++func (s unlimitedConnectorList) ListConnectors(ctx context.Context) ([]storage.Connector, error) {
++	if !storage.RequestLimitSkipped(ctx) {
++		return nil, errors.New("would wait for a slot")
++	}
++	return s.Storage.ListConnectors(ctx)
++}
++
++// The scrape does not wait behind the requests of the users (Deckhouse): a
++// list failed for want of a slot would report a failed collection exactly
++// while Dex throttles its requests.
++func TestConnectorMetricsSkipTheRequestLimit(t *testing.T) {
++	cache, store, _ := newTestCache(t)
++	cache.storage = unlimitedConnectorList{Storage: store}
++	registry := prometheus.NewRegistry()
++	registry.MustRegister(cache)
++	response := httptest.NewRecorder()
++	promhttp.HandlerFor(registry, promhttp.HandlerOpts{}).ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/metrics", nil))
++	require.Equal(t, http.StatusOK, response.Code, response.Body.String())
++	require.Contains(t, response.Body.String(), "dex_connector_metrics_collection_success 1")
++}
++
 +type blockingConnectorList struct {
 +	storage.Storage
 +	active atomic.Int32
@@ -417,37 +444,11 @@ index b8b79ab..0091d1b 100644
  
  	if featureflags.SessionsEnabled.Enabled() {
  		s.logger.InfoContext(ctx, "sessions feature flag is enabled")
-diff --git a/storage/kubernetes/client.go b/storage/kubernetes/client.go
-index 127b9c7..e992470 100644
---- a/storage/kubernetes/client.go
-+++ b/storage/kubernetes/client.go
-@@ -217,7 +217,15 @@ func (cli *client) get(resource, name string, v interface{}) error {
- }
- 
- func (cli *client) getURL(url string, v interface{}) error {
--	resp, err := cli.client.Get(url)
-+	return cli.getURLWithContext(context.Background(), url, v)
-+}
-+
-+func (cli *client) getURLWithContext(ctx context.Context, url string, v interface{}) error {
-+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-+	if err != nil {
-+		return err
-+	}
-+	resp, err := cli.client.Do(req)
- 	if err != nil {
- 		return err
- 	}
 diff --git a/storage/kubernetes/client_test.go b/storage/kubernetes/client_test.go
-index 6375685..e5da266 100644
+index 8ff790c6..42bbd1f3 100644
 --- a/storage/kubernetes/client_test.go
 +++ b/storage/kubernetes/client_test.go
-@@ -1,14 +1,18 @@
- package kubernetes
- 
- import (
-+	"context"
- 	"hash"
+@@ -6,10 +6,13 @@ import (
  	"hash/fnv"
  	"log/slog"
  	"net/http"
@@ -461,7 +462,7 @@ index 6375685..e5da266 100644
  	"time"
  
  	"github.com/stretchr/testify/assert"
-@@ -320,3 +324,75 @@ func main() {
+@@ -321,3 +324,75 @@ func main() {
  	fmt.Println(token)
  }
  */
@@ -538,21 +539,14 @@ index 6375685..e5da266 100644
 +	}
 +}
 diff --git a/storage/kubernetes/storage.go b/storage/kubernetes/storage.go
-index 4aeeea6..5d05873 100644
+index fa205bc5..f3c1c474 100644
 --- a/storage/kubernetes/storage.go
 +++ b/storage/kubernetes/storage.go
-@@ -455,9 +455,13 @@ func (cli *client) ListPasswords(ctx context.Context) (passwords []storage.Passw
- }
- 
+@@ -490,7 +490,7 @@ func (cli *client) ListPasswords(ctx context.Context) (passwords []storage.Passw
  func (cli *client) ListConnectors(ctx context.Context) (connectors []storage.Connector, err error) {
-+	u, err := cli.urlFor(cli.apiVersion, cli.namespace, resourceConnector, "")
-+	if err != nil {
-+		return nil, err
-+	}
  	var connectorList ConnectorList
--	if err = cli.list(resourceConnector, &connectorList); err != nil {
+ 	if err = cli.list(ctx, resourceConnector, &connectorList); err != nil {
 -		return connectors, fmt.Errorf("failed to list connectors: %v", err)
-+	if err = cli.getURLWithContext(ctx, u, &connectorList); err != nil {
 +		return nil, fmt.Errorf("failed to list connectors: %w", err)
  	}
  

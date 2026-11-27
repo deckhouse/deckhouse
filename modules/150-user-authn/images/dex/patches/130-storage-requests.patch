@@ -1,0 +1,2250 @@
+diff --git a/cmd/dex/serve.go b/cmd/dex/serve.go
+index 271a9047..18d556aa 100644
+--- a/cmd/dex/serve.go
++++ b/cmd/dex/serve.go
+@@ -219,6 +219,14 @@ func runServe(options serveOptions) error {
+ 	}
+ 	defer s.Close()
+ 
++	// The kubernetes storage exports the metrics of its requests to the
++	// Kubernetes API (Deckhouse).
++	if collector, ok := s.(prometheus.Collector); ok {
++		if err := prometheusRegistry.Register(collector); err != nil {
++			return fmt.Errorf("failed to register storage metrics: %v", err)
++		}
++	}
++
+ 	logger.Info("config storage", "storage_type", c.Storage.Type)
+ 
+ 	if len(c.StaticClients) > 0 {
+diff --git a/storage/kubernetes/client.go b/storage/kubernetes/client.go
+index 86d88cf7..0cadc718 100644
+--- a/storage/kubernetes/client.go
++++ b/storage/kubernetes/client.go
+@@ -20,7 +20,6 @@ import (
+ 	"os"
+ 	"path"
+ 	"regexp"
+-	"strconv"
+ 	"strings"
+ 	"time"
+ 
+@@ -73,6 +72,10 @@ type client struct {
+ 	// This is called once the client's Close method is called to signal goroutines,
+ 	// such as the one creating third party resources, to stop.
+ 	cancel context.CancelFunc
++
++	// requests limits the requests in flight and sends the throttled ones again
++	// (Deckhouse, requests.go).
++	requests *requestLimiter
+ }
+ 
+ // idToName maps an arbitrary ID, such as an email or client ID to a Kubernetes object name.
+@@ -185,7 +188,11 @@ func checkHTTPErr(r *http.Response, validStatusCodes ...int) error {
+ 	if r.StatusCode == http.StatusNotFound {
+ 		return storage.ErrNotFound
+ 	}
+-	if r.Request.Method == http.MethodPost && r.StatusCode == http.StatusConflict {
++	// A create the API server refused with 409 Conflict before it stored the
++	// object (Deckhouse, reason Conflict: the ResourceQuota admission whose
++	// update of the quota conflicted) is not ErrAlreadyExists; a 409 without
++	// a status still is.
++	if r.Request.Method == http.MethodPost && r.StatusCode == http.StatusConflict && !refusedCreate(body) {
+ 		return storage.ErrAlreadyExists
+ 	}
+ 
+@@ -204,12 +211,12 @@ func closeResp(r *http.Response) {
+ 	r.Body.Close()
+ }
+ 
+-func (cli *client) get(resource, name string, v interface{}) error {
+-	return cli.getResource(cli.apiVersion, cli.namespace, resource, name, v)
++func (cli *client) get(ctx context.Context, resource, name string, v interface{}) error {
++	return cli.getResource(ctx, cli.apiVersion, cli.namespace, resource, name, v)
+ }
+ 
+-func (cli *client) getURL(url string, v interface{}) error {
+-	resp, err := cli.client.Get(url)
++func (cli *client) getURL(ctx context.Context, url string, v interface{}) error {
++	resp, err := cli.do(ctx, http.MethodGet, url, "", nil)
+ 	if err != nil {
+ 		return err
+ 	}
+@@ -220,43 +227,56 @@ func (cli *client) getURL(url string, v interface{}) error {
+ 	return json.NewDecoder(resp.Body).Decode(v)
+ }
+ 
+-func (cli *client) getResource(apiVersion, namespace, resource, name string, v interface{}) error {
++func (cli *client) getResource(ctx context.Context, apiVersion, namespace, resource, name string, v interface{}) error {
+ 	u, err := cli.urlFor(apiVersion, namespace, resource, name)
+ 	if err != nil {
+ 		return err
+ 	}
+-	return cli.getURL(u, v)
++	return cli.getURL(ctx, u, v)
+ }
+ 
+-func (cli *client) listN(resource string, v interface{}, n int) error { //nolint:unparam // In practice, n is the gcResultLimit constant.
++func (cli *client) listN(ctx context.Context, resource string, v interface{}, n int) error { //nolint:unparam // In practice, n is the gcResultLimit constant.
+ 	params := url.Values{}
+ 	params.Add("limit", fmt.Sprintf("%d", n))
+ 	u, err := cli.urlForWithParams(cli.apiVersion, cli.namespace, resource, "", params)
+ 	if err != nil {
+ 		return err
+ 	}
+-	return cli.getURL(u, v)
++	return cli.getURL(ctx, u, v)
+ }
+ 
+-func (cli *client) list(resource string, v interface{}) error {
+-	return cli.get(resource, "", v)
++func (cli *client) list(ctx context.Context, resource string, v interface{}) error {
++	return cli.get(ctx, resource, "", v)
+ }
+ 
+-func (cli *client) post(resource string, v interface{}) error {
+-	return cli.postResource(cli.apiVersion, cli.namespace, resource, v)
++// post creates a Dex object. The object carries a create ID of its own
++// (Deckhouse, see create in requests.go).
++func (cli *client) post(ctx context.Context, resource string, v interface{}) error {
++	body, name, createID, err := withCreateID(v)
++	if err != nil {
++		return err
++	}
++	url, err := cli.urlFor(cli.apiVersion, cli.namespace, resource, "")
++	if err != nil {
++		return err
++	}
++	return cli.create(ctx, resource, url, name, createID, body)
+ }
+ 
+-func (cli *client) postResource(apiVersion, namespace, resource string, v interface{}) error {
++func (cli *client) postResource(ctx context.Context, apiVersion, namespace, resource string, v interface{}) error {
+ 	body, err := json.Marshal(v)
+ 	if err != nil {
+ 		return fmt.Errorf("marshal object: %v", err)
+ 	}
++	return cli.postBody(ctx, apiVersion, namespace, resource, body)
++}
+ 
++func (cli *client) postBody(ctx context.Context, apiVersion, namespace, resource string, body []byte) error {
+ 	url, err := cli.urlFor(apiVersion, namespace, resource, "")
+ 	if err != nil {
+ 		return err
+ 	}
+-	resp, err := cli.client.Post(url, "application/json", bytes.NewReader(body))
++	resp, err := cli.do(ctx, http.MethodPost, url, "application/json", body)
+ 	if err != nil {
+ 		return err
+ 	}
+@@ -264,11 +284,11 @@ func (cli *client) postResource(apiVersion, namespace, resource string, v interf
+ 	return checkHTTPErr(resp, http.StatusCreated)
+ }
+ 
+-func (cli *client) detectKubernetesVersion() error {
++func (cli *client) detectKubernetesVersion(ctx context.Context) error {
+ 	var version struct{ GitVersion string }
+ 
+ 	url := cli.baseURL + "/version"
+-	resp, err := cli.client.Get(url)
++	resp, err := cli.do(ctx, http.MethodGet, url, "", nil)
+ 	if err != nil {
+ 		return err
+ 	}
+@@ -295,24 +315,20 @@ func (cli *client) detectKubernetesVersion() error {
+ 	return nil
+ }
+ 
+-func (cli *client) delete(resource, name string) error {
++func (cli *client) delete(ctx context.Context, resource, name string) error {
+ 	url, err := cli.urlFor(cli.apiVersion, cli.namespace, resource, name)
+ 	if err != nil {
+ 		return err
+ 	}
+-	req, err := http.NewRequest("DELETE", url, nil)
+-	if err != nil {
+-		return fmt.Errorf("create delete request: %v", err)
+-	}
+-	resp, err := cli.client.Do(req)
++	resp, err := cli.do(ctx, http.MethodDelete, url, "", nil)
+ 	if err != nil {
+-		return fmt.Errorf("delete request: %v", err)
++		return fmt.Errorf("delete request: %w", err)
+ 	}
+ 	defer closeResp(resp)
+ 	return checkHTTPErr(resp, http.StatusOK)
+ }
+ 
+-func (cli *client) deleteAll(resource string) error {
++func (cli *client) deleteAll(ctx context.Context, resource string) error {
+ 	var list struct {
+ 		k8sapi.TypeMeta `json:",inline"`
+ 		k8sapi.ListMeta `json:"metadata,omitempty"`
+@@ -321,18 +337,18 @@ func (cli *client) deleteAll(resource string) error {
+ 			k8sapi.ObjectMeta `json:"metadata,omitempty"`
+ 		} `json:"items"`
+ 	}
+-	if err := cli.list(resource, &list); err != nil {
++	if err := cli.list(ctx, resource, &list); err != nil {
+ 		return err
+ 	}
+ 	for _, item := range list.Items {
+-		if err := cli.delete(resource, item.Name); err != nil {
++		if err := cli.delete(ctx, resource, item.Name); err != nil {
+ 			return err
+ 		}
+ 	}
+ 	return nil
+ }
+ 
+-func (cli *client) put(resource, name string, v interface{}) error {
++func (cli *client) put(ctx context.Context, resource, name string, v interface{}) error {
+ 	body, err := json.Marshal(v)
+ 	if err != nil {
+ 		return fmt.Errorf("marshal object: %v", err)
+@@ -343,16 +359,9 @@ func (cli *client) put(resource, name string, v interface{}) error {
+ 		return err
+ 	}
+ 
+-	req, err := http.NewRequest("PUT", url, bytes.NewReader(body))
+-	if err != nil {
+-		return fmt.Errorf("create patch request: %v", err)
+-	}
+-
+-	req.Header.Set("Content-Length", strconv.Itoa(len(body)))
+-
+-	resp, err := cli.client.Do(req)
++	resp, err := cli.do(ctx, http.MethodPut, url, "", body)
+ 	if err != nil {
+-		return fmt.Errorf("patch request: %v", err)
++		return fmt.Errorf("patch request: %w", err)
+ 	}
+ 	defer closeResp(resp)
+ 
+@@ -447,6 +456,7 @@ func newClient(cluster k8sapi.Cluster, user k8sapi.AuthInfo, namespace string, l
+ 		crdAPIVersion: crdAPIVersion,
+ 		crdHandling:   crdHandling,
+ 		logger:        logger,
++		requests:      newRequestLimiter(defaultMaxRequestsInFlight),
+ 	}, nil
+ }
+ 
+diff --git a/storage/kubernetes/client_test.go b/storage/kubernetes/client_test.go
+index 6375685e..8ff790c6 100644
+--- a/storage/kubernetes/client_test.go
++++ b/storage/kubernetes/client_test.go
+@@ -1,6 +1,7 @@
+ package kubernetes
+ 
+ import (
++	"context"
+ 	"hash"
+ 	"hash/fnv"
+ 	"log/slog"
+@@ -107,7 +108,7 @@ func TestInClusterTransport(t *testing.T) {
+ 				base: cli.client.Transport,
+ 			}
+ 
+-			_ = cli.isCRDReady("test")
++			_ = cli.isCRDReady(context.Background(), "test")
+ 			require.Equal(t, tc.expected, helper.info.Token)
+ 		})
+ 	}
+diff --git a/storage/kubernetes/lock.go b/storage/kubernetes/lock.go
+index 092f6d0e..22de01f4 100644
+--- a/storage/kubernetes/lock.go
++++ b/storage/kubernetes/lock.go
+@@ -1,6 +1,7 @@
+ package kubernetes
+ 
+ import (
++	"context"
+ 	"fmt"
+ 	"time"
+ )
+@@ -43,9 +44,9 @@ func newRefreshTokenLock(cli *client) *refreshTokenLock {
+ 
+ // Lock polls until the lock annotation can be set on the refresh token resource.
+ // Returns nil when the lock is acquired, or an error on timeout (200 attempts × 100ms).
+-func (l *refreshTokenLock) Lock(id string) error {
++func (l *refreshTokenLock) Lock(ctx context.Context, id string) error {
+ 	for i := 0; i <= 200; i++ {
+-		ok, err := l.setLockAnnotation(id)
++		ok, err := l.setLockAnnotation(ctx, id)
+ 		if err != nil {
+ 			return err
+ 		}
+@@ -59,21 +60,21 @@ func (l *refreshTokenLock) Lock(id string) error {
+ 
+ // Unlock removes the lock annotation from the refresh token resource.
+ // Only the holder of the lock (waitingState == false) performs the removal.
+-func (l *refreshTokenLock) Unlock(id string) {
++func (l *refreshTokenLock) Unlock(ctx context.Context, id string) {
+ 	if l.waitingState {
+ 		// This goroutine never successfully wrote the annotation, so there's
+ 		// nothing to remove. Another goroutine holds (or held) the lock.
+ 		return
+ 	}
+ 
+-	r, err := l.cli.getRefreshToken(id)
++	r, err := l.cli.getRefreshToken(ctx, id)
+ 	if err != nil {
+ 		l.cli.logger.Debug("failed to get resource to release lock for refresh token", "token_id", id, "err", err)
+ 		return
+ 	}
+ 
+ 	r.Annotations = nil
+-	err = l.cli.put(resourceRefreshToken, r.ObjectMeta.Name, r)
++	err = l.cli.put(ctx, resourceRefreshToken, r.ObjectMeta.Name, r)
+ 	if err != nil {
+ 		l.cli.logger.Debug("failed to release lock for refresh token", "token_id", id, "err", err)
+ 	}
+@@ -86,8 +87,8 @@ func (l *refreshTokenLock) Unlock(id string) {
+ // The locking protocol relies on Kubernetes optimistic concurrency: every put
+ // includes the resource's current resourceVersion, so concurrent writes to the
+ // same object result in a 409 Conflict for all but one writer.
+-func (l *refreshTokenLock) setLockAnnotation(id string) (bool, error) {
+-	r, err := l.cli.getRefreshToken(id)
++func (l *refreshTokenLock) setLockAnnotation(ctx context.Context, id string) (bool, error) {
++	r, err := l.cli.getRefreshToken(ctx, id)
+ 	if err != nil {
+ 		return false, err
+ 	}
+@@ -104,7 +105,7 @@ func (l *refreshTokenLock) setLockAnnotation(id string) (bool, error) {
+ 		// the annotation. The put uses the current resourceVersion, so only one
+ 		// writer succeeds; the rest get a 409 Conflict and go back to polling.
+ 		r.Annotations = lockData
+-		err := l.cli.put(resourceRefreshToken, r.ObjectMeta.Name, r)
++		err := l.cli.put(ctx, resourceRefreshToken, r.ObjectMeta.Name, r)
+ 		if err == nil {
+ 			l.waitingState = false
+ 			return false, nil
+@@ -133,7 +134,7 @@ func (l *refreshTokenLock) setLockAnnotation(id string) (bool, error) {
+ 	// can win the compare-and-swap race.
+ 	r.Annotations = lockData
+ 
+-	err = l.cli.put(resourceRefreshToken, r.ObjectMeta.Name, r)
++	err = l.cli.put(ctx, resourceRefreshToken, r.ObjectMeta.Name, r)
+ 	if err == nil {
+ 		return false, nil
+ 	}
+diff --git a/storage/kubernetes/requests.go b/storage/kubernetes/requests.go
+new file mode 100644
+index 00000000..586cc01e
+--- /dev/null
++++ b/storage/kubernetes/requests.go
+@@ -0,0 +1,525 @@
++package kubernetes
++
++import (
++	"bytes"
++	"context"
++	"encoding/json"
++	"errors"
++	"fmt"
++	"io"
++	"math/rand/v2"
++	"net/http"
++	"strconv"
++	"strings"
++	"time"
++
++	"github.com/prometheus/client_golang/prometheus"
++
++	"github.com/dexidp/dex/storage"
++	"github.com/dexidp/dex/storage/kubernetes/k8sapi"
++)
++
++// Every request of Dex to the Kubernetes API goes through do (Deckhouse): it
++// waits for one of a limited number of slots, and a request the API server
++// throttles is sent again.
++//
++// The requests of Dex have a priority level of their own in the API server
++// (Deckhouse templates/dex/flowcontrol.yaml): about 40 seats of each API
++// server, and 8 queues of 50 requests that one flow, all of Dex, fills. Past
++// those 440 requests in one API server, every request of Dex is refused with
++// 429 Too Many Requests. Each replica keeps its requests on one HTTP/2
++// connection, so to one API server, and at a cold start, with every DexAuthenticator
++// refreshing its users at once, two replicas filled the level and got 1849
++// refusals in 45 seconds; a refresh is 7 to 9 requests one after another, and
++// each refusal was a 500 to the user.
++const (
++	// defaultMaxRequestsInFlight is how many requests one Dex replica sends to
++	// the API server at once: three replicas (two in HA and one more during a
++	// rolling update) on one API server send at most 384, under the 440 its
++	// priority level of Dex holds. A request takes milliseconds, so 128 serve
++	// thousands of requests a second; the limit only holds Dex back when the API
++	// server slows down, and the requests wait in Dex instead of in the queues
++	// of the API server.
++	defaultMaxRequestsInFlight = 128
++	// defaultCallBudget is how long one storage request takes at most, with the
++	// waits for a slot, the attempts and the pauses between them: the 15 s one
++	// attempt could take before (the timeout of the HTTP client). A context
++	// with an earlier deadline ends it earlier; the background tasks (garbage
++	// collection, the sweep of the expired tokens) run in contexts without one.
++	defaultCallBudget = 15 * time.Second
++	// maxRetryAfter caps the Retry-After of the API server: a longer pause is
++	// past the budget of any call anyway.
++	maxRetryAfter = time.Hour
++	// defaultRetryBase is the first pause before a throttled request that came
++	// without Retry-After is sent again; each pause doubles, up to
++	// maxRetryPause.
++	defaultRetryBase = 100 * time.Millisecond
++	maxRetryPause    = 2 * time.Second
++)
++
++// createIDAnnotation names the create ID a Dex object is created with
++// (Deckhouse). The object keeps it: an update writes the metadata it read.
++const createIDAnnotation = "user-authn.deckhouse.io/create-id"
++
++// errNoSlot is returned for a request that found no free slot in time.
++var errNoSlot = errors.New("no free slot for a request to the Kubernetes API")
++
++// requestLimiter limits the requests of the client in flight at once and
++// sends the throttled ones again (Deckhouse).
++type requestLimiter struct {
++	slots      chan struct{}
++	callBudget time.Duration
++	retryBase  time.Duration
++
++	limit     prometheus.Gauge
++	inFlight  prometheus.Gauge
++	waiting   prometheus.Gauge
++	rejected  prometheus.Counter
++	throttled *prometheus.CounterVec
++	refused   *prometheus.CounterVec
++}
++
++func newRequestLimiter(maxInFlight int) *requestLimiter {
++	l := &requestLimiter{
++		slots:      make(chan struct{}, maxInFlight),
++		callBudget: defaultCallBudget,
++		retryBase:  defaultRetryBase,
++		limit: prometheus.NewGauge(prometheus.GaugeOpts{
++			Name: "dex_kubernetes_requests_limit",
++			Help: "How many requests to the Kubernetes API Dex sends at once at most.",
++		}),
++		inFlight: prometheus.NewGauge(prometheus.GaugeOpts{
++			Name: "dex_kubernetes_requests_in_flight",
++			Help: "Requests to the Kubernetes API in flight.",
++		}),
++		waiting: prometheus.NewGauge(prometheus.GaugeOpts{
++			Name: "dex_kubernetes_requests_waiting",
++			Help: "Requests to the Kubernetes API waiting for a free slot.",
++		}),
++		rejected: prometheus.NewCounter(prometheus.CounterOpts{
++			Name: "dex_kubernetes_requests_rejected_total",
++			Help: "Requests to the Kubernetes API that found no free slot before their context or their budget ended.",
++		}),
++		throttled: prometheus.NewCounterVec(prometheus.CounterOpts{
++			Name: "dex_kubernetes_requests_throttled_total",
++			Help: "Responses 429 Too Many Requests of the Kubernetes API, by outcome: retried, or failed when the next attempt would start past the budget of the request.",
++		}, []string{"outcome"}),
++		refused: prometheus.NewCounterVec(prometheus.CounterOpts{
++			Name: "dex_kubernetes_requests_refused_creates_total",
++			Help: "Creates the Kubernetes API answered with 409 Conflict without storing the object (the ResourceQuota admission whose update of the quota conflicted), by outcome: retried, or failed when the next attempt would start past the budget of the request.",
++		}, []string{"outcome"}),
++	}
++	l.limit.Set(float64(maxInFlight))
++	// Both outcomes are exported from the start, so that their rates are.
++	for _, outcome := range []string{"retried", "failed"} {
++		l.throttled.WithLabelValues(outcome)
++		l.refused.WithLabelValues(outcome)
++	}
++	return l
++}
++
++func (l *requestLimiter) collectors() []prometheus.Collector {
++	return []prometheus.Collector{l.limit, l.inFlight, l.waiting, l.rejected, l.throttled, l.refused}
++}
++
++// withBudget ends ctx with the budget of one call, or earlier with the
++// deadline ctx has, and returns the deadline.
++func (l *requestLimiter) withBudget(ctx context.Context) (context.Context, time.Time, context.CancelFunc) {
++	deadline := time.Now().Add(l.callBudget)
++	if d, ok := ctx.Deadline(); ok && d.Before(deadline) {
++		return ctx, d, func() {}
++	}
++	ctx, cancel := context.WithDeadline(ctx, deadline)
++	return ctx, deadline, cancel
++}
++
++// fits reports whether an attempt after pause starts within the budget that
++// ends at deadline: a pause that leaves the attempt less than retryBase of the
++// budget is not waited for, the attempt would be cut.
++func (l *requestLimiter) fits(deadline time.Time, pause time.Duration) bool {
++	return time.Until(deadline) >= pause+l.retryBase
++}
++
++// sleep waits pause, or until ctx ends.
++func sleep(ctx context.Context, pause time.Duration) error {
++	timer := time.NewTimer(pause)
++	defer timer.Stop()
++	select {
++	case <-timer.C:
++		return nil
++	case <-ctx.Done():
++		return context.Cause(ctx)
++	}
++}
++
++// acquire takes a slot, waiting at most until ctx ends. The returned function
++// frees it.
++func (l *requestLimiter) acquire(ctx context.Context) (func(), error) {
++	select {
++	case l.slots <- struct{}{}:
++	default:
++		if err := l.wait(ctx); err != nil {
++			return nil, err
++		}
++	}
++	l.inFlight.Inc()
++	return func() {
++		l.inFlight.Dec()
++		<-l.slots
++	}, nil
++}
++
++func (l *requestLimiter) wait(ctx context.Context) error {
++	l.waiting.Inc()
++	defer l.waiting.Dec()
++
++	select {
++	case l.slots <- struct{}{}:
++		return nil
++	case <-ctx.Done():
++		l.rejected.Inc()
++		return fmt.Errorf("%w: %w", errNoSlot, context.Cause(ctx))
++	}
++}
++
++// retryPause is the pause before attempt+1 of a throttled request (attempt 0
++// is the first). The pause the API server asks for in Retry-After, in seconds,
++// gets up to half of it more at random, so that the requests it throttled at
++// once do not come back at once; without it, the pause doubles from retryBase,
++// each half random.
++func (l *requestLimiter) retryPause(attempt int, retryAfter string) time.Duration {
++	if seconds, err := strconv.ParseInt(strings.TrimSpace(retryAfter), 10, 64); err == nil && seconds > 0 {
++		pause := maxRetryAfter
++		if seconds < int64(maxRetryAfter/time.Second) {
++			pause = time.Duration(seconds) * time.Second
++		}
++		return pause + jitter(pause/2)
++	}
++	pause := maxRetryPause
++	if attempt < 16 {
++		pause = min(l.retryBase<<attempt, maxRetryPause)
++	}
++	if pause <= 0 {
++		pause = maxRetryPause
++	}
++	return pause/2 + jitter(pause/2)
++}
++
++// jitter returns a random pause from 0 to limit.
++func jitter(limit time.Duration) time.Duration {
++	if limit <= 0 {
++		return 0
++	}
++	return rand.N(limit + 1)
++}
++
++// do sends a request to the Kubernetes API in a slot and returns the response
++// with its body read, so that the slot is free once do returns. The waits for
++// a slot, the attempts and the pauses between them end with ctx and within the
++// budget of the call. A response 429 Too Many Requests is sent again while the
++// next attempt starts within the budget, and returned otherwise. The API
++// server answers 429 before it handles a request (priority and fairness, the
++// limit of requests in flight, a server shutting down), so even a create is
++// safe to send again; a create the API server answers 409 Conflict to is told
++// apart by create. A 503 is not sent again: the API server answers it
++// once a request has reached its handler, and a create may be done.
++//
++// A client without a requestLimiter (tests build one by hand) neither waits
++// nor retries.
++func (cli *client) do(ctx context.Context, method, url, contentType string, body []byte) (*http.Response, error) {
++	l := cli.requests
++	if l == nil {
++		return cli.send(ctx, method, url, contentType, body)
++	}
++	ctx, deadline, cancel := l.withBudget(ctx)
++	defer cancel()
++	for attempt := 0; ; attempt++ {
++		resp, err := cli.send(ctx, method, url, contentType, body)
++		if err != nil || resp.StatusCode != http.StatusTooManyRequests {
++			return resp, err
++		}
++
++		// A 429 past the budget is returned: it says more than a cut attempt.
++		pause := l.retryPause(attempt, resp.Header.Get("Retry-After"))
++		if !l.fits(deadline, pause) {
++			l.throttled.WithLabelValues("failed").Inc()
++			return resp, nil
++		}
++		l.throttled.WithLabelValues("retried").Inc()
++		if err := sleep(ctx, pause); err != nil {
++			return nil, fmt.Errorf("%s %s: wait to send a throttled request again: %w", method, url, err)
++		}
++	}
++}
++
++// send is one attempt of do.
++func (cli *client) send(ctx context.Context, method, url, contentType string, body []byte) (*http.Response, error) {
++	var reader io.Reader
++	if body != nil {
++		reader = bytes.NewReader(body)
++	}
++	reqCtx, cancel := requestContext(ctx, method)
++	defer cancel()
++	req, err := http.NewRequestWithContext(reqCtx, method, url, reader)
++	if err != nil {
++		return nil, fmt.Errorf("create request: %w", err)
++	}
++	if contentType != "" {
++		req.Header.Set("Content-Type", contentType)
++	}
++
++	if cli.requests != nil && !storage.RequestLimitSkipped(ctx) {
++		release, err := cli.requests.acquire(ctx)
++		if err != nil {
++			return nil, err
++		}
++		defer release()
++	}
++
++	resp, err := cli.client.Do(req)
++	if err != nil {
++		return nil, err
++	}
++	defer resp.Body.Close()
++	data, err := io.ReadAll(resp.Body)
++	if err != nil {
++		return nil, fmt.Errorf("read response body: %w", err)
++	}
++	resp.Body = io.NopCloser(bytes.NewReader(data))
++	return resp, nil
++}
++
++// requestContext is the context of the HTTP request of a storage call in ctx
++// (Deckhouse). A read ends with ctx. A write keeps the deadline of ctx but not
++// its cancellation: the storage did not pass the context to its requests
++// before, and a user who hangs up still does not cut a write on its way, or the
++// rollback after a failed one. The end of ctx ends the wait for a slot and the
++// pauses before a throttled request is sent again either way, where a request
++// that nobody waits for only adds to the load. A deadline, of the call (its
++// budget) or one Dex sets, still ends the write.
++func requestContext(ctx context.Context, method string) (context.Context, context.CancelFunc) {
++	if method == http.MethodGet {
++		return ctx, func() {}
++	}
++	detached := context.WithoutCancel(ctx)
++	if deadline, ok := ctx.Deadline(); ok {
++		return context.WithDeadline(detached, deadline)
++	}
++	return detached, func() {}
++}
++
++// withCreateID marshals a Dex object with a new create ID in its annotations,
++// and returns the body, the name of the object and the ID.
++//
++// A create may reach the API server twice (Deckhouse): a layer below Dex may
++// send the same request again after the answer to the first one was lost, and
++// the second one finds the object the first one created and gets 409
++// Conflict, and Dex would fail a login whose create had succeeded. A create
++// ID tells such a create from a create of an object that someone else created: the ID is new
++// for every create, and the same in every attempt of it. The IDs of most
++// objects are random as well, but some are names derived from a user, and a
++// storage must keep refusing a second create of the same object.
++func withCreateID(v interface{}) (body []byte, name, createID string, err error) {
++	raw, err := json.Marshal(v)
++	if err != nil {
++		return nil, "", "", fmt.Errorf("marshal object: %v", err)
++	}
++	var object map[string]json.RawMessage
++	if err := json.Unmarshal(raw, &object); err != nil {
++		return nil, "", "", fmt.Errorf("unmarshal object: %w", err)
++	}
++	var meta k8sapi.ObjectMeta
++	if m, ok := object["metadata"]; ok {
++		if err := json.Unmarshal(m, &meta); err != nil {
++			return nil, "", "", fmt.Errorf("unmarshal object metadata: %w", err)
++		}
++	}
++	createID = storage.NewID()
++	if meta.Annotations == nil {
++		meta.Annotations = map[string]string{}
++	}
++	meta.Annotations[createIDAnnotation] = createID
++	if object["metadata"], err = json.Marshal(meta); err != nil {
++		return nil, "", "", fmt.Errorf("marshal object metadata: %w", err)
++	}
++	if body, err = json.Marshal(object); err != nil {
++		return nil, "", "", fmt.Errorf("marshal object: %w", err)
++	}
++	return body, meta.Name, createID, nil
++}
++
++// apiStatus is the part of a Status of the Kubernetes API that Dex reads.
++type apiStatus struct {
++	Kind    string `json:"kind"`
++	Reason  string `json:"reason"`
++	Message string `json:"message"`
++	Details struct {
++		Kind string `json:"kind"`
++	} `json:"details"`
++}
++
++// parseStatus reads the Status in the body of an error response; ok is false
++// for a body without one (an old API server, a proxy).
++func parseStatus(body []byte) (status apiStatus, ok bool) {
++	if err := json.Unmarshal(body, &status); err != nil || status.Kind != "Status" {
++		return apiStatus{}, false
++	}
++	return status, true
++}
++
++// refusedCreate reports whether the body of a 409 Conflict to a create says
++// that the API server refused the create before it stored the object: reason
++// Conflict, where an object that exists gives AlreadyExists. The ResourceQuota
++// admission answers so when its update of the status of a quota still
++// conflicts after its own tries, which it makes from the quota in the cache of
++// its API server: another writer of the quota status (the admission in
++// another API server, the quota controller) was ahead of that cache
++// (kubernetes/kubernetes#67761).
++func refusedCreate(body []byte) bool {
++	status, ok := parseStatus(body)
++	return ok && status.Reason == "Conflict"
++}
++
++// create sends a create of a Dex object to url, with the create ID createID of
++// the object name of resource (Deckhouse). Every attempt sends the same body.
++//
++// A 409 Conflict means one of three things:
++//   - the API server refused the create before it stored the object (reason
++//     Conflict, refusedCreate): the create is sent again;
++//   - the object exists (reason AlreadyExists, or a 409 without a status): if
++//     it carries createID, an earlier attempt, or a layer below Dex sending the
++//     same request again, created it, and the create succeeded; an object of
++//     someone else gives storage.ErrAlreadyExists;
++//   - a 409 without a status whose object does not exist: an API server or a
++//     proxy that dropped the Status of a refusal, and the create is sent again.
++//
++// The attempts, the pauses between them and the reads of the object end with
++// ctx and within the budget of one call. A client without a requestLimiter
++// does not send a create again.
++func (cli *client) create(ctx context.Context, resource, url, name, createID string, body []byte) error {
++	l := cli.requests
++	var deadline time.Time
++	if l != nil {
++		var cancel context.CancelFunc
++		ctx, deadline, cancel = l.withBudget(ctx)
++		defer cancel()
++	}
++	for attempt := 0; ; attempt++ {
++		status, err := cli.createOnce(ctx, url, body)
++		switch {
++		case err == nil:
++			return nil
++		case isKubernetesAPIConflictError(err):
++			// Refused before the object was stored.
++		case errors.Is(err, storage.ErrAlreadyExists):
++			switch cli.createdBy(ctx, resource, name, createID) {
++			case createdHere:
++				cli.logger.InfoContext(ctx, "a create sent again found the object it created", "resource", resource)
++				return nil
++			case notCreated:
++				if status.Reason != "" || l == nil {
++					// The object existed, and was deleted since; or the
++					// create is not sent again.
++					return err
++				}
++				err = fmt.Errorf("create %s %s: 409 Conflict without a status, and the object does not exist", resource, name)
++			case createdElsewhere, createUnknown:
++				return err
++			}
++		default:
++			return err
++		}
++
++		if l == nil {
++			return err
++		}
++		pause := l.retryPause(attempt, "")
++		if !l.fits(deadline, pause) {
++			l.refused.WithLabelValues("failed").Inc()
++			return err
++		}
++		l.refused.WithLabelValues("retried").Inc()
++		cli.logger.InfoContext(ctx, "a create the API server refused with 409 Conflict is sent again",
++			"resource", resource, "attempt", attempt+1, "reason", status.Reason,
++			"status_kind", status.Details.Kind, "message", status.Message)
++		if err := sleep(ctx, pause); err != nil {
++			return fmt.Errorf("create %s %s: wait to send a refused create again: %w", resource, name, err)
++		}
++	}
++}
++
++// createOnce is one attempt of create. It returns the Status of a 409 Conflict
++// as well, empty for a 409 without one.
++func (cli *client) createOnce(ctx context.Context, url string, body []byte) (apiStatus, error) {
++	resp, err := cli.do(ctx, http.MethodPost, url, "application/json", body)
++	if err != nil {
++		return apiStatus{}, err
++	}
++	defer closeResp(resp)
++	var status apiStatus
++	if resp.StatusCode == http.StatusConflict {
++		// send read the body: reading it here leaves it for checkHTTPErr.
++		data, err := io.ReadAll(resp.Body)
++		if err != nil {
++			return apiStatus{}, fmt.Errorf("read response body: %w", err)
++		}
++		resp.Body = io.NopCloser(bytes.NewReader(data))
++		status, _ = parseStatus(data)
++	}
++	return status, checkHTTPErr(resp, http.StatusCreated)
++}
++
++// createOutcome is what the object of a create that got 409 Conflict tells.
++type createOutcome int
++
++const (
++	// createUnknown: the object could not be read.
++	createUnknown createOutcome = iota
++	// createdHere: the object carries the create ID of the create.
++	createdHere
++	// createdElsewhere: the object is someone else's.
++	createdElsewhere
++	// notCreated: the object does not exist.
++	notCreated
++)
++
++// createdBy reads the object name of resource and tells whether the create
++// with createID that got 409 Conflict had created it.
++func (cli *client) createdBy(ctx context.Context, resource, name, createID string) createOutcome {
++	if name == "" {
++		return createUnknown
++	}
++	var object struct {
++		k8sapi.ObjectMeta `json:"metadata"`
++	}
++	switch err := cli.get(ctx, resource, name, &object); {
++	case errors.Is(err, storage.ErrNotFound):
++		return notCreated
++	case err != nil:
++		return createUnknown
++	case object.Annotations[createIDAnnotation] == createID:
++		return createdHere
++	default:
++		return createdElsewhere
++	}
++}
++
++// Describe and Collect export the metrics of the requests to the Kubernetes API
++// (Deckhouse): Dex registers a storage that is a prometheus.Collector.
++func (cli *client) Describe(ch chan<- *prometheus.Desc) {
++	if cli.requests == nil {
++		return
++	}
++	for _, c := range cli.requests.collectors() {
++		c.Describe(ch)
++	}
++}
++
++func (cli *client) Collect(ch chan<- prometheus.Metric) {
++	if cli.requests == nil {
++		return
++	}
++	for _, c := range cli.requests.collectors() {
++		c.Collect(ch)
++	}
++}
+diff --git a/storage/kubernetes/requests_test.go b/storage/kubernetes/requests_test.go
+new file mode 100644
+index 00000000..a9826910
+--- /dev/null
++++ b/storage/kubernetes/requests_test.go
+@@ -0,0 +1,634 @@
++package kubernetes
++
++import (
++	"bytes"
++	"context"
++	"hash"
++	"hash/fnv"
++	"io"
++	"log/slog"
++	"net/http"
++	"net/http/httptest"
++	"sync"
++	"sync/atomic"
++	"testing"
++	"time"
++
++	"github.com/prometheus/client_golang/prometheus/testutil"
++	"github.com/stretchr/testify/require"
++
++	"github.com/dexidp/dex/storage"
++)
++
++// newRequestsClient returns a client of the API server handler, with a limiter
++// of maxInFlight slots, the first backoff retryBase and the budget of a call.
++func newRequestsClient(t *testing.T, handler http.Handler, maxInFlight int, retryBase, callBudget time.Duration) *client {
++	t.Helper()
++	server := httptest.NewServer(handler)
++	t.Cleanup(server.Close)
++	l := newRequestLimiter(maxInFlight)
++	l.retryBase, l.callBudget = retryBase, callBudget
++	return &client{
++		client:     server.Client(),
++		baseURL:    server.URL,
++		namespace:  "dex",
++		apiVersion: "dex.coreos.com/v1",
++		logger:     slog.New(slog.DiscardHandler),
++		hash:       func() hash.Hash { return fnv.New64() },
++		requests:   l,
++	}
++}
++
++// throttling answers the first throttled requests with 429 and retryAfter,
++// then passes them to next; it records the bodies it got.
++type throttling struct {
++	mu         sync.Mutex
++	throttled  int
++	retryAfter string
++	next       http.Handler
++	bodies     [][]byte
++}
++
++func (h *throttling) ServeHTTP(w http.ResponseWriter, r *http.Request) {
++	body, _ := io.ReadAll(r.Body)
++	h.mu.Lock()
++	h.bodies = append(h.bodies, body)
++	throttle := h.throttled != 0
++	if h.throttled > 0 {
++		h.throttled--
++	}
++	h.mu.Unlock()
++
++	if throttle {
++		if h.retryAfter != "" {
++			w.Header().Set("Retry-After", h.retryAfter)
++		}
++		w.WriteHeader(http.StatusTooManyRequests)
++		return
++	}
++	r.Body = io.NopCloser(bytes.NewReader(body))
++	h.next.ServeHTTP(w, r)
++}
++
++func (h *throttling) requests() int {
++	h.mu.Lock()
++	defer h.mu.Unlock()
++	return len(h.bodies)
++}
++
++func okHandler(status int) http.Handler {
++	return http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
++		w.WriteHeader(status)
++		w.Write([]byte(`{}`))
++	})
++}
++
++func TestDoSendsThrottledRequestsAgain(t *testing.T) {
++	tests := []struct {
++		name       string
++		throttled  int
++		retryAfter string
++		minElapsed time.Duration
++	}{
++		{name: "without Retry-After", throttled: 3},
++		{name: "with Retry-After", throttled: 1, retryAfter: "1", minElapsed: time.Second},
++	}
++	for _, tt := range tests {
++		t.Run(tt.name, func(t *testing.T) {
++			t.Parallel()
++			h := &throttling{throttled: tt.throttled, retryAfter: tt.retryAfter, next: okHandler(http.StatusOK)}
++			cli := newRequestsClient(t, h, 4, time.Millisecond, 3*time.Second)
++
++			start := time.Now()
++			var got map[string]any
++			require.NoError(t, cli.get(t.Context(), resourceAuthRequest, "req", &got))
++			require.GreaterOrEqual(t, time.Since(start), tt.minElapsed)
++			require.Equal(t, tt.throttled+1, h.requests())
++			require.InDelta(t, float64(tt.throttled), testutil.ToFloat64(cli.requests.throttled.WithLabelValues("retried")), 0)
++			require.Zero(t, testutil.ToFloat64(cli.requests.throttled.WithLabelValues("failed")))
++		})
++	}
++}
++
++// TestDoSendsThrottledCreateAgain checks that a create is sent again with the
++// same body: the same object, with the same create ID.
++func TestDoSendsThrottledCreateAgain(t *testing.T) {
++	api := &schemaAPI{objects: map[string][]byte{}}
++	h := &throttling{throttled: 2, next: api}
++	cli := newRequestsClient(t, h, 4, time.Millisecond, time.Second)
++
++	require.NoError(t, cli.CreateAuthRequest(t.Context(), storage.AuthRequest{ID: "req", ClientID: "app"}))
++	require.Len(t, h.bodies, 3)
++	require.Equal(t, h.bodies[0], h.bodies[2])
++	require.NotNil(t, api.object(t, cli, resourceAuthRequest, "req"))
++}
++
++func TestDoGivesUpOnceTheBudgetRunsOut(t *testing.T) {
++	tests := []struct {
++		name       string
++		retryAfter string
++		requests   int
++	}{
++		// 10 ms, 20 ms, 40 ms, each half random, and 10 ms left for the attempt
++		// after each: the budget of 50 ms ends after one to three pauses.
++		{name: "without Retry-After", requests: -1},
++		// A pause longer than the budget is not waited for.
++		{name: "Retry-After past the budget", retryAfter: "1", requests: 1},
++	}
++	for _, tt := range tests {
++		t.Run(tt.name, func(t *testing.T) {
++			t.Parallel()
++			h := &throttling{throttled: -1, retryAfter: tt.retryAfter, next: okHandler(http.StatusOK)}
++			cli := newRequestsClient(t, h, 4, 10*time.Millisecond, 50*time.Millisecond)
++
++			start := time.Now()
++			var got map[string]any
++			err := cli.get(t.Context(), resourceAuthRequest, "req", &got)
++			var herr httpError
++			require.ErrorAs(t, err, &herr)
++			require.Equal(t, http.StatusTooManyRequests, herr.StatusCode())
++			require.Less(t, time.Since(start), 500*time.Millisecond)
++			if tt.requests > 0 {
++				require.Equal(t, tt.requests, h.requests())
++			} else {
++				require.GreaterOrEqual(t, h.requests(), 2)
++			}
++			require.InDelta(t, 1, testutil.ToFloat64(cli.requests.throttled.WithLabelValues("failed")), 0)
++		})
++	}
++}
++
++func TestDoStopsRetryingWhenTheContextEnds(t *testing.T) {
++	h := &throttling{throttled: -1, retryAfter: "1", next: okHandler(http.StatusOK)}
++	cli := newRequestsClient(t, h, 4, time.Millisecond, 5*time.Second)
++
++	t.Run("canceled during the pause", func(t *testing.T) {
++		ctx, cancel := context.WithCancel(t.Context())
++		time.AfterFunc(100*time.Millisecond, cancel)
++		start := time.Now()
++		var got map[string]any
++		err := cli.get(ctx, resourceAuthRequest, "req", &got)
++		require.ErrorIs(t, err, context.Canceled)
++		require.Less(t, time.Since(start), 900*time.Millisecond)
++	})
++
++	// A pause past the deadline of the context is not waited for: the 429 is
++	// returned at once.
++	t.Run("deadline before the next attempt", func(t *testing.T) {
++		ctx, cancel := context.WithTimeout(t.Context(), 100*time.Millisecond)
++		defer cancel()
++		start := time.Now()
++		var got map[string]any
++		err := cli.get(ctx, resourceAuthRequest, "req", &got)
++		var herr httpError
++		require.ErrorAs(t, err, &herr)
++		require.Equal(t, http.StatusTooManyRequests, herr.StatusCode())
++		require.Less(t, time.Since(start), 90*time.Millisecond)
++	})
++	require.Equal(t, 2, h.requests())
++}
++
++func TestDoDoesNotSendOtherErrorsAgain(t *testing.T) {
++	for _, status := range []int{http.StatusServiceUnavailable, http.StatusInternalServerError, http.StatusConflict} {
++		t.Run(http.StatusText(status), func(t *testing.T) {
++			t.Parallel()
++			h := &throttling{next: okHandler(status)}
++			cli := newRequestsClient(t, h, 4, time.Millisecond, time.Second)
++
++			err := cli.put(t.Context(), resourceAuthRequest, "req", map[string]any{})
++			var herr httpError
++			require.ErrorAs(t, err, &herr)
++			require.Equal(t, status, herr.StatusCode())
++			require.Equal(t, 1, h.requests())
++		})
++	}
++}
++
++func TestRetryPause(t *testing.T) {
++	l := newRequestLimiter(1)
++	tests := []struct {
++		name       string
++		attempt    int
++		retryAfter string
++		min, max   time.Duration
++	}{
++		{name: "Retry-After", retryAfter: "2", min: 2 * time.Second, max: 3 * time.Second},
++		{name: "first backoff", min: 50 * time.Millisecond, max: 100 * time.Millisecond},
++		{name: "third backoff", attempt: 2, min: 200 * time.Millisecond, max: 400 * time.Millisecond},
++		{name: "capped backoff", attempt: 40, min: time.Second, max: 2 * time.Second},
++		{name: "zero Retry-After", retryAfter: "0", min: 50 * time.Millisecond, max: 100 * time.Millisecond},
++		{name: "HTTP date Retry-After", retryAfter: "Wed, 21 Oct 2015 07:28:00 GMT", min: 50 * time.Millisecond, max: 100 * time.Millisecond},
++		{name: "negative Retry-After", retryAfter: "-5", min: 50 * time.Millisecond, max: 100 * time.Millisecond},
++		{name: "huge Retry-After", retryAfter: "9999999999999", min: time.Hour, max: 90 * time.Minute},
++		{name: "Retry-After past int64", retryAfter: "99999999999999999999", min: 50 * time.Millisecond, max: 100 * time.Millisecond},
++	}
++	for _, tt := range tests {
++		t.Run(tt.name, func(t *testing.T) {
++			for range 100 {
++				pause := l.retryPause(tt.attempt, tt.retryAfter)
++				require.GreaterOrEqual(t, pause, tt.min)
++				require.LessOrEqual(t, pause, tt.max)
++			}
++		})
++	}
++}
++
++// blocking holds every request until released, and records how many it held
++// at once at most.
++type blocking struct {
++	release  chan struct{}
++	held     atomic.Int32
++	maxHeld  atomic.Int32
++	received atomic.Int32
++}
++
++func (h *blocking) ServeHTTP(w http.ResponseWriter, _ *http.Request) {
++	n := h.held.Add(1)
++	h.received.Add(1)
++	for {
++		m := h.maxHeld.Load()
++		if n <= m || h.maxHeld.CompareAndSwap(m, n) {
++			break
++		}
++	}
++	<-h.release
++	h.held.Add(-1)
++	w.Write([]byte(`{}`))
++}
++
++func TestRequestLimiterUnderLoad(t *testing.T) {
++	h := &blocking{release: make(chan struct{})}
++	cli := newRequestsClient(t, h, 2, time.Millisecond, time.Second)
++
++	const requests = 10
++	errs := make(chan error, requests)
++	get := func(ctx context.Context) {
++		var got map[string]any
++		errs <- cli.get(ctx, resourceAuthRequest, "req", &got)
++	}
++	for range requests - 1 {
++		go get(t.Context())
++	}
++	require.Eventually(t, func() bool {
++		return h.received.Load() == 2 && testutil.ToFloat64(cli.requests.waiting) == requests-3
++	}, 5*time.Second, time.Millisecond)
++	require.InDelta(t, 2, testutil.ToFloat64(cli.requests.inFlight), 0)
++
++	// A request waiting for a slot gives up when its context ends.
++	canceled, cancel := context.WithCancel(t.Context())
++	go get(canceled)
++	require.Eventually(t, func() bool {
++		return testutil.ToFloat64(cli.requests.waiting) == requests-2
++	}, 5*time.Second, time.Millisecond)
++	cancel()
++	require.Eventually(t, func() bool {
++		return testutil.ToFloat64(cli.requests.rejected) == 1 && testutil.ToFloat64(cli.requests.waiting) == requests-3
++	}, 5*time.Second, time.Millisecond)
++	require.Equal(t, int32(2), h.received.Load())
++
++	close(h.release)
++	var failed []error
++	for range requests {
++		if err := <-errs; err != nil {
++			failed = append(failed, err)
++		}
++	}
++	require.Len(t, failed, 1)
++	require.ErrorIs(t, failed[0], errNoSlot)
++	require.ErrorIs(t, failed[0], context.Canceled)
++	require.Equal(t, int32(2), h.maxHeld.Load())
++	require.Equal(t, int32(requests-1), h.received.Load())
++	require.Zero(t, testutil.ToFloat64(cli.requests.waiting))
++	require.Zero(t, testutil.ToFloat64(cli.requests.inFlight))
++}
++
++// The wait for a slot counts in the budget of the call.
++func TestRequestLimiterWaitWithinTheBudget(t *testing.T) {
++	cli := newRequestsClient(t, okHandler(http.StatusOK), 1, time.Millisecond, 50*time.Millisecond)
++	release, err := cli.requests.acquire(t.Context())
++	require.NoError(t, err)
++	defer release()
++
++	start := time.Now()
++	var got map[string]any
++	err = cli.get(t.Context(), resourceAuthRequest, "req", &got)
++	require.ErrorIs(t, err, errNoSlot)
++	require.ErrorIs(t, err, context.DeadlineExceeded)
++	require.Less(t, time.Since(start), 500*time.Millisecond)
++	require.InDelta(t, 1, testutil.ToFloat64(cli.requests.rejected), 0)
++
++	// The scrape of the connector metrics does not wait for a slot.
++	_, err = cli.ListConnectors(storage.WithoutRequestLimit(t.Context()))
++	require.NoError(t, err)
++}
++
++// A call, read or write, ends with its budget, whatever the API server does.
++func TestDoEndsWithTheBudget(t *testing.T) {
++	h := &blocking{release: make(chan struct{})}
++	cli := newRequestsClient(t, h, 4, time.Millisecond, 50*time.Millisecond)
++	t.Cleanup(func() { close(h.release) })
++
++	start := time.Now()
++	var got map[string]any
++	require.ErrorIs(t, cli.get(t.Context(), resourceAuthRequest, "req", &got), context.DeadlineExceeded)
++	require.ErrorIs(t, cli.put(t.Context(), resourceAuthRequest, "req", map[string]any{}), context.DeadlineExceeded)
++	require.Less(t, time.Since(start), time.Second)
++}
++
++func TestCreateSentTwice(t *testing.T) {
++	t.Run("own object", func(t *testing.T) {
++		api := &schemaAPI{objects: map[string][]byte{}}
++		cli := newRequestsClient(t, replayingAPI{api}, 4, time.Millisecond, time.Second)
++		ctx := t.Context()
++
++		require.NoError(t, cli.CreateAuthRequest(ctx, storage.AuthRequest{ID: "req", ClientID: "app", State: "s", Nonce: "n"}))
++		require.NoError(t, cli.CreateAuthCode(ctx, storage.AuthCode{ID: "code", ClientID: "app"}))
++		require.NoError(t, cli.CreateRefresh(ctx, storage.RefreshToken{ID: "rt", Token: "dh-test-secret-0123456789abcdef", ClientID: "app"}))
++		require.NoError(t, cli.CreateOfflineSessions(ctx, storage.OfflineSessions{UserID: "jane", ConnID: "ldap"}))
++
++		got, err := cli.GetAuthRequest(ctx, "req")
++		require.NoError(t, err)
++		require.Equal(t, "s", got.State)
++	})
++
++	t.Run("someone else's object", func(t *testing.T) {
++		api := &schemaAPI{objects: map[string][]byte{}}
++		cli := newRequestsClient(t, api, 4, time.Millisecond, time.Second)
++		ctx := t.Context()
++		name := cli.offlineTokenName("jane", "ldap")
++		// Created by the user-authn controller, without a create ID.
++		api.set(t, cli, resourceUserIdentity, name, `{"metadata": {"name": "`+name+`"}, "userID": "jane", "connectorID": "ldap"}`)
++
++		err := cli.CreateUserIdentity(ctx, storage.UserIdentity{UserID: "jane", ConnectorID: "ldap"})
++		require.ErrorIs(t, err, storage.ErrAlreadyExists)
++	})
++
++	t.Run("the same object created twice", func(t *testing.T) {
++		api := &schemaAPI{objects: map[string][]byte{}}
++		cli := newRequestsClient(t, api, 4, time.Millisecond, time.Second)
++		ctx := t.Context()
++		req := storage.AuthRequest{ID: "req", ClientID: "app", State: "s", Nonce: "n"}
++
++		require.NoError(t, cli.CreateAuthRequest(ctx, req))
++		require.ErrorIs(t, cli.CreateAuthRequest(ctx, req), storage.ErrAlreadyExists)
++	})
++}
++
++// replayingAPI sends every create to api twice and answers with the second
++// response, as when a transport sends a create again whose first answer was
++// lost.
++type replayingAPI struct{ api *schemaAPI }
++
++func (h replayingAPI) ServeHTTP(w http.ResponseWriter, r *http.Request) {
++	if r.Method != http.MethodPost {
++		h.api.ServeHTTP(w, r)
++		return
++	}
++	body, err := io.ReadAll(r.Body)
++	if err != nil {
++		w.WriteHeader(http.StatusBadRequest)
++		return
++	}
++	for _, rw := range []http.ResponseWriter{httptest.NewRecorder(), w} {
++		r.Body = io.NopCloser(bytes.NewReader(body))
++		h.api.ServeHTTP(rw, r)
++	}
++}
++
++func TestRequestMetrics(t *testing.T) {
++	cli := newRequestsClient(t, okHandler(http.StatusOK), 3, time.Millisecond, time.Second)
++	require.Equal(t, 8, testutil.CollectAndCount(cli))
++	require.InDelta(t, 3, testutil.ToFloat64(cli.requests.limit), 0)
++
++	var bare client
++	require.Zero(t, testutil.CollectAndCount(&bare))
++}
++
++// A write whose context is canceled while it is on its way still ends; a
++// deadline ends it. A read ends with its context (TestListConnectorsCancelsHTTPRequest).
++func TestSendKeepsWritesOnTheirWay(t *testing.T) {
++	t.Run("canceled", func(t *testing.T) {
++		h := &blocking{release: make(chan struct{})}
++		cli := newRequestsClient(t, h, 2, time.Millisecond, time.Second)
++
++		ctx, cancel := context.WithCancel(t.Context())
++		done := make(chan error, 1)
++		go func() { done <- cli.put(ctx, resourceAuthRequest, "req", map[string]any{}) }()
++		require.Eventually(t, func() bool { return h.held.Load() == 1 }, 5*time.Second, time.Millisecond)
++		cancel()
++		close(h.release)
++		require.NoError(t, <-done)
++	})
++
++	t.Run("deadline", func(t *testing.T) {
++		h := &blocking{release: make(chan struct{})}
++		cli := newRequestsClient(t, h, 2, time.Millisecond, time.Second)
++		// Before the server closes, which waits for the handler.
++		t.Cleanup(func() { close(h.release) })
++
++		ctx, cancel := context.WithTimeout(t.Context(), 50*time.Millisecond)
++		defer cancel()
++		err := cli.put(ctx, resourceAuthRequest, "req", map[string]any{})
++		require.ErrorIs(t, err, context.DeadlineExceeded)
++	})
++}
++
++// quotaConflict is the response of the API server to a create that the
++// ResourceQuota admission refused when its update of the quota conflicted.
++const quotaConflict = `{"kind": "Status", "apiVersion": "v1", "status": "Failure",
++	"message": "Operation cannot be fulfilled on resourcequotas \"authrequest-quota\": the object has been modified; please apply your changes to the latest version and try again",
++	"reason": "Conflict", "details": {"name": "authrequest-quota", "kind": "resourcequotas"}, "code": 409}`
++
++// refusing answers the first creates with 409 Conflict and body (-1 refuses
++// every one), without passing them to next, and records the bodies of the
++// creates and the number of reads; getStatus, if set, answers every read.
++type refusing struct {
++	mu        sync.Mutex
++	refuse    int
++	body      string
++	getStatus int
++	next      http.Handler
++	posts     [][]byte
++	gets      int
++}
++
++func (h *refusing) ServeHTTP(w http.ResponseWriter, r *http.Request) {
++	body, _ := io.ReadAll(r.Body)
++	h.mu.Lock()
++	refuse, getStatus := false, h.getStatus
++	switch r.Method {
++	case http.MethodPost:
++		h.posts = append(h.posts, body)
++		refuse = h.refuse != 0
++		if h.refuse > 0 {
++			h.refuse--
++		}
++	case http.MethodGet:
++		h.gets++
++	}
++	h.mu.Unlock()
++
++	switch {
++	case refuse:
++		w.WriteHeader(http.StatusConflict)
++		w.Write([]byte(h.body))
++	case r.Method == http.MethodGet && getStatus != 0:
++		w.WriteHeader(getStatus)
++	default:
++		r.Body = io.NopCloser(bytes.NewReader(body))
++		h.next.ServeHTTP(w, r)
++	}
++}
++
++func (h *refusing) counts() (posts, gets int) {
++	h.mu.Lock()
++	defer h.mu.Unlock()
++	return len(h.posts), h.gets
++}
++
++// A create the ResourceQuota admission refused with 409 Conflict was not
++// stored and is sent again, with the same body, within the budget of the call.
++func TestCreateRefusedBeforeItWasStored(t *testing.T) {
++	req := storage.AuthRequest{ID: "req", ClientID: "app", State: "s", Nonce: "n"}
++
++	t.Run("sent again", func(t *testing.T) {
++		api := &schemaAPI{objects: map[string][]byte{}}
++		h := &refusing{refuse: 2, body: quotaConflict, next: api}
++		cli := newRequestsClient(t, h, 4, time.Millisecond, 5*time.Second)
++
++		require.NoError(t, cli.CreateAuthRequest(t.Context(), req))
++		got, err := cli.GetAuthRequest(t.Context(), "req")
++		require.NoError(t, err)
++		require.Equal(t, "s", got.State)
++
++		posts, gets := h.counts()
++		require.Equal(t, 3, posts)
++		require.Equal(t, 1, gets, "a refusal reads no object, only GetAuthRequest does")
++		require.Equal(t, h.posts[0], h.posts[2], "every attempt sends the same create ID")
++		require.InDelta(t, 2, testutil.ToFloat64(cli.requests.refused.WithLabelValues("retried")), 0)
++	})
++
++	t.Run("past the budget", func(t *testing.T) {
++		h := &refusing{refuse: -1, body: quotaConflict, next: okHandler(http.StatusCreated)}
++		cli := newRequestsClient(t, h, 4, time.Millisecond, 100*time.Millisecond)
++
++		start := time.Now()
++		err := cli.CreateAuthRequest(t.Context(), req)
++		require.Error(t, err)
++		require.NotErrorIs(t, err, storage.ErrAlreadyExists, "the object was never stored")
++		require.True(t, isKubernetesAPIConflictError(err))
++		require.Less(t, time.Since(start), time.Second)
++		require.InDelta(t, 1, testutil.ToFloat64(cli.requests.refused.WithLabelValues("failed")), 0)
++	})
++
++	t.Run("without a limiter", func(t *testing.T) {
++		h := &refusing{refuse: 1, body: quotaConflict, next: okHandler(http.StatusCreated)}
++		cli := newRequestsClient(t, h, 4, time.Millisecond, time.Second)
++		cli.requests = nil
++
++		err := cli.CreateAuthRequest(t.Context(), req)
++		require.True(t, isKubernetesAPIConflictError(err))
++		posts, _ := h.counts()
++		require.Equal(t, 1, posts)
++	})
++}
++
++// A 409 Conflict without a status reads the object: none means that the
++// create was refused and is sent again; an object of someone else, one that
++// cannot be read, or a status saying that the object existed, fail the create.
++func TestCreateConflictWithoutStatus(t *testing.T) {
++	req := storage.AuthRequest{ID: "req", ClientID: "app", State: "s", Nonce: "n"}
++	alreadyExists := `{"kind": "Status", "apiVersion": "v1", "status": "Failure", "reason": "AlreadyExists",
++		"details": {"name": "req", "group": "dex.coreos.com", "kind": "authrequests"}, "code": 409}`
++
++	t.Run("no object", func(t *testing.T) {
++		api := &schemaAPI{objects: map[string][]byte{}}
++		h := &refusing{refuse: 1, body: "", next: api}
++		cli := newRequestsClient(t, h, 4, time.Millisecond, 5*time.Second)
++
++		require.NoError(t, cli.CreateAuthRequest(t.Context(), req))
++		posts, gets := h.counts()
++		require.Equal(t, 2, posts)
++		require.Equal(t, 1, gets)
++		require.Equal(t, h.posts[0], h.posts[1])
++	})
++
++	t.Run("no object past the budget", func(t *testing.T) {
++		api := &schemaAPI{objects: map[string][]byte{}}
++		h := &refusing{refuse: -1, body: "", next: api}
++		cli := newRequestsClient(t, h, 4, time.Millisecond, 100*time.Millisecond)
++
++		err := cli.CreateAuthRequest(t.Context(), req)
++		require.Error(t, err)
++		require.NotErrorIs(t, err, storage.ErrAlreadyExists, "the object does not exist")
++	})
++
++	t.Run("someone else's object", func(t *testing.T) {
++		api := &schemaAPI{objects: map[string][]byte{}}
++		h := &refusing{next: api}
++		cli := newRequestsClient(t, h, 4, time.Millisecond, 5*time.Second)
++		api.set(t, cli, resourceAuthRequest, "req", `{"metadata": {"name": "req"}}`)
++
++		require.ErrorIs(t, cli.CreateAuthRequest(t.Context(), req), storage.ErrAlreadyExists)
++		posts, _ := h.counts()
++		require.Equal(t, 1, posts)
++	})
++
++	t.Run("object that cannot be read", func(t *testing.T) {
++		h := &refusing{refuse: -1, body: "", getStatus: http.StatusInternalServerError, next: okHandler(http.StatusCreated)}
++		cli := newRequestsClient(t, h, 4, time.Millisecond, 5*time.Second)
++
++		require.ErrorIs(t, cli.CreateAuthRequest(t.Context(), req), storage.ErrAlreadyExists)
++		posts, _ := h.counts()
++		require.Equal(t, 1, posts)
++	})
++
++	t.Run("AlreadyExists, and the object is gone", func(t *testing.T) {
++		api := &schemaAPI{objects: map[string][]byte{}}
++		h := &refusing{refuse: -1, body: alreadyExists, next: api}
++		cli := newRequestsClient(t, h, 4, time.Millisecond, 5*time.Second)
++
++		require.ErrorIs(t, cli.CreateAuthRequest(t.Context(), req), storage.ErrAlreadyExists)
++		posts, gets := h.counts()
++		require.Equal(t, 1, posts)
++		require.Equal(t, 1, gets)
++	})
++}
++
++// Only a create is told apart by the reason of its 409: an update that
++// conflicts stays a conflict, and a create of a CRD that exists stays
++// ErrAlreadyExists.
++func TestConflictReasons(t *testing.T) {
++	for _, tc := range []struct {
++		name, method, body string
++		alreadyExists      bool
++	}{
++		{"update, Conflict", http.MethodPut, quotaConflict, false},
++		{"update, no status", http.MethodPut, "", false},
++		{"create, Conflict", http.MethodPost, quotaConflict, false},
++		{"create, AlreadyExists", http.MethodPost, `{"kind": "Status", "reason": "AlreadyExists", "code": 409}`, true},
++		{"create, no status", http.MethodPost, "", true},
++		{"create, not a Status", http.MethodPost, `{"reason": "Conflict"}`, true},
++	} {
++		t.Run(tc.name, func(t *testing.T) {
++			h := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
++				w.WriteHeader(http.StatusConflict)
++				w.Write([]byte(tc.body))
++			})
++			cli := newRequestsClient(t, h, 4, time.Millisecond, time.Second)
++
++			var err error
++			if tc.method == http.MethodPut {
++				err = cli.put(t.Context(), resourceAuthRequest, "req", map[string]any{})
++			} else {
++				err = cli.postResource(t.Context(), cli.apiVersion, cli.namespace, resourceAuthRequest, map[string]any{})
++			}
++			if tc.alreadyExists {
++				require.ErrorIs(t, err, storage.ErrAlreadyExists)
++				return
++			}
++			require.NotErrorIs(t, err, storage.ErrAlreadyExists)
++			require.True(t, isKubernetesAPIConflictError(err))
++		})
++	}
++}
+diff --git a/storage/kubernetes/storage.go b/storage/kubernetes/storage.go
+index 5b2984ff..9cb8a6df 100644
+--- a/storage/kubernetes/storage.go
++++ b/storage/kubernetes/storage.go
+@@ -112,14 +112,15 @@ func (c *Config) open(logger *slog.Logger, waitForResources bool) (*client, erro
+ 		return nil, fmt.Errorf("create client: %v", err)
+ 	}
+ 
+-	if err = cli.detectKubernetesVersion(); err != nil {
++	ctx, cancel := context.WithCancel(context.Background())
++
++	if err = cli.detectKubernetesVersion(ctx); err != nil {
++		cancel()
+ 		return nil, fmt.Errorf("cannot get kubernetes version: %v", err)
+ 	}
+ 
+-	ctx, cancel := context.WithCancel(context.Background())
+-
+ 	logger.Info("creating custom Kubernetes resources")
+-	if !cli.registerCustomResources() {
++	if !cli.registerCustomResources(ctx) {
+ 		if waitForResources {
+ 			cancel()
+ 			return nil, fmt.Errorf("failed creating custom resources")
+@@ -130,7 +131,7 @@ func (c *Config) open(logger *slog.Logger, waitForResources bool) (*client, erro
+ 		// once.
+ 		go func() {
+ 			for {
+-				if cli.registerCustomResources() {
++				if cli.registerCustomResources(ctx) {
+ 					return
+ 				}
+ 
+@@ -161,7 +162,7 @@ func (c *Config) open(logger *slog.Logger, waitForResources bool) (*client, erro
+ // It logs all errors, returning true if the resources were created successfully.
+ //
+ // Creating a custom resource does not mean that they'll be immediately available.
+-func (cli *client) registerCustomResources() bool {
++func (cli *client) registerCustomResources(ctx context.Context) bool {
+ 	definitions := customResourceDefinitions(cli.crdAPIVersion)
+ 
+ 	// First pass: collect all CRDs that don't exist
+@@ -170,7 +171,7 @@ func (cli *client) registerCustomResources() bool {
+ 	for _, r := range definitions {
+ 		var i interface{}
+ 		cli.logger.Info("checking if custom resource has already been created...", "object", r.ObjectMeta.Name)
+-		if err := cli.listN(r.Spec.Names.Plural, &i, 1); err == nil {
++		if err := cli.listN(ctx, r.Spec.Names.Plural, &i, 1); err == nil {
+ 			cli.logger.Info("the custom resource already available, skipping create", "object", r.ObjectMeta.Name)
+ 		} else {
+ 			cli.logger.Info("custom resource not found", "object", r.ObjectMeta.Name, "err", err)
+@@ -190,7 +191,7 @@ func (cli *client) registerCustomResources() bool {
+ 			cli.logger.Info("crdHandling is 'ensure', attempting to create missing CRDs")
+ 			for _, r := range missingCRDs {
+ 				resourceName := r.ObjectMeta.Name
+-				err := cli.postResource(cli.crdAPIVersion, "", "customresourcedefinitions", r)
++				err := cli.postResource(ctx, cli.crdAPIVersion, "", "customresourcedefinitions", r)
+ 				if err != nil {
+ 					if !errors.Is(err, storage.ErrAlreadyExists) {
+ 						cli.logger.Error("failed to create custom resource", "object", resourceName, "err", err)
+@@ -220,7 +221,7 @@ func (cli *client) waitForCRDs(ctx context.Context) error {
+ 
+ 	for _, crd := range customResourceDefinitions(cli.crdAPIVersion) {
+ 		for {
+-			err := cli.isCRDReady(crd.Name)
++			err := cli.isCRDReady(ctx, crd.Name)
+ 			if err == nil {
+ 				break
+ 			}
+@@ -238,9 +239,9 @@ func (cli *client) waitForCRDs(ctx context.Context) error {
+ }
+ 
+ // isCRDReady determines if a CRD is ready by inspecting its conditions.
+-func (cli *client) isCRDReady(name string) error {
++func (cli *client) isCRDReady(ctx context.Context, name string) error {
+ 	var r k8sapi.CustomResourceDefinition
+-	err := cli.getResource(cli.crdAPIVersion, "", "customresourcedefinitions", name, &r)
++	err := cli.getResource(ctx, cli.crdAPIVersion, "", "customresourcedefinitions", name, &r)
+ 	if err != nil {
+ 		return fmt.Errorf("get crd %s: %v", name, err)
+ 	}
+@@ -263,36 +264,36 @@ func (cli *client) Close() error {
+ }
+ 
+ func (cli *client) CreateAuthRequest(ctx context.Context, a storage.AuthRequest) error {
+-	return cli.post(resourceAuthRequest, cli.fromStorageAuthRequest(a))
++	return cli.post(ctx, resourceAuthRequest, cli.fromStorageAuthRequest(a))
+ }
+ 
+ func (cli *client) CreateClient(ctx context.Context, c storage.Client) error {
+-	return cli.post(resourceClient, cli.fromStorageClient(c))
++	return cli.post(ctx, resourceClient, cli.fromStorageClient(c))
+ }
+ 
+ func (cli *client) CreateAuthCode(ctx context.Context, c storage.AuthCode) error {
+-	return cli.post(resourceAuthCode, cli.fromStorageAuthCode(c))
++	return cli.post(ctx, resourceAuthCode, cli.fromStorageAuthCode(c))
+ }
+ 
+ func (cli *client) CreatePassword(ctx context.Context, p storage.Password) error {
+-	return cli.post(resourcePassword, cli.fromStoragePassword(p))
++	return cli.post(ctx, resourcePassword, cli.fromStoragePassword(p))
+ }
+ 
+ func (cli *client) CreateRefresh(ctx context.Context, r storage.RefreshToken) error {
+-	return cli.post(resourceRefreshToken, cli.fromStorageRefreshToken(r))
++	return cli.post(ctx, resourceRefreshToken, cli.fromStorageRefreshToken(r))
+ }
+ 
+ func (cli *client) CreateOfflineSessions(ctx context.Context, o storage.OfflineSessions) error {
+-	return cli.post(resourceOfflineSessions, cli.fromStorageOfflineSessions(o))
++	return cli.post(ctx, resourceOfflineSessions, cli.fromStorageOfflineSessions(o))
+ }
+ 
+ func (cli *client) CreateConnector(ctx context.Context, c storage.Connector) error {
+-	return cli.post(resourceConnector, cli.fromStorageConnector(c))
++	return cli.post(ctx, resourceConnector, cli.fromStorageConnector(c))
+ }
+ 
+ func (cli *client) GetAuthRequest(ctx context.Context, id string) (storage.AuthRequest, error) {
+ 	var req AuthRequest
+-	if err := cli.get(resourceAuthRequest, id, &req); err != nil {
++	if err := cli.get(ctx, resourceAuthRequest, id, &req); err != nil {
+ 		return storage.AuthRequest{}, err
+ 	}
+ 	return toStorageAuthRequest(req), nil
+@@ -300,24 +301,24 @@ func (cli *client) GetAuthRequest(ctx context.Context, id string) (storage.AuthR
+ 
+ func (cli *client) GetAuthCode(ctx context.Context, id string) (storage.AuthCode, error) {
+ 	var code AuthCode
+-	if err := cli.get(resourceAuthCode, id, &code); err != nil {
++	if err := cli.get(ctx, resourceAuthCode, id, &code); err != nil {
+ 		return storage.AuthCode{}, err
+ 	}
+ 	return toStorageAuthCode(code), nil
+ }
+ 
+ func (cli *client) GetClient(ctx context.Context, id string) (storage.Client, error) {
+-	c, err := cli.getClient(id)
++	c, err := cli.getClient(ctx, id)
+ 	if err != nil {
+ 		return storage.Client{}, err
+ 	}
+ 	return toStorageClient(c), nil
+ }
+ 
+-func (cli *client) getClient(id string) (Client, error) {
++func (cli *client) getClient(ctx context.Context, id string) (Client, error) {
+ 	var c Client
+ 	name := cli.idToName(id)
+-	if err := cli.get(resourceClient, name, &c); err != nil {
++	if err := cli.get(ctx, resourceClient, name, &c); err != nil {
+ 		return Client{}, err
+ 	}
+ 	if c.ID != id {
+@@ -327,19 +328,19 @@ func (cli *client) getClient(id string) (Client, error) {
+ }
+ 
+ func (cli *client) GetPassword(ctx context.Context, email string) (storage.Password, error) {
+-	p, err := cli.getPassword(email)
++	p, err := cli.getPassword(ctx, email)
+ 	if err != nil {
+ 		return storage.Password{}, err
+ 	}
+ 	return toStoragePassword(p), nil
+ }
+ 
+-func (cli *client) getPassword(email string) (Password, error) {
++func (cli *client) getPassword(ctx context.Context, email string) (Password, error) {
+ 	// TODO(ericchiang): Figure out whose job it is to lowercase emails.
+ 	email = strings.ToLower(email)
+ 	var p Password
+ 	name := cli.idToName(email)
+-	if err := cli.get(resourcePassword, name, &p); err != nil {
++	if err := cli.get(ctx, resourcePassword, name, &p); err != nil {
+ 		return Password{}, err
+ 	}
+ 	if email != p.Email {
+@@ -350,36 +351,36 @@ func (cli *client) getPassword(email string) (Password, error) {
+ 
+ func (cli *client) GetKeys(ctx context.Context) (storage.Keys, error) {
+ 	var keys Keys
+-	if err := cli.get(resourceKeys, keysName, &keys); err != nil {
++	if err := cli.get(ctx, resourceKeys, keysName, &keys); err != nil {
+ 		return storage.Keys{}, err
+ 	}
+ 	return toStorageKeys(keys), nil
+ }
+ 
+ func (cli *client) GetRefresh(ctx context.Context, id string) (storage.RefreshToken, error) {
+-	r, err := cli.getRefreshToken(id)
++	r, err := cli.getRefreshToken(ctx, id)
+ 	if err != nil {
+ 		return storage.RefreshToken{}, err
+ 	}
+ 	return toStorageRefreshToken(r), nil
+ }
+ 
+-func (cli *client) getRefreshToken(id string) (r RefreshToken, err error) {
+-	err = cli.get(resourceRefreshToken, id, &r)
++func (cli *client) getRefreshToken(ctx context.Context, id string) (r RefreshToken, err error) {
++	err = cli.get(ctx, resourceRefreshToken, id, &r)
+ 	return
+ }
+ 
+ func (cli *client) GetOfflineSessions(ctx context.Context, userID string, connID string) (storage.OfflineSessions, error) {
+-	o, err := cli.getOfflineSessions(userID, connID)
++	o, err := cli.getOfflineSessions(ctx, userID, connID)
+ 	if err != nil {
+ 		return storage.OfflineSessions{}, err
+ 	}
+ 	return toStorageOfflineSessions(o), nil
+ }
+ 
+-func (cli *client) getOfflineSessions(userID string, connID string) (o OfflineSessions, err error) {
++func (cli *client) getOfflineSessions(ctx context.Context, userID string, connID string) (o OfflineSessions, err error) {
+ 	name := cli.offlineTokenName(userID, connID)
+-	if err = cli.get(resourceOfflineSessions, name, &o); err != nil {
++	if err = cli.get(ctx, resourceOfflineSessions, name, &o); err != nil {
+ 		return OfflineSessions{}, err
+ 	}
+ 	if userID != o.UserID || connID != o.ConnID {
+@@ -390,7 +391,7 @@ func (cli *client) getOfflineSessions(userID string, connID string) (o OfflineSe
+ 
+ func (cli *client) GetConnector(ctx context.Context, id string) (storage.Connector, error) {
+ 	var c Connector
+-	if err := cli.get(resourceConnector, id, &c); err != nil {
++	if err := cli.get(ctx, resourceConnector, id, &c); err != nil {
+ 		return storage.Connector{}, err
+ 	}
+ 	return toStorageConnector(c), nil
+@@ -406,7 +407,7 @@ func (cli *client) ListRefreshTokens(ctx context.Context) ([]storage.RefreshToke
+ 
+ func (cli *client) ListPasswords(ctx context.Context) (passwords []storage.Password, err error) {
+ 	var passwordList PasswordList
+-	if err = cli.list(resourcePassword, &passwordList); err != nil {
++	if err = cli.list(ctx, resourcePassword, &passwordList); err != nil {
+ 		return passwords, fmt.Errorf("failed to list passwords: %v", err)
+ 	}
+ 
+@@ -419,7 +420,7 @@ func (cli *client) ListPasswords(ctx context.Context) (passwords []storage.Passw
+ 
+ func (cli *client) ListConnectors(ctx context.Context) (connectors []storage.Connector, err error) {
+ 	var connectorList ConnectorList
+-	if err = cli.list(resourceConnector, &connectorList); err != nil {
++	if err = cli.list(ctx, resourceConnector, &connectorList); err != nil {
+ 		return connectors, fmt.Errorf("failed to list connectors: %v", err)
+ 	}
+ 
+@@ -432,58 +433,58 @@ func (cli *client) ListConnectors(ctx context.Context) (connectors []storage.Con
+ }
+ 
+ func (cli *client) DeleteAuthRequest(ctx context.Context, id string) error {
+-	return cli.delete(resourceAuthRequest, id)
++	return cli.delete(ctx, resourceAuthRequest, id)
+ }
+ 
+ func (cli *client) DeleteAuthCode(ctx context.Context, code string) error {
+-	return cli.delete(resourceAuthCode, code)
++	return cli.delete(ctx, resourceAuthCode, code)
+ }
+ 
+ func (cli *client) DeleteClient(ctx context.Context, id string) error {
+ 	// Check for hash collision.
+-	c, err := cli.getClient(id)
++	c, err := cli.getClient(ctx, id)
+ 	if err != nil {
+ 		return err
+ 	}
+-	return cli.delete(resourceClient, c.ObjectMeta.Name)
++	return cli.delete(ctx, resourceClient, c.ObjectMeta.Name)
+ }
+ 
+ func (cli *client) DeleteRefresh(ctx context.Context, id string) error {
+-	return cli.delete(resourceRefreshToken, id)
++	return cli.delete(ctx, resourceRefreshToken, id)
+ }
+ 
+ func (cli *client) DeletePassword(ctx context.Context, email string) error {
+ 	// Check for hash collision.
+-	p, err := cli.getPassword(email)
++	p, err := cli.getPassword(ctx, email)
+ 	if err != nil {
+ 		return err
+ 	}
+-	return cli.delete(resourcePassword, p.ObjectMeta.Name)
++	return cli.delete(ctx, resourcePassword, p.ObjectMeta.Name)
+ }
+ 
+ func (cli *client) DeleteOfflineSessions(ctx context.Context, userID string, connID string) error {
+ 	// Check for hash collision.
+-	o, err := cli.getOfflineSessions(userID, connID)
++	o, err := cli.getOfflineSessions(ctx, userID, connID)
+ 	if err != nil {
+ 		return err
+ 	}
+-	return cli.delete(resourceOfflineSessions, o.ObjectMeta.Name)
++	return cli.delete(ctx, resourceOfflineSessions, o.ObjectMeta.Name)
+ }
+ 
+ func (cli *client) DeleteConnector(ctx context.Context, id string) error {
+-	return cli.delete(resourceConnector, id)
++	return cli.delete(ctx, resourceConnector, id)
+ }
+ 
+ func (cli *client) UpdateRefreshToken(ctx context.Context, id string, updater func(old storage.RefreshToken) (storage.RefreshToken, error)) error {
+ 	lock := newRefreshTokenLock(cli)
+ 
+-	if err := lock.Lock(id); err != nil {
++	if err := lock.Lock(ctx, id); err != nil {
+ 		return err
+ 	}
+-	defer lock.Unlock(id)
++	defer lock.Unlock(ctx, id)
+ 
+ 	return retryOnConflict(ctx, func() error {
+-		r, err := cli.getRefreshToken(id)
++		r, err := cli.getRefreshToken(ctx, id)
+ 		if err != nil {
+ 			return err
+ 		}
+@@ -497,12 +498,12 @@ func (cli *client) UpdateRefreshToken(ctx context.Context, id string, updater fu
+ 		newToken := cli.fromStorageRefreshToken(updated)
+ 		newToken.ObjectMeta = r.ObjectMeta
+ 
+-		return cli.put(resourceRefreshToken, r.ObjectMeta.Name, newToken)
++		return cli.put(ctx, resourceRefreshToken, r.ObjectMeta.Name, newToken)
+ 	})
+ }
+ 
+ func (cli *client) UpdateClient(ctx context.Context, id string, updater func(old storage.Client) (storage.Client, error)) error {
+-	c, err := cli.getClient(id)
++	c, err := cli.getClient(ctx, id)
+ 	if err != nil {
+ 		return err
+ 	}
+@@ -515,11 +516,11 @@ func (cli *client) UpdateClient(ctx context.Context, id string, updater func(old
+ 
+ 	newClient := cli.fromStorageClient(updated)
+ 	newClient.ObjectMeta = c.ObjectMeta
+-	return cli.put(resourceClient, c.ObjectMeta.Name, newClient)
++	return cli.put(ctx, resourceClient, c.ObjectMeta.Name, newClient)
+ }
+ 
+ func (cli *client) UpdatePassword(ctx context.Context, email string, updater func(old storage.Password) (storage.Password, error)) error {
+-	p, err := cli.getPassword(email)
++	p, err := cli.getPassword(ctx, email)
+ 	if err != nil {
+ 		return err
+ 	}
+@@ -532,12 +533,12 @@ func (cli *client) UpdatePassword(ctx context.Context, email string, updater fun
+ 
+ 	newPassword := cli.fromStoragePassword(updated)
+ 	newPassword.ObjectMeta = p.ObjectMeta
+-	return cli.put(resourcePassword, p.ObjectMeta.Name, newPassword)
++	return cli.put(ctx, resourcePassword, p.ObjectMeta.Name, newPassword)
+ }
+ 
+ func (cli *client) UpdateOfflineSessions(ctx context.Context, userID string, connID string, updater func(old storage.OfflineSessions) (storage.OfflineSessions, error)) error {
+ 	return retryOnConflict(ctx, func() error {
+-		o, err := cli.getOfflineSessions(userID, connID)
++		o, err := cli.getOfflineSessions(ctx, userID, connID)
+ 		if err != nil {
+ 			return err
+ 		}
+@@ -549,14 +550,14 @@ func (cli *client) UpdateOfflineSessions(ctx context.Context, userID string, con
+ 
+ 		newOfflineSessions := cli.fromStorageOfflineSessions(updated)
+ 		newOfflineSessions.ObjectMeta = o.ObjectMeta
+-		return cli.put(resourceOfflineSessions, o.ObjectMeta.Name, newOfflineSessions)
++		return cli.put(ctx, resourceOfflineSessions, o.ObjectMeta.Name, newOfflineSessions)
+ 	})
+ }
+ 
+ func (cli *client) UpdateKeys(ctx context.Context, updater func(old storage.Keys) (storage.Keys, error)) error {
+ 	firstUpdate := false
+ 	var keys Keys
+-	if err := cli.get(resourceKeys, keysName, &keys); err != nil {
++	if err := cli.get(ctx, resourceKeys, keysName, &keys); err != nil {
+ 		if err != storage.ErrNotFound {
+ 			return err
+ 		}
+@@ -575,7 +576,7 @@ func (cli *client) UpdateKeys(ctx context.Context, updater func(old storage.Keys
+ 
+ 	newKeys := cli.fromStorageKeys(updated)
+ 	if firstUpdate {
+-		err = cli.post(resourceKeys, newKeys)
++		err = cli.post(ctx, resourceKeys, newKeys)
+ 		if err != nil && errors.Is(err, storage.ErrAlreadyExists) {
+ 			// We need to tolerate conflicts here in case of HA mode.
+ 			cli.logger.Debug("Keys creation failed. It is possible that keys have already been created by another dex instance.", "err", err)
+@@ -587,7 +588,7 @@ func (cli *client) UpdateKeys(ctx context.Context, updater func(old storage.Keys
+ 
+ 	newKeys.ObjectMeta = keys.ObjectMeta
+ 
+-	err = cli.put(resourceKeys, keysName, newKeys)
++	err = cli.put(ctx, resourceKeys, keysName, newKeys)
+ 	if isKubernetesAPIConflictError(err) {
+ 		// We need to tolerate conflicts here in case of HA mode.
+ 		// Dex instances run keys rotation at the same time because they use SigningKey.nextRotation CR field as a trigger.
+@@ -600,7 +601,7 @@ func (cli *client) UpdateKeys(ctx context.Context, updater func(old storage.Keys
+ 
+ func (cli *client) UpdateAuthRequest(ctx context.Context, id string, updater func(a storage.AuthRequest) (storage.AuthRequest, error)) error {
+ 	var req AuthRequest
+-	err := cli.get(resourceAuthRequest, id, &req)
++	err := cli.get(ctx, resourceAuthRequest, id, &req)
+ 	if err != nil {
+ 		return err
+ 	}
+@@ -612,13 +613,13 @@ func (cli *client) UpdateAuthRequest(ctx context.Context, id string, updater fun
+ 
+ 	newReq := cli.fromStorageAuthRequest(updated)
+ 	newReq.ObjectMeta = req.ObjectMeta
+-	return cli.put(resourceAuthRequest, id, newReq)
++	return cli.put(ctx, resourceAuthRequest, id, newReq)
+ }
+ 
+ func (cli *client) UpdateConnector(ctx context.Context, id string, updater func(a storage.Connector) (storage.Connector, error)) error {
+ 	return retryOnConflict(ctx, func() error {
+ 		var c Connector
+-		err := cli.get(resourceConnector, id, &c)
++		err := cli.get(ctx, resourceConnector, id, &c)
+ 		if err != nil {
+ 			return err
+ 		}
+@@ -630,20 +631,20 @@ func (cli *client) UpdateConnector(ctx context.Context, id string, updater func(
+ 
+ 		newConn := cli.fromStorageConnector(updated)
+ 		newConn.ObjectMeta = c.ObjectMeta
+-		return cli.put(resourceConnector, id, newConn)
++		return cli.put(ctx, resourceConnector, id, newConn)
+ 	})
+ }
+ 
+ func (cli *client) GarbageCollect(ctx context.Context, now time.Time) (result storage.GCResult, err error) {
+ 	var authRequests AuthRequestList
+-	if err := cli.listN(resourceAuthRequest, &authRequests, gcResultLimit); err != nil {
++	if err := cli.listN(ctx, resourceAuthRequest, &authRequests, gcResultLimit); err != nil {
+ 		return result, fmt.Errorf("failed to list auth requests: %v", err)
+ 	}
+ 
+ 	var delErr error
+ 	for _, authRequest := range authRequests.AuthRequests {
+ 		if now.After(authRequest.Expiry) {
+-			if err := cli.delete(resourceAuthRequest, authRequest.ObjectMeta.Name); err != nil && !errors.Is(err, storage.ErrNotFound) {
++			if err := cli.delete(ctx, resourceAuthRequest, authRequest.ObjectMeta.Name); err != nil && !errors.Is(err, storage.ErrNotFound) {
+ 				cli.logger.Error("failed to delete auth request", "err", err)
+ 				delErr = fmt.Errorf("failed to delete auth request: %v", err)
+ 			}
+@@ -655,13 +656,13 @@ func (cli *client) GarbageCollect(ctx context.Context, now time.Time) (result st
+ 	}
+ 
+ 	var authCodes AuthCodeList
+-	if err := cli.listN(resourceAuthCode, &authCodes, gcResultLimit); err != nil {
++	if err := cli.listN(ctx, resourceAuthCode, &authCodes, gcResultLimit); err != nil {
+ 		return result, fmt.Errorf("failed to list auth codes: %v", err)
+ 	}
+ 
+ 	for _, authCode := range authCodes.AuthCodes {
+ 		if now.After(authCode.Expiry) {
+-			if err := cli.delete(resourceAuthCode, authCode.ObjectMeta.Name); err != nil && !errors.Is(err, storage.ErrNotFound) {
++			if err := cli.delete(ctx, resourceAuthCode, authCode.ObjectMeta.Name); err != nil && !errors.Is(err, storage.ErrNotFound) {
+ 				cli.logger.Error("failed to delete auth code", "err", err)
+ 				delErr = fmt.Errorf("failed to delete auth code: %v", err)
+ 			}
+@@ -670,13 +671,13 @@ func (cli *client) GarbageCollect(ctx context.Context, now time.Time) (result st
+ 	}
+ 
+ 	var deviceRequests DeviceRequestList
+-	if err := cli.listN(resourceDeviceRequest, &deviceRequests, gcResultLimit); err != nil {
++	if err := cli.listN(ctx, resourceDeviceRequest, &deviceRequests, gcResultLimit); err != nil {
+ 		return result, fmt.Errorf("failed to list device requests: %v", err)
+ 	}
+ 
+ 	for _, deviceRequest := range deviceRequests.DeviceRequests {
+ 		if now.After(deviceRequest.Expiry) {
+-			if err := cli.delete(resourceDeviceRequest, deviceRequest.ObjectMeta.Name); err != nil && !errors.Is(err, storage.ErrNotFound) {
++			if err := cli.delete(ctx, resourceDeviceRequest, deviceRequest.ObjectMeta.Name); err != nil && !errors.Is(err, storage.ErrNotFound) {
+ 				cli.logger.Error("failed to delete device request", "err", err)
+ 				delErr = fmt.Errorf("failed to delete device request: %v", err)
+ 			}
+@@ -685,13 +686,13 @@ func (cli *client) GarbageCollect(ctx context.Context, now time.Time) (result st
+ 	}
+ 
+ 	var deviceTokens DeviceTokenList
+-	if err := cli.listN(resourceDeviceToken, &deviceTokens, gcResultLimit); err != nil {
++	if err := cli.listN(ctx, resourceDeviceToken, &deviceTokens, gcResultLimit); err != nil {
+ 		return result, fmt.Errorf("failed to list device tokens: %v", err)
+ 	}
+ 
+ 	for _, deviceToken := range deviceTokens.DeviceTokens {
+ 		if now.After(deviceToken.Expiry) {
+-			if err := cli.delete(resourceDeviceToken, deviceToken.ObjectMeta.Name); err != nil && !errors.Is(err, storage.ErrNotFound) {
++			if err := cli.delete(ctx, resourceDeviceToken, deviceToken.ObjectMeta.Name); err != nil && !errors.Is(err, storage.ErrNotFound) {
+ 				cli.logger.Error("failed to delete device token", "err", err)
+ 				delErr = fmt.Errorf("failed to delete device token: %v", err)
+ 			}
+@@ -700,13 +701,13 @@ func (cli *client) GarbageCollect(ctx context.Context, now time.Time) (result st
+ 	}
+ 
+ 	var authSessions AuthSessionList
+-	if err := cli.listN(resourceAuthSession, &authSessions, gcResultLimit); err != nil {
++	if err := cli.listN(ctx, resourceAuthSession, &authSessions, gcResultLimit); err != nil {
+ 		return result, fmt.Errorf("failed to list auth sessions: %v", err)
+ 	}
+ 
+ 	for _, authSession := range authSessions.AuthSessions {
+ 		if now.After(authSession.AbsoluteExpiry) || now.After(authSession.IdleExpiry) {
+-			if err := cli.delete(resourceAuthSession, authSession.ObjectMeta.Name); err != nil && !errors.Is(err, storage.ErrNotFound) {
++			if err := cli.delete(ctx, resourceAuthSession, authSession.ObjectMeta.Name); err != nil && !errors.Is(err, storage.ErrNotFound) {
+ 				cli.logger.Error("failed to delete auth session", "err", err)
+ 				delErr = fmt.Errorf("failed to delete auth session: %v", err)
+ 			} else {
+@@ -722,37 +723,37 @@ func (cli *client) GarbageCollect(ctx context.Context, now time.Time) (result st
+ }
+ 
+ func (cli *client) CreateDeviceRequest(ctx context.Context, d storage.DeviceRequest) error {
+-	return cli.post(resourceDeviceRequest, cli.fromStorageDeviceRequest(d))
++	return cli.post(ctx, resourceDeviceRequest, cli.fromStorageDeviceRequest(d))
+ }
+ 
+ func (cli *client) GetDeviceRequest(ctx context.Context, userCode string) (storage.DeviceRequest, error) {
+ 	var req DeviceRequest
+-	if err := cli.get(resourceDeviceRequest, strings.ToLower(userCode), &req); err != nil {
++	if err := cli.get(ctx, resourceDeviceRequest, strings.ToLower(userCode), &req); err != nil {
+ 		return storage.DeviceRequest{}, err
+ 	}
+ 	return toStorageDeviceRequest(req), nil
+ }
+ 
+ func (cli *client) CreateDeviceToken(ctx context.Context, t storage.DeviceToken) error {
+-	return cli.post(resourceDeviceToken, cli.fromStorageDeviceToken(t))
++	return cli.post(ctx, resourceDeviceToken, cli.fromStorageDeviceToken(t))
+ }
+ 
+ func (cli *client) GetDeviceToken(ctx context.Context, deviceCode string) (storage.DeviceToken, error) {
+ 	var token DeviceToken
+-	if err := cli.get(resourceDeviceToken, deviceCode, &token); err != nil {
++	if err := cli.get(ctx, resourceDeviceToken, deviceCode, &token); err != nil {
+ 		return storage.DeviceToken{}, err
+ 	}
+ 	return toStorageDeviceToken(token), nil
+ }
+ 
+-func (cli *client) getDeviceToken(deviceCode string) (t DeviceToken, err error) {
+-	err = cli.get(resourceDeviceToken, deviceCode, &t)
++func (cli *client) getDeviceToken(ctx context.Context, deviceCode string) (t DeviceToken, err error) {
++	err = cli.get(ctx, resourceDeviceToken, deviceCode, &t)
+ 	return
+ }
+ 
+ func (cli *client) UpdateDeviceToken(ctx context.Context, deviceCode string, updater func(old storage.DeviceToken) (storage.DeviceToken, error)) error {
+ 	return retryOnConflict(ctx, func() error {
+-		r, err := cli.getDeviceToken(deviceCode)
++		r, err := cli.getDeviceToken(ctx, deviceCode)
+ 		if err != nil {
+ 			return err
+ 		}
+@@ -764,25 +765,25 @@ func (cli *client) UpdateDeviceToken(ctx context.Context, deviceCode string, upd
+ 
+ 		newToken := cli.fromStorageDeviceToken(updated)
+ 		newToken.ObjectMeta = r.ObjectMeta
+-		return cli.put(resourceDeviceToken, r.ObjectMeta.Name, newToken)
++		return cli.put(ctx, resourceDeviceToken, r.ObjectMeta.Name, newToken)
+ 	})
+ }
+ 
+ func (cli *client) CreateUserIdentity(ctx context.Context, u storage.UserIdentity) error {
+-	return cli.post(resourceUserIdentity, cli.fromStorageUserIdentity(u))
++	return cli.post(ctx, resourceUserIdentity, cli.fromStorageUserIdentity(u))
+ }
+ 
+ func (cli *client) GetUserIdentity(ctx context.Context, userID, connectorID string) (storage.UserIdentity, error) {
+-	u, err := cli.getUserIdentity(userID, connectorID)
++	u, err := cli.getUserIdentity(ctx, userID, connectorID)
+ 	if err != nil {
+ 		return storage.UserIdentity{}, err
+ 	}
+ 	return toStorageUserIdentity(u)
+ }
+ 
+-func (cli *client) getUserIdentity(userID, connectorID string) (u UserIdentity, err error) {
++func (cli *client) getUserIdentity(ctx context.Context, userID, connectorID string) (u UserIdentity, err error) {
+ 	name := cli.offlineTokenName(userID, connectorID)
+-	if err = cli.get(resourceUserIdentity, name, &u); err != nil {
++	if err = cli.get(ctx, resourceUserIdentity, name, &u); err != nil {
+ 		return UserIdentity{}, err
+ 	}
+ 	if userID != u.UserID || connectorID != u.ConnectorID {
+@@ -793,7 +794,7 @@ func (cli *client) getUserIdentity(userID, connectorID string) (u UserIdentity,
+ 
+ func (cli *client) UpdateUserIdentity(ctx context.Context, userID, connectorID string, updater func(old storage.UserIdentity) (storage.UserIdentity, error)) error {
+ 	return retryOnConflict(ctx, func() error {
+-		u, err := cli.getUserIdentity(userID, connectorID)
++		u, err := cli.getUserIdentity(ctx, userID, connectorID)
+ 		if err != nil {
+ 			return err
+ 		}
+@@ -809,22 +810,22 @@ func (cli *client) UpdateUserIdentity(ctx context.Context, userID, connectorID s
+ 
+ 		newUserIdentity := cli.fromStorageUserIdentity(updated)
+ 		newUserIdentity.ObjectMeta = u.ObjectMeta
+-		return cli.put(resourceUserIdentity, u.ObjectMeta.Name, newUserIdentity)
++		return cli.put(ctx, resourceUserIdentity, u.ObjectMeta.Name, newUserIdentity)
+ 	})
+ }
+ 
+ func (cli *client) DeleteUserIdentity(ctx context.Context, userID, connectorID string) error {
+ 	// Check for hash collision.
+-	u, err := cli.getUserIdentity(userID, connectorID)
++	u, err := cli.getUserIdentity(ctx, userID, connectorID)
+ 	if err != nil {
+ 		return err
+ 	}
+-	return cli.delete(resourceUserIdentity, u.ObjectMeta.Name)
++	return cli.delete(ctx, resourceUserIdentity, u.ObjectMeta.Name)
+ }
+ 
+ func (cli *client) ListUserIdentities(ctx context.Context) ([]storage.UserIdentity, error) {
+ 	var userIdentityList UserIdentityList
+-	if err := cli.list(resourceUserIdentity, &userIdentityList); err != nil {
++	if err := cli.list(ctx, resourceUserIdentity, &userIdentityList); err != nil {
+ 		return nil, fmt.Errorf("failed to list user identities: %v", err)
+ 	}
+ 
+@@ -840,19 +841,19 @@ func (cli *client) ListUserIdentities(ctx context.Context) ([]storage.UserIdenti
+ }
+ 
+ func (cli *client) CreateAuthSession(ctx context.Context, s storage.AuthSession) error {
+-	return cli.post(resourceAuthSession, cli.fromStorageAuthSession(s))
++	return cli.post(ctx, resourceAuthSession, cli.fromStorageAuthSession(s))
+ }
+ 
+-func (cli *client) getAuthSession(id string) (AuthSession, error) {
++func (cli *client) getAuthSession(ctx context.Context, id string) (AuthSession, error) {
+ 	var s AuthSession
+-	if err := cli.get(resourceAuthSession, id, &s); err != nil {
++	if err := cli.get(ctx, resourceAuthSession, id, &s); err != nil {
+ 		return AuthSession{}, err
+ 	}
+ 	return s, nil
+ }
+ 
+ func (cli *client) GetAuthSession(ctx context.Context, id string) (storage.AuthSession, error) {
+-	s, err := cli.getAuthSession(id)
++	s, err := cli.getAuthSession(ctx, id)
+ 	if err != nil {
+ 		return storage.AuthSession{}, err
+ 	}
+@@ -861,7 +862,7 @@ func (cli *client) GetAuthSession(ctx context.Context, id string) (storage.AuthS
+ 
+ func (cli *client) UpdateAuthSession(ctx context.Context, id string, updater func(old storage.AuthSession) (storage.AuthSession, error)) error {
+ 	return retryOnConflict(ctx, func() error {
+-		s, err := cli.getAuthSession(id)
++		s, err := cli.getAuthSession(ctx, id)
+ 		if err != nil {
+ 			return err
+ 		}
+@@ -873,13 +874,13 @@ func (cli *client) UpdateAuthSession(ctx context.Context, id string, updater fun
+ 
+ 		newSession := cli.fromStorageAuthSession(updated)
+ 		newSession.ObjectMeta = s.ObjectMeta
+-		return cli.put(resourceAuthSession, s.ObjectMeta.Name, newSession)
++		return cli.put(ctx, resourceAuthSession, s.ObjectMeta.Name, newSession)
+ 	})
+ }
+ 
+ func (cli *client) ListAuthSessions(ctx context.Context) ([]storage.AuthSession, error) {
+ 	var authSessionList AuthSessionList
+-	if err := cli.list(resourceAuthSession, &authSessionList); err != nil {
++	if err := cli.list(ctx, resourceAuthSession, &authSessionList); err != nil {
+ 		return nil, fmt.Errorf("failed to list auth sessions: %v", err)
+ 	}
+ 
+@@ -892,11 +893,11 @@ func (cli *client) ListAuthSessions(ctx context.Context) ([]storage.AuthSession,
+ }
+ 
+ func (cli *client) DeleteAuthSession(ctx context.Context, id string) error {
+-	s, err := cli.getAuthSession(id)
++	s, err := cli.getAuthSession(ctx, id)
+ 	if err != nil {
+ 		return err
+ 	}
+-	return cli.delete(resourceAuthSession, s.ObjectMeta.Name)
++	return cli.delete(ctx, resourceAuthSession, s.ObjectMeta.Name)
+ }
+ 
+ // CreateRevocation creates the Revocation object of r, labeled with its type and
+@@ -906,7 +907,7 @@ func (cli *client) CreateRevocation(ctx context.Context, r storage.Revocation) e
+ 	if err != nil {
+ 		return err
+ 	}
+-	return cli.post(resourceRevocation, revocation)
++	return cli.post(ctx, resourceRevocation, revocation)
+ }
+ 
+ func isKubernetesAPIConflictError(err error) bool {
+diff --git a/storage/kubernetes/storage_test.go b/storage/kubernetes/storage_test.go
+index 08c07d14..55bae32d 100644
+--- a/storage/kubernetes/storage_test.go
++++ b/storage/kubernetes/storage_test.go
+@@ -77,7 +77,7 @@ func (s *StorageTestSuite) TestStorage() {
+ 			resourceKeys,
+ 			resourcePassword,
+ 		} {
+-			if err := s.client.deleteAll(resource); err != nil {
++			if err := s.client.deleteAll(context.Background(), resource); err != nil {
+ 				s.T().Fatalf("delete all %q failed: %v", resource, err)
+ 			}
+ 		}
+diff --git a/storage/kubernetes/types_test.go b/storage/kubernetes/types_test.go
+index 153dcf5c..3c7dcfcd 100644
+--- a/storage/kubernetes/types_test.go
++++ b/storage/kubernetes/types_test.go
+@@ -608,7 +608,7 @@ func TestUserIdentityGenerationIsReadOnly(t *testing.T) {
+ 			Generation:  5,
+ 		})
+ 		require.NoError(t, err)
+-		require.Nil(t, annotations(t, api.object(t, cli, resourceUserIdentity, name)))
++		require.NotContains(t, annotations(t, api.object(t, cli, resourceUserIdentity, name)), generationAnnotation)
+ 
+ 		got, err := cli.GetUserIdentity(ctx, "jane", "ldap")
+ 		require.NoError(t, err)
+diff --git a/storage/requestlimit.go b/storage/requestlimit.go
+new file mode 100644
+index 00000000..9e0edcfe
+--- /dev/null
++++ b/storage/requestlimit.go
+@@ -0,0 +1,20 @@
++package storage
++
++import "context"
++
++// WithoutRequestLimit returns a context whose storage requests do not wait for
++// the limit of requests in flight of a storage that has one (Deckhouse, the
++// Kubernetes storage). Their other bounds stay. The scrape of the connector
++// metrics lists the connectors so: one request per scrape, which reports the
++// connectors, not whether Dex is throttling its own requests at the moment.
++func WithoutRequestLimit(ctx context.Context) context.Context {
++	return context.WithValue(ctx, requestLimitKey{}, true)
++}
++
++// RequestLimitSkipped reports whether ctx comes from WithoutRequestLimit.
++func RequestLimitSkipped(ctx context.Context) bool {
++	skipped, _ := ctx.Value(requestLimitKey{}).(bool)
++	return skipped
++}
++
++type requestLimitKey struct{}

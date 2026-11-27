@@ -130,6 +130,92 @@ storage for each token.
 
 **Depends on:** nothing.
 
+### 130-storage-requests.patch
+
+**Zone:** storage requests. Every request of the Kubernetes storage to the API
+server goes through one function (`storage/kubernetes/requests.go`), with the
+context of the storage call down to the HTTP request.
+
+The API server gives Dex a priority level of its own
+(`templates/dex/flowcontrol.yaml`): about 40 seats of each API server, and 8
+queues of 50 requests, which one flow, all of Dex, fills; past that every
+request is refused with 429. Each replica sends its requests over one HTTP/2
+connection, so to one API server. At a cold start with 1000 DexAuthenticators,
+two replicas filled the level for 45 seconds: 1849 refusals, and each was a 500
+to a user, since a refresh is 7 to 9 requests one after another and none was
+sent again.
+
+- One storage request takes 15 s at most, the timeout one attempt had before:
+  the waits for a slot, the attempts and the pauses between them, or less when
+  its context has an earlier deadline. A refresh of 7 to 9 requests is bounded
+  only by their sum and by the client that waits for it.
+- A read ends with the context of its call. A write keeps only its deadline:
+  the storage ignored the context before, and a user who hangs up still does
+  not cut a write on its way or the rollback after a failed one. The end of the
+  context ends the wait for a slot and the pauses before a retry either way.
+- At most 128 requests of a replica are in flight; a request waits for a slot
+  within its context and its 15 s, then fails. Three replicas (two and one
+  more during a rolling update) on one API server send at most 384, under the
+  440 the level holds. A request takes milliseconds, so the limit only holds
+  Dex back while the API server is slow, and the requests wait in Dex.
+- A 429 is sent again, POST included: the API server answers 429 before a
+  handler runs (priority and fairness, the limit of requests in flight, a
+  shutting-down server; the watch cache refuses lists and watches only). The
+  pause is `Retry-After` plus up to half of it at random, or 100 ms doubling to
+  2 s, each half random; `Retry-After` counts up to an hour. A pause after
+  which no attempt fits into the 15 s returns the 429 at once.
+  A 503 is not sent again: the API server answers it from a handler, when a
+  create may be done.
+- Every create carries a create ID of its own, the annotation
+  `user-authn.deckhouse.io/create-id`. A create answered 409 Conflict reads the
+  object, and one with this ID is the create sent twice, which succeeded: a
+  layer below Dex that sends a create again after its answer was lost no
+  longer fails the login over its own object. The same holds for every
+  object Dex creates. An object of
+  someone else (the user-authn controller, a parallel login, a second create
+  of the same object) has another ID or none and still gives
+  `storage.ErrAlreadyExists`, which the storage conformance tests ask for. The
+  object keeps the annotation: an update writes the metadata it read.
+- A create is told apart by the `reason` of the Status of its 409. `Conflict`
+  means that the API server refused it before it stored the object: the
+  ResourceQuota admission (`templates/dex/resource-quota.yaml` counts
+  `AuthRequest` objects) whose update of the quota status still conflicted
+  after its own retries from the quota in the cache of its API server,
+  because another writer of the quota status was ahead of that cache
+  (kubernetes/kubernetes#67761).
+  Such a create is sent again with the same body, the pause and the budget
+  of a 429, and past the budget fails with the 409 itself, not with
+  `storage.ErrAlreadyExists`. `AlreadyExists`, or a 409 without a Status,
+  reads the object as above; a 409 without a Status whose object does not
+  exist is a refusal as well and is sent again. Each create sent again is
+  logged with the reason and the message of the 409. A 409 to an update is a
+  conflict as before.
+- Metrics: `dex_kubernetes_requests_limit`, `dex_kubernetes_requests_in_flight`,
+  `dex_kubernetes_requests_waiting`, `dex_kubernetes_requests_rejected_total`
+  (no slot in time), `dex_kubernetes_requests_throttled_total{outcome}`
+  (`retried`, or `failed` when no attempt fits any more),
+  `dex_kubernetes_requests_refused_creates_total{outcome}` (creates refused
+  with 409 Conflict, the same outcomes). `cmd/dex/serve.go`
+  registers a storage that is a `prometheus.Collector`.
+- The scrape of the connector metrics (450) lists the connectors in a context
+  of `storage.WithoutRequestLimit`, past the slots: one list per scrape, and
+  `dex_connector_metrics_collection_success` does not fall to 0 because Dex
+  throttles its own requests. No alert uses that metric.
+
+On a stand, the 409 answers to the creates of `AuthRequest` objects matched
+the refusals of the ResourceQuota admission one to one, and the object did not
+exist afterwards; no create was found sent twice. The create ID stays for a
+create that a layer below Dex sends again.
+
+**Consumer in Deckhouse:** every request of Dex to the API server; its APF
+level (`templates/dex/flowcontrol.yaml`).
+
+**Upstream status:** Deckhouse only.
+
+**Depends on:** 100 (the test API server and `generationAnnotation` in
+`types_test.go`). The later patches that add storage requests (150, 250, 300,
+320, 330, 450) pass the context to them.
+
 ### 150-transitional-offline-sessions.patch
 
 **Zone:** transitional. Removed in Deckhouse 1.79 together with the controller
@@ -184,7 +270,7 @@ kubernetes storage only:
 
 **Upstream status:** Deckhouse only, temporary.
 
-**Depends on:** 100 (`toStorageUserIdentity`, which returns an error for a
+**Depends on:** 130 (the context of the storage requests), 100 (`toStorageUserIdentity`, which returns an error for a
 generation that does not parse; context lines in `storage/kubernetes/types.go`
 and `storage.go`).
 
@@ -709,7 +795,45 @@ connector only when the claims stored for the pair are older than
     removed): the connector is called before the update, under the lease, and
     the update only decides on what it read, guarded by the `resourceVersion`
     of the put. The lock cost four requests of every refresh, two of them
-    writes; an update is a get and a put now.
+    writes; an update is a get and a put now. The token endpoint runs in a
+    context of `storage.ReuseReads` (`storage/reads.go`): the first attempt of
+    the update starts from the token as the refresh last read it, to check it
+    or under the lease, and only a conflict reads it again: one read of the
+    token less in every refresh, two instead of three with a connector under
+    the lease (`TestUpdateRefreshTokenStartsFromTheRead`,
+    `TestRefreshUpdatesTheTokenItRead`). A token deleted after the read fails
+    the put with 404, as the read did before. The updater has run on the copy
+    by then, which spends nothing upstream: the identity is read before the
+    update, and SAML only replays the identity of the login.
+  - A refresh whose token is written does not fail when the offline session
+    cannot record it (the Kubernetes API throttling dex, a conflict that does
+    not clear): the error is logged, the successor of a spent upstream
+    credential is stored as after any failure, and the client gets the new
+    token. Failed, the refresh left the client with the token it presented;
+    offered again past the reuse interval, that token was claimed twice,
+    `invalid_grant`, and DexAuthenticator ended the session of the user. A
+    grant gone from the session, or a session that is gone, is still refused.
+    `TestRefreshStoreRotateWhenTheOfflineSessionFails`.
+  - The Kubernetes storage writes the updates of one offline session in
+    batches within a replica (`storage/kubernetes/offline_batch.go`). Every
+    refresh updates the one OfflineSessions object of the pair (the check of
+    the grant and its last use, a rotated credential, the lease), and a user
+    signed in to many DexAuthenticators refreshes them all at once after a
+    pause: on a stand with 50 such users a refresh wrote the offline session
+    3.8 times, 77% of the writes were 409 conflicts, and their requests were
+    43% of all the requests of dex to the API server. The updates that wait
+    while one is written go together: one read, the updaters one after
+    another, each on its own copy of what the one before returned, and one
+    write. An updater that fails (a revoked grant, a lease held) gets its error
+    at once and leaves none of its changes; a failed read or write is the error
+    of every update of the batch, as it is; a conflict with another replica
+    reads again and runs again the updates not answered yet. Each update runs
+    before its call returns and keeps its own result. A call leaves the queue
+    when its context ends; once its batch is being written it waits for the
+    outcome, and the batch ends at the latest deadline of its calls or once all
+    of them are gone. A panic of an updater is raised again in its own call.
+    `TestOfflineSessionsUpdatesInOneBatch`,
+    `TestParallelRefreshesShareOfflineSessionWrites`.
   - A request that lost the race for the shared credential to a dex without
     the lease (during an update) waits for the winner's successor up to the
     5 s of a connector call by the clock, looking again with the same backoff
@@ -832,7 +956,7 @@ period from the first failure (its patch 002).
 **Upstream status:** not upstream; the bugs fixed here (one credential shared
 by all clients, the request context) are present in v2.46 with sessions off.
 
-**Depends on:** nothing (context lines of 200 and 210 in
+**Depends on:** 130 (the context of the storage requests); otherwise nothing (context lines of 200 and 210 in
 `server/grants/refresh.go` only).
 
 ### 260-sign-in-logging.patch
@@ -1166,7 +1290,7 @@ advertises `end_session_endpoint`, writes the SSO state of a client before the
 checks of the session login, takes `max_age` and `auth_time` from `LastLogin`
 of the pair, and keeps the secret of a session for its whole life.
 
-**Depends on:** 100 (`mfaAuthenticators`, `rememberMe`), 200 (`checkAllowLists`), 220 (the
+**Depends on:** 130 (the context of the storage requests), 100 (`mfaAuthenticators`, `rememberMe`), 200 (`checkAllowLists`), 220 (the
 password change flag), 290 (the `session` revocation of `/logout`).
 
 ### 310-session-identity-freshness.patch
@@ -1291,7 +1415,7 @@ forgets), user-api (the devices of the user and the 24-hour rule).
 
 **Upstream status:** Deckhouse only.
 
-**Depends on:** 100 (the fields), 290 (`Recorder`), 300 (the logout of a
+**Depends on:** 130 (the context of the storage requests), 100 (the fields), 290 (`Recorder`), 300 (the logout of a
 session), 310 (the end of a pair over every grant).
 
 ### 330-backchannel-revoked-sessions.patch
@@ -1324,7 +1448,7 @@ every browser session it ends, also when it revokes the whole pair); the
 
 **Upstream status:** Deckhouse only.
 
-**Depends on:** 290 (`Revocation`, `Recorder`), 300 (`backchannel.Notifier`).
+**Depends on:** 130 (the context of the storage requests), 290 (`Revocation`, `Recorder`), 300 (`backchannel.Notifier`).
 
 ### 340-mfa-one-of.patch
 
@@ -1797,7 +1921,8 @@ interrupt in-flight authentication requests on the restarting pods.
 Each scrape lists configured connectors and compares their versions with
 completed attempts. A deleted connector disappears from the metric. Concurrent
 scrapes share one list request. Its context has a five-second deadline, which
-is propagated to the Kubernetes storage HTTP request.
+is propagated to the Kubernetes storage HTTP request, and does not wait for a
+free slot of the requests of Dex (130).
 
 `dex_connector_metrics_collection_success` is `1` after a successful list and
 `0` after a listing error or timeout. On error, the scrape still serves this
@@ -1808,7 +1933,7 @@ The `D8DexConnectorNotInitialized` alert in
 `monitoring/prometheus-rules/dex.yaml` uses the initialization result.
 `dex_connector_metrics_collection_success` reports collection health for
 observation. This patch is maintained in Deckhouse and depends on 445 for the
-cache it instruments.
+cache it instruments, and on 130 for the context of its storage request.
 
 ### 998-fix-cve.patch
 

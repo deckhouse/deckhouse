@@ -1456,7 +1456,7 @@ index cee6302d..a1c63a58 100644
  
  // TestIssuerGenerationClaim checks "d8_gen": present exactly when the pair has
 diff --git a/server/tokens/refresh_store.go b/server/tokens/refresh_store.go
-index 6e9ed345..dc2e5abb 100644
+index f34ba190..95d1a07f 100644
 --- a/server/tokens/refresh_store.go
 +++ b/server/tokens/refresh_store.go
 @@ -5,6 +5,9 @@ import (
@@ -1871,7 +1871,7 @@ index 6e9ed345..dc2e5abb 100644
  }
  
  // IdentityFromClaims projects stored claims into a connector identity. The
-@@ -305,12 +588,17 @@ func (rt *RefreshStore) updateOfflineSession(ctx context.Context, refresh *stora
+@@ -320,12 +603,17 @@ func (rt *RefreshStore) updateOfflineSession(ctx context.Context, refresh *stora
  	var isReleased bool
  
  	offlineSessionUpdater := func(old storage.OfflineSessions) (storage.OfflineSessions, error) {
@@ -1880,7 +1880,7 @@ index 6e9ed345..dc2e5abb 100644
 +		grants := GrantsOf(old)
 +		ref, ok := grants[refresh.ID]
 +		if !ok {
- 			return old, errors.New("refresh token invalid")
+ 			return old, errGrantRevoked
  		}
  
  		ref.LastUsed = lastUsed
@@ -1891,7 +1891,7 @@ index 6e9ed345..dc2e5abb 100644
  
  		publishSpent(&old, src)
  		isReleased = lease.releaseIn(&old)
-@@ -333,8 +621,10 @@ func (rt *RefreshStore) updateOfflineSession(ctx context.Context, refresh *stora
+@@ -348,8 +636,10 @@ func (rt *RefreshStore) updateOfflineSession(ctx context.Context, refresh *stora
  // of the same client may have replaced it already, and must keep its own.
  func (rt *RefreshStore) RevokeGrant(ctx context.Context, refresh *storage.RefreshToken) error {
  	err := rt.storage.UpdateOfflineSessions(ctx, refresh.Claims.UserID, refresh.ConnectorID, func(old storage.OfflineSessions) (storage.OfflineSessions, error) {
@@ -1903,7 +1903,7 @@ index 6e9ed345..dc2e5abb 100644
  		}
  		return old, nil
  	})
-@@ -348,6 +638,54 @@ func (rt *RefreshStore) RevokeGrant(ctx context.Context, refresh *storage.Refres
+@@ -363,6 +653,54 @@ func (rt *RefreshStore) RevokeGrant(ctx context.Context, refresh *storage.Refres
  	return nil
  }
  
@@ -1958,7 +1958,7 @@ index 6e9ed345..dc2e5abb 100644
  // RevokeClients deletes the refresh tokens issued to the named clients for the
  // user/connector pair, in one pass over the offline session. Every other client's
  // token is left alone. See RevokeAll for the unscoped variant.
-@@ -363,18 +701,31 @@ func (rt *RefreshStore) RevokeClients(ctx context.Context, userID, connectorID s
+@@ -378,18 +716,31 @@ func (rt *RefreshStore) RevokeClients(ctx context.Context, userID, connectorID s
  		}
  	}
  
@@ -1993,7 +1993,7 @@ index 6e9ed345..dc2e5abb 100644
  }
  
  // revoke deletes the refresh tokens of every client matching the predicate and
-@@ -385,7 +736,7 @@ func (rt *RefreshStore) RevokeAll(ctx context.Context, userID, connectorID strin
+@@ -400,7 +751,7 @@ func (rt *RefreshStore) RevokeAll(ctx context.Context, userID, connectorID strin
  // session update would have its reference wiped, we snapshot the token IDs,
  // remove only those references (the updater sees the latest state, so a
  // concurrently added reference survives), then delete the tokens.
@@ -2002,7 +2002,7 @@ index 6e9ed345..dc2e5abb 100644
  	offlineSessions, err := rt.storage.GetOfflineSessions(ctx, userID, connectorID)
  	if err != nil {
  		if !errors.Is(err, storage.ErrNotFound) {
-@@ -394,9 +745,10 @@ func (rt *RefreshStore) revoke(ctx context.Context, userID, connectorID string,
+@@ -409,9 +760,10 @@ func (rt *RefreshStore) revoke(ctx context.Context, userID, connectorID string,
  		return
  	}
  
@@ -2016,7 +2016,7 @@ index 6e9ed345..dc2e5abb 100644
  			tokenIDs[ref.ID] = struct{}{}
  		}
  	}
-@@ -406,9 +758,13 @@ func (rt *RefreshStore) revoke(ctx context.Context, userID, connectorID string,
+@@ -421,9 +773,13 @@ func (rt *RefreshStore) revoke(ctx context.Context, userID, connectorID string,
  	}
  
  	if err := rt.storage.UpdateOfflineSessions(ctx, userID, connectorID, func(old storage.OfflineSessions) (storage.OfflineSessions, error) {
@@ -2032,13 +2032,13 @@ index 6e9ed345..dc2e5abb 100644
  		}
  		return old, nil
 diff --git a/server/tokens/refresh_store_test.go b/server/tokens/refresh_store_test.go
-index 622b51ab..a7d2172d 100644
+index 13a0ba7b..c6da6be1 100644
 --- a/server/tokens/refresh_store_test.go
 +++ b/server/tokens/refresh_store_test.go
-@@ -2,7 +2,11 @@ package tokens
- 
+@@ -3,7 +3,11 @@ package tokens
  import (
  	"context"
+ 	"errors"
 +	"fmt"
  	"log/slog"
 +	"maps"
@@ -2047,7 +2047,7 @@ index 622b51ab..a7d2172d 100644
  	"testing"
  	"time"
  
-@@ -25,38 +29,595 @@ func TestRefreshStoreCreate(t *testing.T) {
+@@ -26,38 +30,595 @@ func TestRefreshStoreCreate(t *testing.T) {
  	ctx := context.Background()
  	rt, store := newTestStore(t)
  	auth := testAuthorization()
@@ -2304,7 +2304,9 @@ index 622b51ab..a7d2172d 100644
 +	for err := range errs {
 +		require.NoError(t, err)
 +	}
-+
+ 
+-	// A second create for the same client replaces the old token.
+-	second, err := rt.Create(ctx, auth)
 +	sess, err := base.GetOfflineSessions(ctx, "u1", "mock")
 +	require.NoError(t, err)
 +	byDomain := map[string]string{}
@@ -2339,9 +2341,7 @@ index 622b51ab..a7d2172d 100644
 +	}
 +	age(old, 3*time.Hour, time.Minute)
 +	age(unused, time.Hour, 45*time.Minute)
- 
--	// A second create for the same client replaces the old token.
--	second, err := rt.Create(ctx, auth)
++
 +	n, err := rt.DeleteExpired(ctx, NewRefreshStrategy(true, 0, 0, 0, nil))
 +	require.NoError(t, err)
 +	require.Zero(t, n, "no lifetime, nothing expires")
@@ -3109,10 +3109,10 @@ index 00000000..070abe54
 +	require.Equal(t, []string{"fresh"}, slices.Sorted(maps.Keys(sessions.Grants)))
 +}
 diff --git a/storage/kubernetes/storage.go b/storage/kubernetes/storage.go
-index 5649c728..1ce25a82 100644
+index 45114b89..1baa7934 100644
 --- a/storage/kubernetes/storage.go
 +++ b/storage/kubernetes/storage.go
-@@ -7,6 +7,8 @@ import (
+@@ -8,6 +8,8 @@ import (
  	"log/slog"
  	"math/rand"
  	"net/http"
@@ -3121,7 +3121,7 @@ index 5649c728..1ce25a82 100644
  	"strings"
  	"time"
  
-@@ -408,8 +410,33 @@ func (cli *client) ListClients(ctx context.Context) ([]storage.Client, error) {
+@@ -441,8 +443,33 @@ func (cli *client) ListClients(ctx context.Context) ([]storage.Client, error) {
  	return nil, errors.New("not implemented")
  }
  
@@ -3142,7 +3142,7 @@ index 5649c728..1ce25a82 100644
 +			return nil, err
 +		}
 +		var page RefreshList
-+		if err := cli.getURL(u, &page); err != nil {
++		if err := cli.getURL(ctx, u, &page); err != nil {
 +			return nil, fmt.Errorf("list a page of refresh tokens: %w", err)
 +		}
 +		for _, r := range page.RefreshTokens {
