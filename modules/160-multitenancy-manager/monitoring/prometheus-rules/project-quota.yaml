@@ -63,21 +63,3 @@
         d8 k get projectquotastatus {{ $labels.project }} -o jsonpath='{range .status.conditions[*]}{.type}={.status} {.reason}: {.message}{"\n"}{end}'
         d8 k get resourcequota -A -l projects.deckhouse.io/project={{ $labels.project }} -o custom-columns=NAMESPACE:.metadata.namespace,HARD:.spec.hard,CALCULATED:.status.hard
         ```
-
-  - alert: D8ProjectQuotaNotSupported
-    expr: |
-      max(d8_multitenancy_project_quota_enforcement{mode="NotSupported"}) > 0
-      and on() max(d8_multitenancy_project_quotas) > 0
-    for: 1h
-    labels:
-      severity_level: "8"
-      tier: cluster
-      d8_module: multitenancy-manager
-    annotations:
-      plk_protocol_version: "1"
-      plk_markup_format: "markdown"
-      summary: The sum of a project quota is not enforced, because Deckhouse Platform does not manage the control plane.
-      description: |-
-        The cluster has projects with a quota, but the `control-plane-manager` module is disabled: Deckhouse Platform does not manage the control plane of the cluster. The sum over the namespaces of a project is enforced only where it does. Every ProjectQuotaStatus reports `Enforced=False` with the `ControlPlaneNotManaged` reason; the usage is counted and shown, and every namespace is limited by its `d8-project-quota` ResourceQuota, so no namespace alone uses more than the quota of the whole project.
-
-        This is expected on a cluster whose control plane is managed outside Deckhouse Platform, for example by a cloud provider. Silence the alert if that is the case.

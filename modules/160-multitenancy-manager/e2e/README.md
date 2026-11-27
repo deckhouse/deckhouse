@@ -81,10 +81,9 @@ The `lint` task prints `The document is valid` for the configuration and for eve
 
 The following planned checks are not automated:
 
-- Firing of the `MultitenancyManagerProjectNamedLikeAdditionalNamespace`
-  and `MultitenancyManagerPreviousRevisionStillRunning` alerts.
-  The second has `for: 15m`, and the suite has no Prometheus access.
-  The tests check the underlying event and pod revisions instead.
+- Firing of the `MultitenancyManagerPreviousRevisionStillRunning` alert.
+  It has `for: 15m`, and the suite has no Prometheus access.
+  The tests check the pod revisions instead.
 - A ClusterProjectRoleBinding with a selector.
   The resource has no selector and always covers every non-virtual project, which the test checks.
 - `Ready=True` of a ClusterProjectRoleBinding.

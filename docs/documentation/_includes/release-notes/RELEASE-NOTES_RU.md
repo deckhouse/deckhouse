@@ -201,7 +201,7 @@
 - Проверьте завершение автоматического перехода проектов на встроенных шаблонах `default`, `secure` и `secure-with-dedicated-nodes` на структурные поля.
   Администраторы проекта переходят с AuthorizationRule уровня Admin на роль `d8:project:admin` (ProjectRoleBinding `d8-administrators`), квота `all-pods` заменяется на `d8-project-quota`.
   Передача доступа выполняется без перерыва. Для сохранения кастомных расширений доступа создайте кастомную роль и привяжите её через ProjectRoleBinding.
-  Если переход не завершился за 30 минут, срабатывает алерт [MultitenancyManagerProjectHandoverStuck](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.78/reference/alerts.html#multitenancy-manager-multitenancymanagerprojecthandoverstuck).
+  Пока переход не завершён, в статусе проекта есть условие `HandoverPending`.
   Подробнее — [о переходе проекта с Helm-шаблонов](https://deckhouse.ru/modules/multitenancy-manager/v1.78/usage.html#переход-проекта-с-helm-текста).
 
 ### Устаревшие и удалённые интерфейсы

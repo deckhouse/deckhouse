@@ -698,7 +698,7 @@ func (m *Manager) adoptKeptObject(ctx context.Context, project *v1alpha3.Project
 	if err != nil {
 		return fmt.Errorf("take the %s '%s/%s' off status.keptObjects: %w", object.GetKind(), object.GetNamespace(), object.GetName(), err)
 	}
-	m.publishSeries(project)
+	m.publishSeries(ctx, project)
 	return nil
 }
 

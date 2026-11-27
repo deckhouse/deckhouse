@@ -90,8 +90,9 @@ import (
 //
 // The HandoverPending condition lives in the status, which a replace of the Project does not touch,
 // and the d8_multitenancy_project_handover_pending series follows it once the handover has had time
-// to finish, so a handover that does not finish is seen in the MultitenancyManagerProjectHandoverStuck
-// alert, and a project controller busy after an update raises none.
+// to finish, so a handover that does not finish is seen in the series, and a project controller busy
+// after an update publishes none. No alert reads the series: after an update the handover of the
+// projects of the built-in templates can wait on what their users cannot change.
 
 const (
 	// helmResourcePolicy is the annotation Helm reads before it deletes an object that left the
@@ -131,8 +132,8 @@ const (
 // controller scheme does not know it, so the rules are handled as unstructured objects.
 var authorizationRuleGVK = schema.GroupVersionKind{Group: "deckhouse.io", Version: "v1alpha1", Kind: "AuthorizationRule"}
 
-// handoverPendingProjects is the series the MultitenancyManagerProjectHandoverStuck alert reads: one
-// per project whose handover began more than handoverExpected ago and has not finished.
+// handoverPendingProjects is one per project whose handover began more than handoverExpected ago and
+// has not finished. It is kept for debugging; no alert reads it.
 //
 //	max by (project) (d8_multitenancy_project_handover_pending) > 0
 var handoverPendingProjects = prometheus.NewGaugeVec(prometheus.GaugeOpts{
@@ -141,13 +142,23 @@ var handoverPendingProjects = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 }, []string{"project"})
 
 // keptObjectsProjects is the series the MultitenancyManagerProjectKeepsHelmTemplateObjects alert
-// reads: the number of objects in status.keptObjects of a project, while there are any.
+// reads: the number of objects in status.keptObjects of a project, while there are any. A project of a
+// built-in template has none (see setKeptObjectsSeries).
 //
 //	max by (project) (d8_multitenancy_project_kept_objects) > 0
 var keptObjectsProjects = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 	Name: "d8_multitenancy_project_kept_objects",
 	Help: "The number of objects a project release left in place and no longer manages, from a Helm text or from a native release that manifests take over.",
 }, []string{"project"})
+
+// builtinTemplates are the templates the module ships and the template of the virtual projects.
+var builtinTemplates = []string{
+	"default",
+	"secure",
+	"secure-with-dedicated-nodes",
+	"simple",
+	v1alpha3.VirtualProjectTemplateName,
+}
 
 func init() {
 	metrics.Registry.MustRegister(handoverPendingProjects, keptObjectsProjects)
@@ -263,7 +274,7 @@ func (m *Manager) prepareUpgrade(ctx context.Context, project *v1alpha3.Project,
 	if err != nil {
 		return fmt.Errorf("record the preparation of the upgrade on the project: %w", err)
 	}
-	m.publishSeries(project)
+	m.publishSeries(ctx, project)
 
 	for _, live := range unmark {
 		if err := m.unmarkKept(ctx, live); err != nil {
@@ -681,7 +692,7 @@ func mergeKeptObjects(list, more []v1alpha3.KeptObject) []v1alpha3.KeptObject {
 // written by the reconcile that calls it.
 func (m *Manager) refreshKeptObjects(ctx context.Context, project *v1alpha3.Project) (time.Duration, error) {
 	if len(project.Status.KeptObjects) == 0 {
-		keptObjectsProjects.DeleteLabelValues(project.Name)
+		m.setKeptObjectsSeries(ctx, project, 0)
 		m.keptChecks.Delete(project.Name)
 		return 0, nil
 	}
@@ -689,7 +700,7 @@ func (m *Manager) refreshKeptObjects(ctx context.Context, project *v1alpha3.Proj
 	// release and each object from the API server; once a minute is enough to notice what goes.
 	if last, ok := m.keptChecks.Load(project.Name); ok {
 		if checked, _ := last.(time.Time); time.Since(checked) < keptObjectsMinCheck {
-			keptObjectsProjects.WithLabelValues(project.Name).Set(float64(len(project.Status.KeptObjects)))
+			m.setKeptObjectsSeries(ctx, project, len(project.Status.KeptObjects))
 			return leftObjectsRecheck, nil
 		}
 	}
@@ -725,11 +736,10 @@ func (m *Manager) refreshKeptObjects(ctx context.Context, project *v1alpha3.Proj
 		still = append(still, kept)
 	}
 	project.Status.KeptObjects = still
+	m.setKeptObjectsSeries(ctx, project, len(still))
 	if len(still) == 0 {
-		keptObjectsProjects.DeleteLabelValues(project.Name)
 		return 0, nil
 	}
-	keptObjectsProjects.WithLabelValues(project.Name).Set(float64(len(still)))
 	return leftObjectsRecheck, nil
 }
 
@@ -783,7 +793,7 @@ func (m *Manager) finishHandover(ctx context.Context, project *v1alpha3.Project)
 	if err != nil {
 		return fmt.Errorf("remove the record of the handover from the project: %w", err)
 	}
-	m.publishSeries(project)
+	m.publishSeries(ctx, project)
 	return nil
 }
 
@@ -809,18 +819,41 @@ func (m *Manager) recordInStatus(ctx context.Context, project *v1alpha3.Project,
 // publishSeries publishes the series of the project from its status: one while a handover that
 // began more than handoverExpected ago is on record, and the number of the objects in
 // status.keptObjects while there are any.
-func (m *Manager) publishSeries(project *v1alpha3.Project) {
+func (m *Manager) publishSeries(ctx context.Context, project *v1alpha3.Project) {
 	pending := project.IsConditionTrue(v1alpha3.ProjectConditionHandoverPending)
 	if pending && time.Since(handoverStart(project)) >= handoverExpected {
 		handoverPendingProjects.WithLabelValues(project.Name).Set(1)
 	} else {
 		handoverPendingProjects.DeleteLabelValues(project.Name)
 	}
-	if len(project.Status.KeptObjects) > 0 {
-		keptObjectsProjects.WithLabelValues(project.Name).Set(float64(len(project.Status.KeptObjects)))
-	} else {
+	m.setKeptObjectsSeries(ctx, project, len(project.Status.KeptObjects))
+}
+
+// setKeptObjectsSeries publishes count as the number of the kept objects of the project. It drops the
+// series when there are none, and when the project is on a built-in template: the alert on the series
+// asks the users of a project to sort out what their own Helm text left, and what a built-in template
+// left on an update of Deckhouse is not theirs. status.keptObjects lists the objects either way.
+func (m *Manager) setKeptObjectsSeries(ctx context.Context, project *v1alpha3.Project, count int) {
+	if count == 0 || m.isBuiltinTemplate(ctx, project.Spec.ProjectTemplateName) {
 		keptObjectsProjects.DeleteLabelValues(project.Name)
+		return
 	}
+	keptObjectsProjects.WithLabelValues(project.Name).Set(float64(count))
+}
+
+// isBuiltinTemplate reports whether Deckhouse ships the template: one of builtinTemplates, or one
+// labelled heritage: deckhouse. A template that is gone or cannot be read counts as the user's, so
+// the series of its projects is not lost.
+func (m *Manager) isBuiltinTemplate(ctx context.Context, name string) bool {
+	if slices.Contains(builtinTemplates, name) {
+		return true
+	}
+	template, err := m.projectTemplateByName(ctx, name)
+	if err != nil {
+		m.logger.Error(err, "read the template of a project with kept objects", "template", name)
+		return false
+	}
+	return template != nil && template.Labels[v1alpha3.ResourceLabelHeritage] == v1alpha3.ResourceHeritageDeckhouse
 }
 
 // handoverStartedMessage is the HandoverPending message of a handover that has just kept the
@@ -956,7 +989,7 @@ func (m *Manager) deleteKeptObjects(ctx context.Context, project *v1alpha3.Proje
 	if err != nil {
 		return 0, fmt.Errorf("record the handover on the project: %w", err)
 	}
-	m.publishSeries(project)
+	m.publishSeries(ctx, project)
 
 	if recheck > 0 {
 		for _, rule := range waitingRules {

@@ -201,7 +201,7 @@ Check the result of the changes:
 - Check that the automatic switch of projects on the built-in `default`, `secure`, and `secure-with-dedicated-nodes` templates to structured fields has completed.
   Project administrators are switched from the AuthorizationRule of the Admin level to the `d8:project:admin` role (the `d8-administrators` ProjectRoleBinding), and the `all-pods` quota is replaced with `d8-project-quota`.
   Access is handed over without interruption. To keep custom access extensions, create a custom role and bind it through ProjectRoleBinding.
-  If the switch has not completed within 30 minutes, the [MultitenancyManagerProjectHandoverStuck](https://deckhouse.io/products/kubernetes-platform/documentation/v1.78/reference/alerts.html#multitenancy-manager-multitenancymanagerprojecthandoverstuck) alert fires.
+  The switch is not complete while the project has the `HandoverPending` condition in its status.
   For details, see [switching a project from Helm templates](https://deckhouse.io/modules/multitenancy-manager/v1.78/usage.html#switching-a-project-from-a-helm-text).
 
 ### Deprecated and removed interfaces

@@ -15,8 +15,8 @@ limitations under the License.
 */
 
 // Discovers the custom ClusterRoles that have lost access the role model gave them, whatever their
-// names. Such a role has no heritage: deckhouse label and has an aggregationRule, and one of the
-// following holds:
+// names. Such a role is not a ClusterRole of a module (isModuleClusterRole) and has an
+// aggregationRule, and one of the following holds:
 //
 //   - A selector of it requires rbac.deckhouse.io/kind manage or use. The built-in capabilities no
 //     longer carry these values, so the selector matches none of them, and the aggregation
@@ -179,13 +179,14 @@ func applyLegacyCustomRoleFilter(obj *unstructured.Unstructured) (go_hook.Filter
 }
 
 // legacyCustomRoleCandidateOf returns what the hook needs of a custom role of the role model, and
-// whether the role may have lost access. Such a role is not a built-in object (heritage:
-// deckhouse), has an aggregationRule, and has the labels of the old scheme or selects by a lineage
-// other than the scope lineages and the lineage of its own subsystem. The name does not matter. A
-// role frozen by removing its aggregationRule is not counted, although it keeps its labels and its
-// rules.
+// whether the role may have lost access. Such a role is not a ClusterRole of a module
+// (isModuleClusterRole), has an aggregationRule, and has the labels of the old scheme or selects by
+// a lineage other than the scope lineages and the lineage of its own subsystem. A module, including
+// one released on its own, fixes its roles in its own release, and the user can change neither the
+// role nor the release, so such a role is left out of the alert and of the requirement alike. A role
+// frozen by removing its aggregationRule is not counted, although it keeps its labels and its rules.
 func legacyCustomRoleCandidateOf(role *rbacv1.ClusterRole) (legacyCustomRoleCandidate, bool) {
-	if role.Labels["heritage"] == "deckhouse" || role.AggregationRule == nil {
+	if isModuleClusterRole(role.Name, role.Labels) || role.AggregationRule == nil {
 		return legacyCustomRoleCandidate{}, false
 	}
 	candidate := legacyCustomRoleCandidate{
@@ -309,7 +310,10 @@ func applyCollectedLineagesFilter(obj *unstructured.Unstructured) (go_hook.Filte
 // applyCarriedLineagesFilter keeps the sorted lineages whose aggregation labels a custom capability
 // carries: a ClusterRole without heritage: deckhouse and without an aggregationRule. A selector by
 // such a lineage gets the rules of the capability, so a custom role that selects by it has lost
-// nothing. A custom role is not a carrier, or a role would vouch for the lineage it selects by.
+// nothing. A custom role is not a carrier, or a role would vouch for the lineage it selects by. A
+// capability of a module without heritage: deckhouse (a module label or a d8: name) stays a carrier,
+// although the candidates leave such roles out: its rules reach a selector by its lineage all the
+// same, and dropping it would report a custom role that has lost nothing.
 func applyCarriedLineagesFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	role := new(rbacv1.ClusterRole)
 	if err := sdk.FromUnstructured(obj, role); err != nil {

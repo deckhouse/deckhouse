@@ -21,7 +21,7 @@
       plk_grouped_by__d8_user_authz_legacy_rbacv2_custom_roles: "D8UserAuthzLegacyRBACv2CustomRoles,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       summary: The custom role `{{ $labels.name }}` has lost access it gave through the labels of an earlier role model.
       description: |-
-        The ClusterRole `{{ $labels.name }}` has no `heritage: deckhouse` label and has an `aggregationRule` field, and one of the following holds:
+        The ClusterRole `{{ $labels.name }}` has an `aggregationRule` field and does not belong to a module: it has neither the `heritage: deckhouse` nor the `module` label, and its name does not start with `d8:` unless it starts with `d8:custom:`. One of the following holds:
 
         - A selector of its `aggregationRule` field requires the `rbac.deckhouse.io/kind: manage` or `use` label of the experimental role model. The built-in capabilities no longer carry these labels, so such a selector matches none of them. The Kubernetes aggregation controller keeps from it only the rules of the custom capabilities that still carry the old labels, and the subjects of the role have lost the other permissions it gave. Custom roles get no compatibility aliases.
         - The role has the `rbac.deckhouse.io/use-role` label without `rbac.deckhouse.io/scope: system` or `subsystem`. Deckhouse creates the RoleBinding objects for the subjects of a role in the namespaces of the modules only for roles with that scope, so it has deleted the ones it had created for this role, even if its selectors are already rewritten.
@@ -50,6 +50,8 @@
                 | capture("^rbac\\.deckhouse\\.io/aggregate-to-(?<lineage>.+)-as$").lineage]) as $carried
           | .items[]
           | select(.metadata.labels.heritage != "deckhouse" and .aggregationRule != null)
+          | select((.metadata.labels.module // "") == "")
+          | select((.metadata.name | startswith("d8:") | not) or (.metadata.name | startswith("d8:custom:")))
           | (.metadata.labels["rbac.deckhouse.io/subsystem"] // "") as $own
           | select(
               (

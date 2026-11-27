@@ -176,7 +176,7 @@ func (m *Manager) Init(ctx context.Context, checker healthz.Checker, init *sync.
 func (m *Manager) Handle(ctx context.Context, project *v1alpha3.Project) (ctrl.Result, error) {
 	// The series of a handover and of the objects left from a Helm text release follow the status as
 	// read, before any step that can stop the reconcile, so they outlive a restart.
-	m.publishSeries(project)
+	m.publishSeries(ctx, project)
 
 	// A handover of manifests objects that a previous pass did not finish is completed from the
 	// journal before this pass upgrades again. An empty journal returns without reading the release.

@@ -72,35 +72,6 @@
 
 - name: d8.user-authz.controller.reconcile
   rules:
-  - alert: D8UserAuthzControllerReconcileErrorsHigh
-    expr: |
-      sum by (controller) (
-        rate(controller_runtime_reconcile_errors_total{
-          namespace="d8-user-authz",
-          job="user-authz-controller"
-        }[5m])
-      ) > 0.1
-    for: 10m
-    labels:
-      severity_level: "8"
-      tier: cluster
-      d8_module: user-authz
-      d8_component: user-authz-controller
-    annotations:
-      plk_protocol_version: "1"
-      plk_markup_format: markdown
-      plk_create_group_if_not_exists__d8_user_authz_controller_malfunctioning: "D8UserAuthzControllerMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
-      plk_grouped_by__d8_user_authz_controller_malfunctioning: "D8UserAuthzControllerMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
-      summary: user-authz-controller reconcile errors are high for {{ $labels.controller }}.
-      description: |-
-        Controller `{{ $labels.controller }}` of `user-authz-controller` has a reconcile error rate above 0.1 errors per second for more than 10 minutes.
-
-        Check logs:
-
-        ```bash
-        d8 k -n d8-user-authz logs deploy/user-authz-controller --all-pods=true
-        ```
-
   - alert: D8UserAuthzBindingsDrift
     expr: |
       sum by (kind) (
