@@ -15,7 +15,9 @@
 package deckhouse
 
 import (
+	"context"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	v1 "k8s.io/api/core/v1"
@@ -239,6 +241,54 @@ func newCAPIMachine(name, nodeGroup string, drainTimeout int64) *unstructured.Un
 		"spec": map[string]interface{}{
 			"deletion": map[string]interface{}{
 				"nodeDrainTimeoutSeconds": drainTimeout,
+			},
+		},
+	}}
+}
+
+func TestDeleteClustersKeepsStaticCluster(t *testing.T) {
+	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
+	defer cancel()
+
+	fakeClient := client.NewFakeKubernetesClientWithListGVR(map[schema.GroupVersionResource]string{
+		capi.V1beta2.ClusterGVR: "ClusterList",
+	})
+
+	discovery := fakeClient.Discovery().(*fakediscovery.FakeDiscovery)
+	discovery.Resources = append(discovery.Resources, capi.APIResourcesList())
+
+	clusters := fakeClient.Dynamic().Resource(capi.V1beta2.ClusterGVR).Namespace(deckhouseClusterNamespace)
+	for _, cluster := range []*unstructured.Unstructured{
+		newCAPICluster("static", "StaticCluster"),
+		newCAPICluster("dvp", "DeckhouseCluster"),
+	} {
+		_, err := clusters.Create(ctx, cluster, metav1.CreateOptions{})
+		require.NoError(t, err)
+	}
+
+	require.NoError(t, DeleteClusters(ctx, fakeClient))
+
+	left, err := clusters.List(ctx, metav1.ListOptions{})
+	require.NoError(t, err)
+	require.Len(t, left.Items, 1)
+	require.Equal(t, "static", left.Items[0].GetName())
+
+	require.NoError(t, WaitForClustersDeletion(ctx, fakeClient))
+}
+
+func newCAPICluster(name, infrastructureKind string) *unstructured.Unstructured {
+	return &unstructured.Unstructured{Object: map[string]interface{}{
+		"apiVersion": capi.V1beta2.GV.String(),
+		"kind":       "Cluster",
+		"metadata": map[string]interface{}{
+			"name":      name,
+			"namespace": deckhouseClusterNamespace,
+		},
+		"spec": map[string]interface{}{
+			"infrastructureRef": map[string]interface{}{
+				"apiGroup": "infrastructure.cluster.x-k8s.io",
+				"kind":     infrastructureKind,
+				"name":     name,
 			},
 		},
 	}}
