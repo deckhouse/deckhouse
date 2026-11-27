@@ -1,3 +1,5 @@
+//go:build !linux
+
 /*
 Copyright 2026 Flant JSC
 
@@ -16,55 +18,7 @@ limitations under the License.
 
 package verity
 
-import (
-	"errors"
-	"fmt"
-	"log/slog"
-	"strings"
-
-	"github.com/containerd/go-dmverity/pkg/dm"
-	"golang.org/x/sys/unix"
-
-	"github.com/deckhouse/deckhouse/pkg/log"
-)
-
-// verityUUIDPrefix starts the uuid veritysetup sets on the devices it creates
-const verityUUIDPrefix = "CRYPT-VERITY-"
-
-// removeIncompleteMapper removes the device mapper that an interrupted veritysetup open left
-// without a live table, as 'dmsetup remove' does. It reports false and keeps any other device.
-func removeIncompleteMapper(name string) (bool, error) {
-	control, err := dm.Open()
-	if err != nil {
-		return false, fmt.Errorf("open device mapper control: %w", err)
-	}
-	defer control.Close()
-
-	status, err := control.DeviceStatus(name)
-	if errors.Is(err, unix.ENXIO) {
-		return false, nil
-	}
-
-	if err != nil {
-		return false, err
-	}
-
-	if !isIncompleteMapper(status) {
-		return false, nil
-	}
-
-	if err = control.RemoveDevice(name); err != nil {
-		return false, err
-	}
-
-	log.Warn("removed device mapper left without a live table by an interrupted veritysetup open", slog.String("name", name))
-
-	return true, nil
-}
-
-// isIncompleteMapper reports whether the device is left by an interrupted veritysetup open.
-// A device with a live table is complete, a device in use can't be removed, and a device without
-// the veritysetup uuid isn't created by Deckhouse.
-func isIncompleteMapper(status dm.DeviceStatus) bool {
-	return !status.ActivePresent && status.OpenCount == 0 && strings.HasPrefix(status.UUID, verityUUIDPrefix)
+// removeIncompleteMapper is a no-op on non-Linux platforms: go-dmverity builds the device mapper ioctls only for Linux.
+func removeIncompleteMapper(string) (bool, error) {
+	return false, nil
 }
