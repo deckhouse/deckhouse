@@ -235,7 +235,13 @@ d8 k get project my-project -o jsonpath='{range .status.conditions[*]}{.type}={.
 
 ## Дополнительные неймспейсы проекта
 
-Если приложению требуется несколько неймспейсов (например, отдельный под кеш или очереди), добавьте их в проект ресурсом [ProjectNamespace](/modules/multitenancy-manager/cr.html#projectnamespace). Ресурс создаётся **в [основном неймспейсе проекта](../../glossary.html#main-project-namespace)**. Итоговый неймспейс получает имя `<имя проекта>-<spec.name>`:
+Если приложению требуется несколько неймспейсов (например, отдельный под кеш или очереди), добавьте их в проект ресурсом [ProjectNamespace](/modules/multitenancy-manager/cr.html#projectnamespace). Ресурс создаётся **в [основном неймспейсе проекта](../../glossary.html#main-project-namespace)**.
+
+{% alert level="info" %}
+В Deckhouse Platform Open/CE у проекта есть только основной неймспейс, создание дополнительных недоступно.
+{% endalert %}
+
+Итоговый неймспейс получает имя `<имя проекта>-<spec.name>`:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha3
@@ -407,8 +413,8 @@ d8 k label clusterrole d8:custom:namespace:developer rbac.deckhouse.io/delegatab
 | `allowedUIDs`, `allowedGIDs` | Допустимые диапазоны UID/GID контейнеров проекта |
 | `runtimeAudit.enabled` | Аудит обращений процессов проекта к ядру Linux |
 | `namespaceMetadata.labels`, `namespaceMetadata.annotations` | Дополнительные лейблы и аннотации неймспейсов проекта. Лейблы, которыми управляет модуль, здесь задать нельзя: шаблон или Project с таким лейблом отклоняется |
-| `resources`, `grantPolicies` | Выдача кластерных ресурсов через шаблон проекта — см. [«Управление доступом к cluster-wide-ресурсам»](#управление-доступом-к-cluster-wide-ресурсам) |
-| `manifests` | Другие объекты в неймспейсах проекта, которые применяются с правами администратора проекта. Подробнее — в разделе [«Описание других объектов в manifests»](/modules/multitenancy-manager/usage.html#описание-других-объектов-в-manifests) |
+| `resources`, `grantPolicies` | Выдача кластерных ресурсов через шаблон проекта. Подробнее — [в разделе «Управление доступом к cluster-wide-ресурсам»](#управление-доступом-к-cluster-wide-ресурсам) |
+| `manifests` | Другие объекты в неймспейсах проекта, которые применяются с правами администратора проекта. Подробнее — [в разделе «Описание других объектов в manifests»](/modules/multitenancy-manager/usage.html#описание-других-объектов-в-manifests) |
 | `parametersSchema.openAPIV3Schema` | Схема параметров, которые задаются при создании проекта |
 
 Пример структурированного шаблона:

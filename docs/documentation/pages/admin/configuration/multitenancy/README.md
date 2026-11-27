@@ -42,3 +42,7 @@ it could lead to a data leak and a security model breach.
 ## Additional namespaces
 
 A project is not limited to a single namespace: if an application needs several namespaces (for example, a separate one for a cache or a queue), they can be added to the project as [additional namespaces](multitenancy/project-management.html#additional-project-namespaces). The project's access grants and namespaced template policies (network isolation, log shipping) automatically apply to every namespace of the project, not just the main one.
+
+{% alert level="info" %}
+In Deckhouse Platform Open/CE, a project has only its main namespace. Additional namespaces cannot be created.
+{% endalert %}

@@ -1538,7 +1538,7 @@ spec:
       availabilityDefault: All
 ```
 
-The selected projects get every resource of the type that is not reserved, and `premium`. The `internal` resource stays unavailable, because `availabilityDefault: All` does not open reserved resources. `availabilityDefault: All` also overrides the `allowed` and `allowedSelector` lists of the other policies that apply to the project (see ["Granting access to all resources of a specific type"](#granting-access-to-all-resources-of-a-specific-type)).
+The selected projects get every resource of the type that is not reserved, and `premium`. The `internal` resource stays unavailable, because `availabilityDefault: All` does not open reserved resources. `availabilityDefault: All` also overrides the `allowed` and `allowedSelector` lists of the other policies that apply to the project (for details, refer to ["Granting access to all resources of a specific type"](#granting-access-to-all-resources-of-a-specific-type)).
 
 `allowed` without `availabilityDefault` makes every resource not on its list unavailable, as in any other policy. If a project must stay restricted to a list, for example by the policy of its template, grant the reserved resource with `allowed` alone: the `allowed` lists of all policies that apply to the project add up. Alternatively, list in one policy every resource the project needs, the reserved one included.
 
