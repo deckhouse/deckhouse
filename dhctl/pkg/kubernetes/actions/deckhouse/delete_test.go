@@ -15,13 +15,18 @@
 package deckhouse
 
 import (
+	"context"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	fakediscovery "k8s.io/client-go/discovery/fake"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/apis/capi"
 	sapcloud "github.com/deckhouse/deckhouse/dhctl/pkg/apis/sapcloudio/v1alpha1"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 )
@@ -170,4 +175,52 @@ func TestDeletePods(t *testing.T) {
 		require.Equal(t, "withDifferentPv", pods.Items[0].Name)
 		require.Equal(t, "withoutPv", pods.Items[1].Name)
 	})
+}
+
+func TestDeleteClustersKeepsStaticCluster(t *testing.T) {
+	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
+	defer cancel()
+
+	fakeClient := client.NewFakeKubernetesClientWithListGVR(map[schema.GroupVersionResource]string{
+		capi.V1beta2.ClusterGVR: "ClusterList",
+	})
+
+	discovery := fakeClient.Discovery().(*fakediscovery.FakeDiscovery)
+	discovery.Resources = append(discovery.Resources, capi.APIResourcesList())
+
+	clusters := fakeClient.Dynamic().Resource(capi.V1beta2.ClusterGVR).Namespace(deckhouseClusterNamespace)
+	for _, cluster := range []*unstructured.Unstructured{
+		newCAPICluster("static", "StaticCluster"),
+		newCAPICluster("dvp", "DeckhouseCluster"),
+	} {
+		_, err := clusters.Create(ctx, cluster, metav1.CreateOptions{})
+		require.NoError(t, err)
+	}
+
+	require.NoError(t, DeleteClusters(ctx, fakeClient))
+
+	left, err := clusters.List(ctx, metav1.ListOptions{})
+	require.NoError(t, err)
+	require.Len(t, left.Items, 1)
+	require.Equal(t, "static", left.Items[0].GetName())
+
+	require.NoError(t, WaitForClustersDeletion(ctx, fakeClient))
+}
+
+func newCAPICluster(name, infrastructureKind string) *unstructured.Unstructured {
+	return &unstructured.Unstructured{Object: map[string]interface{}{
+		"apiVersion": capi.V1beta2.GV.String(),
+		"kind":       "Cluster",
+		"metadata": map[string]interface{}{
+			"name":      name,
+			"namespace": deckhouseClusterNamespace,
+		},
+		"spec": map[string]interface{}{
+			"infrastructureRef": map[string]interface{}{
+				"apiGroup": "infrastructure.cluster.x-k8s.io",
+				"kind":     infrastructureKind,
+				"name":     name,
+			},
+		},
+	}}
 }

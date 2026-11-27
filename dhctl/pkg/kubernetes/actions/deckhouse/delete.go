@@ -58,6 +58,28 @@ func isCAPIClusterUnsupportedErr(err error) bool {
 		strings.Contains(msg, "no matches for kind")
 }
 
+// staticClusterInfrastructureKind is the infrastructure kind of the Cluster that node-manager creates for StaticInstances.
+const staticClusterInfrastructureKind = "StaticCluster"
+
+// clustersToDelete leaves out the static Cluster. Deleting a Cluster makes CAPI delete all its Machines,
+// and the static Cluster also holds the Machines of masters added from StaticInstances. CAPS wipes such
+// a master as soon as its Machine is gone, so etcd loses quorum before the static destroyer cleans
+// the masters over SSH. Only provider Clusters need the deletion: their finalizers remove cloud resources.
+func clustersToDelete(ctx context.Context, clusters []unstructured.Unstructured) []unstructured.Unstructured {
+	result := make([]unstructured.Unstructured, 0, len(clusters))
+	for _, cluster := range clusters {
+		kind, _, _ := unstructured.NestedString(cluster.Object, "spec", "infrastructureRef", "kind")
+		if kind == staticClusterInfrastructureKind {
+			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Cluster %s/%s was skipped because its infrastructure is %s: deleting it would delete the master Machines.", cluster.GetNamespace(), cluster.GetName(), kind))
+			continue
+		}
+
+		result = append(result, cluster)
+	}
+
+	return result
+}
+
 func DeleteValidatingWebhookConfigurations(ctx context.Context, kubeCl *client.KubernetesClient) error {
 	return retry.NewLoop("Delete validating webhook configurations", 45, 5*time.Second).WithShowError(false).RunContext(ctx, func() error {
 		vwcs, err := kubeCl.AdmissionregistrationV1().ValidatingWebhookConfigurations().List(ctx, metav1.ListOptions{
@@ -134,7 +156,7 @@ func DeleteClusters(ctx context.Context, kubeCl *client.KubernetesClient) error 
 			return err
 		}
 
-		for _, cluster := range clusters.Items {
+		for _, cluster := range clustersToDelete(ctx, clusters.Items) {
 			err := kubeCl.Dynamic().Resource(capiGVRs.ClusterGVR).Namespace(cluster.GetNamespace()).Delete(ctx, cluster.GetName(), metav1.DeleteOptions{})
 			if err != nil && !errors.IsNotFound(err) {
 				return err
@@ -353,10 +375,11 @@ func WaitForClustersDeletion(ctx context.Context, kubeCl *client.KubernetesClien
 			return err
 		}
 
-		count := len(resources.Items)
+		clusters := clustersToDelete(ctx, resources.Items)
+		count := len(clusters)
 		if count != 0 {
 			builder := strings.Builder{}
-			for _, item := range resources.Items {
+			for _, item := range clusters {
 				fmt.Fprintf(&builder, "\t\t%s/%s\n", item.GetNamespace(), item.GetName())
 			}
 			return fmt.Errorf("%d Clusters left in the cluster\n%s", count, strings.TrimSuffix(builder.String(), "\n"))
