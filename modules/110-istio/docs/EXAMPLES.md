@@ -679,6 +679,8 @@ spec:
 
 {% alert level="warning" %}Federation covers sidecar-mode workloads only. For details, refer to [Ambient mesh limitations](./#ambient-mesh-limitations).{% endalert %}
 
+{% alert level="warning" %}The [`spec.trustDomain`](cr.html#istiofederation-v1alpha1-spec-trustdomain) parameter is deprecated.{% endalert %}
+
 Cluster A:
 
 ```yaml
@@ -702,6 +704,8 @@ spec:
   metadataEndpoint: https://istio.k8s-a.example.com/metadata/
   trustDomain: cluster-a.local
 ```
+
+If a remote cluster runs Deckhouse Platform earlier than 1.78, set its trust domain in [`spec.trustDomain`](cr.html#istiofederation-v1alpha1-spec-trustdomain) of the IstioFederation resource in the local cluster. Once you upgrade the remote cluster to version 1.78, remove that field: Deckhouse Platform will identify that domain automatically based on the private metadata of the remote cluster.
 
 ## Setting up multicluster for two clusters using the IstioMulticluster CR
 

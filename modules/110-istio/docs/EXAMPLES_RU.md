@@ -681,6 +681,8 @@ spec:
 
 {% alert level="warning" %}Федерация работает только с рабочими нагрузками в режиме сайдкаров. Подробнее — в разделе [Ограничения ambient mesh](./#ограничения-ambient-mesh).{% endalert %}
 
+{% alert level="warning" %}Параметр [`spec.trustDomain`](cr.html#istiofederation-v1alpha1-spec-trustdomain) устарел.{% endalert %}
+
 Cluster A:
 
 ```yaml
@@ -704,6 +706,8 @@ spec:
   metadataEndpoint: https://istio.k8s-a.example.com/metadata/
   trustDomain: cluster-a.local
 ```
+
+Если удалённый кластер работает на версии Deckhouse Platform ниже 1.78, укажите его доверенный домен [в поле `spec.trustDomain`](cr.html#istiofederation-v1alpha1-spec-trustdomain) ресурса IstioFederation в локальном кластере. После обновления удалённого кластера до версии 1.78 удалите это поле: Deckhouse Platform будет автоматически определять этот домен на основе приватных метаданных удалённого сервера.
 
 ## Устройство мультикластера из двух кластеров с помощью ресурса IstioMulticluster
 
