@@ -185,14 +185,14 @@ spec:
         password: test-password
         scheme: HTTPS
         ca: "-----BEGIN CERTIFICATE-----"
-  version: 2
+  version: 1
 `
 	assert := func(t *testing.T, tplCtx, expect map[string]any) {
 		metaConfig := generateMetaConfig(t, tpl, tplCtx, false)
 		installConfig, err := PrepareDeckhouseInstallConfig(t.Context(), metaConfig, &options.New().Global)
 		require.NoError(t, err)
 		require.Len(t, installConfig.ModuleConfigs, 1)
-		assertModuleConfig(t, installConfig.ModuleConfigs[0], true, 2, expect)
+		assertModuleConfig(t, installConfig.ModuleConfigs[0], true, 1, expect)
 	}
 
 	t.Run("InitConfiguration -> always empty", func(t *testing.T) {
@@ -238,7 +238,7 @@ spec:
 			require.NoError(t, err)
 			require.Len(t, installConfig.ModuleConfigs, 2)
 
-			assertModuleConfig(t, moduleConfigNamed(t, installConfig.ModuleConfigs, "deckhouse"), true, 2, map[string]any{
+			assertModuleConfig(t, moduleConfigNamed(t, installConfig.ModuleConfigs, "deckhouse"), true, 1, map[string]any{
 				"bundle":   "Default",
 				"logLevel": "Info",
 			})

@@ -2,7 +2,6 @@
 # if you change this file please evaluate to change files
 # /modules/002-deckhouse/openapi/config-values.yaml
 # /ee/cse/modules/002-deckhouse/openapi/config-values.yaml
-x-config-version: 2
 type: object
 properties:
 
