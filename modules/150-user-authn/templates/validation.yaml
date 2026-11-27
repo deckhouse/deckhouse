@@ -146,6 +146,14 @@ spec:
   validationActions: [Deny]
 {{- end }}
 {{- $dexProviderTokenExchangePolicyName := "dexprovider-token-exchange.deckhouse.io" }}
+{{- /* Exchange through a DexProvider can only be turned off, with one exception this policy does not see: the
+       DexProvider "commander" without spec.tokenExchange exchanges tokens (dex_connector_grants in
+       templates/dex/config.yaml). Deckhouse Commander creates it in every cluster it manages and exchanges the tokens
+       of its users through it, also in a cluster created or connected after the migration. The exception goes by the
+       name only: whoever may create a DexProvider gets the exchange by naming one "commander" and leaving the field
+       out, and the D8UserAuthnDexProviderTokenExchangeDeprecated alert skips that connector. That is no escalation:
+       the same person may create a TokenExchangeProvider. The exception goes once Commander exchanges through a
+       TokenExchangeProvider. */}}
 ---
 apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicy") }}
 kind: ValidatingAdmissionPolicy

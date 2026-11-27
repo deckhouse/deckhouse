@@ -597,6 +597,29 @@ var _ = Describe("Module :: user-authn :: helm template :: dex-config", func() {
 			Expect(grants("gitlab-off")).To(Equal(signIn))
 			Expect(grants("github")).To(Equal(signIn))
 		})
+
+		It("After the migration, the DexProvider commander without the field exchanges tokens, and false turns it off", func() {
+			hec.ValuesSetFromYaml("userAuthn.internal.providers", providers+`
+- id: commander
+  displayName: commander
+  type: OIDC
+  oidc: {issuer: "https://dex.commander.example.com", clientID: dex, clientSecret: plainstring}`)
+			hec.ValuesSet("userAuthn.internal.dexProviderTokenExchangeMigrated", true)
+			hec.HelmRender()
+			Expect(hec.RenderError).ToNot(HaveOccurred())
+			Expect(grants("commander")).To(Equal(withExchange))
+			Expect(grants("oidc-unset")).To(Equal(signIn))
+
+			hec.ValuesSetFromYaml("userAuthn.internal.providers", providers+`
+- id: commander
+  displayName: commander
+  type: OIDC
+  tokenExchange: {enabled: false}
+  oidc: {issuer: "https://dex.commander.example.com", clientID: dex, clientSecret: plainstring}`)
+			hec.HelmRender()
+			Expect(hec.RenderError).ToNot(HaveOccurred())
+			Expect(grants("commander")).To(Equal(signIn))
+		})
 	})
 })
 

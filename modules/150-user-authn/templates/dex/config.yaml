@@ -43,7 +43,12 @@ fields when it decides who may write the provider. Rendered right after the conn
 
        Until the user-authn controller has set the field on the providers that existed before it
        (internal.dexProviderTokenExchangeMigrated), a provider without the field keeps exchanging tokens, as it did:
-       the config is rendered on the upgrade before the controller runs. Called with (list $provider $migrated). */ -}}
+       the config is rendered on the upgrade before the controller runs.
+
+       The DexProvider "commander" without the field exchanges tokens at any time. Deckhouse Commander creates it in
+       every cluster it manages and exchanges the tokens of its users through it, also in a cluster created or
+       connected after the migration, where nobody can set the field to true. An explicit false still turns the
+       exchange off. Called with (list $provider $migrated). */ -}}
 {{- define "dex_connector_grants" }}
   {{- $provider := index . 0 }}
   {{- $migrated := index . 1 }}
@@ -53,7 +58,7 @@ fields when it decides who may write the provider. Rendered right after the conn
     {{- if kindIs "bool" $enabled }}
       {{- $exchange = $enabled }}
     {{- else }}
-      {{- $exchange = not $migrated }}
+      {{- $exchange = or (not $migrated) (eq $provider.id "commander") }}
     {{- end }}
   {{- end }}
       grantTypes:
