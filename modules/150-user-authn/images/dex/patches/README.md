@@ -292,11 +292,13 @@ application, and which identities a provider may assert. New package
 - The login form, SPNEGO, the connector callback and the password change page
   of 220 refuse in `finalizeLogin` before `useridentity.Record`, so a refused
   login records nothing: HTTP 401 page "Access denied. Please contact your
-  administrator.", which does not say which list refused. The request carries
-  the narrowed groups; the user identity keeps the connector's, since every
-  client shares it.
+  administrator.", which does not say which list refused. A login with a
+  second factor to pass is refused after the factor instead (365). The request
+  carries the narrowed groups; the user identity keeps the connector's, since
+  every client shares it.
 - The password, refresh-token and token-exchange grants refuse with
-  `access_denied`, HTTP 401, "User is not allowed.". Refresh checks the stored
+  `access_denied`, HTTP 401, "User is not allowed."; the password grant
+  answers as to a wrong password since 365. Refresh checks the stored
   claims before the rotation and the connector's answer after it; a refused
   user loses the client's refresh token, with its offline-session reference.
 - `authflow`'s `checkAllowLists` and `renderNotAllowed` are what a login from a
@@ -1271,7 +1273,7 @@ runs with sessions off.
   (of the same user, connector and generation); a login from the session to a
   client whose chain was passed asks for no second factor again. Upstream asks
   for it at every login from a session, as the session is made after the first
-  factor. A reset of the second factor, a lock and a logout end the session with
+  factor (365 makes it after the second one). A reset of the second factor, a lock and a logout end the session with
   the generation of the pair;
 - **offline access only interactively**: a client asking for `offline_access`
   whose refresh tokens are not bound to the session (kubeconfig, device flow,
@@ -1583,6 +1585,101 @@ theme (the button and the flow on `webauthn_verify.html`).
 **Upstream status:** Deckhouse only.
 
 **Depends on:** 210 (one key per account), 340 (the choice), 350 (the page).
+
+### 365-allowlist-after-second-factor.patch
+
+**Zone:** the order of the allow-lists of 200 and the second factor. A login
+the allow-lists refused was refused right after the password, while a login
+they admit went on to the second factor: the answer to a right password told
+whoever had only the password whether the account may sign in to the client.
+
+- `finalizeLogin` takes the decision as before, once, on the claims of the
+  login. With a second factor to pass (`mfaOutstanding`, the gate of the
+  dispatcher), it keeps the refusal on the auth request
+  (`AuthRequest.AllowListRefusal`, the rule; the custom resource keeps unknown
+  fields), and the login goes on as any other: the request is marked logged
+  in. The refused login records nothing of the user: the lock and the
+  generation of the pair are read (`useridentity.State`), no claims are
+  written, so the user identity gets no claims the limits of a provider
+  refuse. It writes no "login successful" line and no offline session. Its
+  "access denied" line is written at the decision, as before, with
+  `after_second_factor`. Without a second factor the login is refused at once,
+  as in 200, and so it is when the client cannot be read.
+- `dispatch` refuses the login right after the second factor, before the
+  password change that 220 puts off, `LastLogin` and the known device (210,
+  320), the consent and the code: HTTP 401 page "Access denied. Please contact
+  your administrator.", and the warning "access denied after the second
+  factor" with the rule. `writeResponse` and the page of a deferred password
+  change refuse such a request too.
+- The browser session of a login with a second factor to pass is made after
+  the factor, for every login (`startSession`): the login form and the
+  connector callback put it off on the request (`SessionAfterSecondFactor`,
+  with the remember-me choice), and the dispatcher creates or joins it once
+  the factor is done, then sends the browser back to itself, so the code and
+  the second factor recorded on the session (300) name the session. Upstream
+  and 300 made it after the first factor. A session made for an admitted
+  login and not for a refused one would tell them apart, and a session made
+  for both would outlive a login abandoned at the second factor and serve a
+  login that answers by the allow-lists before the factor. A refused login
+  creates no session and leaves the session the browser has as it was. A
+  login without a second factor makes its session as before.
+- A refused login registers no factor. `/mfa` refuses it where it would offer
+  a registration (no factor of the chain registered, with or without the
+  choice of 340), with the warning "access denied instead of the registration
+  of a second factor", the registration pages and endpoints refuse it, a chain
+  of several factors completes once the factors the user has are passed, to be
+  refused, and "add a key" of 360 completes the step instead. For a user with a
+  factor of the chain registered, the pages before the second factor, the "add
+  a key" box included, are the same for a refused and an admitted user.
+- A rolling update: a Dex without this patch drops `AllowListRefusal` when it
+  writes the request (the second factor marks it passed), and its dispatcher
+  would issue the code. A refused login therefore carries
+  `PendingPasswordChange` set to the password change page without the
+  signature of a login (`refusalBarrier`), in place of a password change it put
+  off, which it never gets to: this Dex refuses before it goes there, a Dex of
+  the earlier patches keeps the field and sends the login to the page, which
+  answers 401. Such a Dex drops `SessionAfterSecondFactor` too, so an admitted
+  login it completes ends without a session of Dex: the user signs in again at
+  the next application.
+- The password grant answers a refused user as a wrong password:
+  `access_denied`, HTTP 401, "Invalid username or password". The log line
+  keeps the rule. The refresh-token and token-exchange grants keep "User is
+  not allowed.".
+- The lock of 230 is checked before the password and the allow-lists, as
+  before: a locked account gets the lock page whether the lists admit it or
+  not.
+
+What is left:
+
+- The lock of 230 still tells a right password from a wrong one through the
+  password grant: a right password resets the count of failed attempts,
+  whether the lists admit the user or not, and a wrong one adds to it. The
+  answers are the same; the moment the account locks is not. Counting a
+  refused password as a failure would lock the pair for every client.
+- A user with no factor of the chain registered, the first sign-in without a
+  user identity included: an admitted login is offered the registration on
+  `/mfa`, a refused one gets 401 there, so the password alone still tells them
+  apart. Such an account has no second factor to pass yet.
+- A refused login after the password reads the user identity, an admitted one
+  writes it and the offline session: the time of the answer may differ.
+- A session made by a login that needed no second factor (the second factor
+  turned on later, or a client chain that asks for none) still serves a login
+  to a client that asks for the factor, which then goes to the factor or, when
+  the lists refuse it, to the password form.
+- A refused user learns the refusal once the second factor is passed, when the
+  login is authenticated.
+
+**Consumer in Deckhouse:** DexClient and DexAuthenticator `allowedEmails` and
+`allowedGroups`, DexProvider `allowedIdentities`, with `twoFactor` and
+`sessions` of user-authn; basic-auth-proxy (password grant).
+
+**Upstream status:** Deckhouse only, as 200.
+
+**Depends on:** 100 (`AuthRequest`), 200, 210 (the user identity of every
+login, `LastLogin` after the second factor), 220 (the deferred password
+change), 290 (the generation of the pair), 300 (sessions), 340 (the choice of
+the factor), 360 (adding a key). It is not part of 200 because the code it
+changes comes from these patches.
 
 ### 400-connector-open-deadline.patch
 

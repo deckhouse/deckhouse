@@ -1,0 +1,1484 @@
+diff --git a/server/authflow/allowlist.go b/server/authflow/allowlist.go
+index df8c88d..2de1e30 100644
+--- a/server/authflow/allowlist.go
++++ b/server/authflow/allowlist.go
+@@ -19,22 +19,34 @@ import (
+ // claims.Groups to the groups they admit (see allowlist.Apply). A refusal is
+ // *allowlist.NotAllowedError, logged here; renderNotAllowed renders it.
+ //
+-// finalizeLogin calls it before anything is recorded for a login through a
+-// connector. A login from a browser session (trySessionLoginWithSession) is to
+-// call it the same way, with the claims of the stored user identity; it does
+-// not yet.
++// A login from a browser session (trySessionLoginWithSession) calls it with the
++// claims of the stored user identity. finalizeLogin applies the lists the same
++// way, through applyAllowLists, and shows a refusal after the second factor
++// when one follows.
+ func (h *Handler) checkAllowLists(ctx context.Context, clientID, connectorID string, claims *storage.Claims) error {
++	err := h.applyAllowLists(ctx, clientID, connectorID, claims)
++	h.logNotAllowed(ctx, err, *claims)
++	return err
++}
++
++// applyAllowLists is checkAllowLists without the log line: finalizeLogin logs a
++// refusal once it knows whether the refusal waits for the second factor.
++func (h *Handler) applyAllowLists(ctx context.Context, clientID, connectorID string, claims *storage.Claims) error {
+ 	client, err := h.Storage.GetClient(ctx, clientID)
+ 	if err != nil {
+ 		return fmt.Errorf("get client %q: %w", clientID, err)
+ 	}
++	return allowlist.Apply(ctx, h.Storage, client, connectorID, claims)
++}
+ 
+-	err = allowlist.Apply(ctx, h.Storage, client, connectorID, claims)
++// logNotAllowed logs err when it is a refusal of an allow-list, with extra at the
++// end of the line. The line is the same whenever the refusal is shown, as log
++// searches rely on it.
++func (h *Handler) logNotAllowed(ctx context.Context, err error, claims storage.Claims, extra ...any) {
+ 	var notAllowed *allowlist.NotAllowedError
+ 	if errors.As(err, &notAllowed) {
+-		h.Logger.WarnContext(ctx, "access denied", signinlog.NotAllowed(notAllowed, signinlog.ClaimsUser(*claims))...)
++		h.Logger.WarnContext(ctx, "access denied", append(signinlog.NotAllowed(notAllowed, signinlog.ClaimsUser(claims)), extra...)...)
+ 	}
+-	return err
+ }
+ 
+ // renderNotAllowed renders the page of a login that an allow-list refused and
+@@ -53,3 +65,17 @@ func (h *Handler) renderNotAllowed(r *http.Request, w http.ResponseWriter, err e
+ 	h.renderError(r, w, http.StatusUnauthorized, ErrMsgAccessDenied)
+ 	return true
+ }
++
++// refuseAfterSecondFactor refuses a login that an allow-list refused once its
++// second factor is done (see finalizeLogin), and reports whether it did. A login
++// the allow-lists let in is not answered. The login has no browser session to
++// take back: the session waits for the second factor (see startSession).
++func (h *Handler) refuseAfterSecondFactor(w http.ResponseWriter, r *http.Request, authReq storage.AuthRequest) bool {
++	if authReq.AllowListRefusal == "" {
++		return false
++	}
++	h.Logger.WarnContext(r.Context(), "access denied after the second factor", append(signinlog.Refused(signinlog.ReasonNotAllowed,
++		authReq.ConnectorID, authReq.ClientID, signinlog.ClaimsUser(authReq.Claims)), "rule", authReq.AllowListRefusal)...)
++	h.renderError(r, w, http.StatusUnauthorized, ErrMsgAccessDenied)
++	return true
++}
+diff --git a/server/authflow/allowlist_refusal_test.go b/server/authflow/allowlist_refusal_test.go
+new file mode 100644
+index 0000000..c18397a
+--- /dev/null
++++ b/server/authflow/allowlist_refusal_test.go
+@@ -0,0 +1,94 @@
++package authflow
++
++import (
++	"net/http"
++	"net/http/httptest"
++	"testing"
++	"time"
++
++	"github.com/stretchr/testify/require"
++
++	"github.com/dexidp/dex/server/mfa"
++	"github.com/dexidp/dex/storage"
++)
++
++// TestRefusalAfterSecondFactor checks that a login an allow-list refused before
++// its second factor is refused once the factor is done, before the password
++// change it put off and the last login, and that no path issues a response to
++// it (Deckhouse).
++func TestRefusalAfterSecondFactor(t *testing.T) {
++	httpServer, server := newTestHandler(t, func(c *testFlowConfig) {
++		c.MFAProviders = map[string]mfa.Provider{"totp": mfa.NewTOTPProvider("test-issuer", nil)}
++		c.DefaultMFAChain = []string{"totp"}
++	})
++	defer httpServer.Close()
++	ctx := t.Context()
++
++	require.NoError(t, server.Storage.CreateClient(ctx, storage.Client{
++		ID: "example-app", Secret: "secret", RedirectURIs: []string{"https://example.com/callback"},
++	}))
++	require.NoError(t, server.Storage.CreateUserIdentity(ctx, storage.UserIdentity{UserID: "user-1", ConnectorID: "mock"}))
++	newRequest := func(id string, validated bool) storage.AuthRequest {
++		t.Helper()
++		authReq := storage.AuthRequest{
++			ID: id, ClientID: "example-app", ConnectorID: "mock",
++			ResponseTypes: []string{"code"}, Scopes: []string{"openid"},
++			RedirectURI: "https://example.com/callback", Expiry: time.Now().Add(time.Hour),
++			LoggedIn: true, AuthTime: time.Now(), Claims: storage.Claims{UserID: "user-1"},
++			MFAValidated: validated, AllowListRefusal: "client_allowed_groups",
++			PendingPasswordChange: "/password/change?req=" + id,
++		}
++		require.NoError(t, server.Storage.CreateAuthRequest(ctx, authReq))
++		return authReq
++	}
++	requireRefused := func(w *httptest.ResponseRecorder, id string) {
++		t.Helper()
++		require.Equal(t, http.StatusUnauthorized, w.Code, w.Body.String())
++		require.Contains(t, w.Body.String(), ErrMsgAccessDenied)
++		_, err := server.Storage.GetAuthRequest(ctx, id)
++		require.NoError(t, err, "the request is deleted when a response is issued")
++		ui, err := server.Storage.GetUserIdentity(ctx, "user-1", "mock")
++		require.NoError(t, err)
++		require.True(t, ui.LastLogin.IsZero())
++		require.Empty(t, ui.KnownDevices)
++	}
++
++	tests := []struct {
++		name  string
++		serve func(w http.ResponseWriter, r *http.Request, authReq storage.AuthRequest)
++	}{
++		{
++			name: "dispatcher",
++			serve: func(w http.ResponseWriter, r *http.Request, authReq storage.AuthRequest) {
++				server.dispatch(w, r, authReq, false)
++			},
++		},
++		{
++			name: "dispatcher after consent",
++			serve: func(w http.ResponseWriter, r *http.Request, authReq storage.AuthRequest) {
++				server.dispatch(w, r, authReq, true)
++			},
++		},
++		{
++			name: "response",
++			serve: func(w http.ResponseWriter, r *http.Request, authReq storage.AuthRequest) {
++				server.writeResponse(w, r, authReq)
++			},
++		},
++	}
++	for _, tc := range tests {
++		t.Run(tc.name, func(t *testing.T) {
++			authReq := newRequest(tc.name, true)
++			w := httptest.NewRecorder()
++			tc.serve(w, httptest.NewRequest(http.MethodGet, "/auth", nil), authReq)
++			requireRefused(w, authReq.ID)
++		})
++	}
++
++	// The second factor is pending: the dispatcher sends the login to it, as any other.
++	authReq := newRequest("pending", false)
++	w := httptest.NewRecorder()
++	server.dispatch(w, httptest.NewRequest(http.MethodGet, "/auth", nil), authReq, false)
++	require.Equal(t, http.StatusSeeOther, w.Code)
++	require.Contains(t, w.Header().Get("Location"), "/mfa")
++}
+diff --git a/server/authflow/callback.go b/server/authflow/callback.go
+index 0ca2ac6..cb474e8 100644
+--- a/server/authflow/callback.go
++++ b/server/authflow/callback.go
+@@ -116,9 +116,7 @@ func (h *Handler) handleConnectorCallback(w http.ResponseWriter, r *http.Request
+ 	// Connector callbacks don't render the remember_me checkbox, so we use the server default.
+ 	// The password login handler reads r.FormValue("remember_me") from the submitted form instead.
+ 	rememberMe := h.Sessions.RememberMeDefault()
+-	if err := h.Sessions.CreateOrUpdateAuthSession(ctx, r, w, authReq, rememberMe != nil && *rememberMe); err != nil {
+-		h.Logger.ErrorContext(ctx, "failed to create/update auth session", "err", err)
+-	}
++	h.startSession(ctx, r, w, authReq, rememberMe != nil && *rememberMe)
+ 
+ 	http.Redirect(w, r, h.buildContinueURL(authReq), http.StatusSeeOther)
+ }
+diff --git a/server/authflow/deferredsession.go b/server/authflow/deferredsession.go
+new file mode 100644
+index 0000000..5047e15
+--- /dev/null
++++ b/server/authflow/deferredsession.go
+@@ -0,0 +1,73 @@
++package authflow
++
++// deferredsession.go puts the browser session of a login off until its second
++// factor is done (Deckhouse).
++
++import (
++	"context"
++	"net/http"
++
++	"github.com/dexidp/dex/storage"
++)
++
++// startSession records a login that passed its first factor on the browser
++// session, as upstream does, unless a second factor is still to pass: then the
++// session waits for it, and the dispatcher creates or joins it once the factor
++// is done (startDeferredSession).
++//
++// The first factor of a login the allow-lists refused is answered as the one of
++// a login they admit (see finalizeLogin), and the session must not tell them
++// apart either: a session created for the one and not for the other would. A
++// session made before the second factor would also outlive a login abandoned
++// there, and a login from it would answer by the allow-lists of the client
++// before the second factor. So no session is made before the second factor, for
++// any login.
++func (h *Handler) startSession(ctx context.Context, r *http.Request, w http.ResponseWriter, authReq storage.AuthRequest, rememberMe bool) {
++	if !h.Sessions.Enabled() {
++		return
++	}
++	outstanding, err := h.mfaOutstanding(ctx, authReq)
++	if err != nil {
++		// Without a session: the user signs in again next time.
++		h.Logger.ErrorContext(ctx, "failed to check the second factor of the login, no session", "err", err)
++		return
++	}
++	if !outstanding {
++		if err := h.Sessions.CreateOrUpdateAuthSession(ctx, r, w, authReq, rememberMe); err != nil {
++			h.Logger.ErrorContext(ctx, "failed to create/update auth session", "err", err)
++		}
++		return
++	}
++	if err := h.Storage.UpdateAuthRequest(ctx, authReq.ID, func(a storage.AuthRequest) (storage.AuthRequest, error) {
++		a.SessionAfterSecondFactor = true
++		a.RememberMe = rememberMe
++		return a, nil
++	}); err != nil {
++		h.Logger.ErrorContext(ctx, "failed to put the auth session off until the second factor", "err", err)
++	}
++}
++
++// startDeferredSession creates or joins the browser session a login put off
++// until its second factor (startSession), and reports whether it answered the
++// request. It sends the browser back to the dispatcher, so that the response is
++// issued from a request that carries the cookie of the session: the code and
++// the second factor recorded on the session name it.
++func (h *Handler) startDeferredSession(w http.ResponseWriter, r *http.Request, authReq storage.AuthRequest) bool {
++	if !authReq.SessionAfterSecondFactor {
++		return false
++	}
++	ctx := r.Context()
++	if err := h.Sessions.CreateOrUpdateAuthSession(ctx, r, w, authReq, authReq.RememberMe); err != nil {
++		h.Logger.ErrorContext(ctx, "failed to create/update auth session", "err", err)
++	}
++	if err := h.Storage.UpdateAuthRequest(ctx, authReq.ID, func(a storage.AuthRequest) (storage.AuthRequest, error) {
++		a.SessionAfterSecondFactor = false
++		return a, nil
++	}); err != nil {
++		h.Logger.ErrorContext(ctx, "failed to record the auth session of the login", "err", err)
++		h.renderError(r, w, http.StatusInternalServerError, ErrMsgInternalServerError)
++		return true
++	}
++	http.Redirect(w, r, h.buildContinueURL(authReq), http.StatusSeeOther)
++	return true
++}
+diff --git a/server/authflow/dispatch.go b/server/authflow/dispatch.go
+index 2d8865b..43f22c0 100644
+--- a/server/authflow/dispatch.go
++++ b/server/authflow/dispatch.go
+@@ -54,7 +54,8 @@ func (h *Handler) handleContinue(w http.ResponseWriter, r *http.Request) {
+ }
+ 
+ // dispatch runs the auth request's next step. It is the single place the
+-// post-identity decision lives: MFA, then consent, then issuance. Each
++// post-identity decision lives: MFA, then the refusal of an allow-list
++// (Deckhouse), then consent, then issuance. Each
+ // user-facing step is forbidden under prompt=none, which allows only a silent
+ // issue.
+ func (h *Handler) dispatch(w http.ResponseWriter, r *http.Request, authReq storage.AuthRequest, consentApproved bool) {
+@@ -82,6 +83,13 @@ func (h *Handler) dispatch(w http.ResponseWriter, r *http.Request, authReq stora
+ 		}
+ 	}
+ 
++	// A login an allow-list refused is refused once its second factor is done
++	// (Deckhouse, see finalizeLogin): before the password change, LastLogin, the
++	// consent and the code, so the refusal changes nothing of the user.
++	if h.refuseAfterSecondFactor(w, r, authReq) {
++		return
++	}
++
+ 	// A password change the password form put off until the second factor is
+ 	// done (Deckhouse, 220): the change page creates the session and comes back.
+ 	if authReq.PendingPasswordChange != "" {
+@@ -93,6 +101,12 @@ func (h *Handler) dispatch(w http.ResponseWriter, r *http.Request, authReq stora
+ 		return
+ 	}
+ 
++	// The browser session the login put off until the second factor (Deckhouse,
++	// see startSession).
++	if h.startDeferredSession(w, r, authReq) {
++		return
++	}
++
+ 	// Every factor is done, so the login counts: finalizeLogin left LastLogin to
+ 	// this point because a second factor could follow.
+ 	if h.MFAEnabled {
+diff --git a/server/authflow/finalize.go b/server/authflow/finalize.go
+index 0f1966b..2d2ace5 100644
+--- a/server/authflow/finalize.go
++++ b/server/authflow/finalize.go
+@@ -2,12 +2,15 @@ package authflow
+ 
+ // finalize.go implements the post-authentication step shared by every login
+ // mechanism: it persists the identity onto the AuthRequest, records the offline
+-// session and the user identity, then returns the finalized request.
++// session and the user identity, then returns the finalized request. A login the
++// allow-lists refuse is refused here, or after its second factor when one
++// follows (Deckhouse).
+ 
+ import (
+ 	"context"
+ 	"errors"
+ 	"fmt"
++	"net/url"
+ 
+ 	"github.com/dexidp/dex/connector"
+ 	"github.com/dexidp/dex/server/allowlist"
+@@ -53,10 +56,11 @@ func (h *Handler) finalizeLogin(ctx context.Context, identity connector.Identity
+ 	now := h.Now()
+ 
+ 	// The allow-lists of the client and the connector decide whether the user
+-	// may sign in here at all, so a refused login records nothing. The request
+-	// carries the groups they admit; the user identity keeps the connector's.
++	// may sign in here at all. The request carries the groups they admit; the
++	// user identity keeps the connector's.
+ 	issued := claims
+-	if err := h.checkAllowLists(ctx, authReq.ClientID, authReq.ConnectorID, &issued); err != nil {
++	refusal, err := h.allowListRefusal(ctx, authReq, &issued)
++	if err != nil {
+ 		return storage.AuthRequest{}, err
+ 	}
+ 
+@@ -65,15 +69,22 @@ func (h *Handler) finalizeLogin(ctx context.Context, identity connector.Identity
+ 	// the second factor and the lock live on the identity. When a second factor
+ 	// may follow, LastLogin waits for it (see dispatch). The request carries the
+ 	// generation of the pair on to the code, the tokens and the session.
+-	generation, err := useridentity.Record(ctx, h.Storage, useridentity.Login{
+-		ConnectorID: authReq.ConnectorID,
+-		Claims:      claims,
+-		Time:        now,
+-		Complete:    !h.MFAEnabled,
+-		GroupsRead:  tokens.ParseScopes(authReq.Scopes).Groups,
+-		DeviceHash:  authReq.DeviceHash,
+-		Logger:      h.Logger,
+-	})
++	// A login the allow-lists refused records nothing of the user (Deckhouse):
++	// the lock and the generation of the pair are read.
++	var generation uint64
++	if refusal != "" {
++		generation, err = useridentity.State(ctx, h.Storage, claims.UserID, authReq.ConnectorID, now)
++	} else {
++		generation, err = useridentity.Record(ctx, h.Storage, useridentity.Login{
++			ConnectorID: authReq.ConnectorID,
++			Claims:      claims,
++			Time:        now,
++			Complete:    !h.MFAEnabled,
++			GroupsRead:  tokens.ParseScopes(authReq.Scopes).Groups,
++			DeviceHash:  authReq.DeviceHash,
++			Logger:      h.Logger,
++		})
++	}
+ 	var blocked *useridentity.BlockedError
+ 	switch {
+ 	case errors.As(err, &blocked):
+@@ -97,6 +108,16 @@ func (h *Handler) finalizeLogin(ctx context.Context, identity connector.Identity
+ 		a.ConnectorData = identity.ConnectorData
+ 		a.AuthTime = now
+ 		a.Generation = generation
++		a.AllowListRefusal = string(refusal)
++		// A Dex without the refusal (a rolling update) drops the field when it
++		// writes the request; it still sends a login with a password change to
++		// pass to the change page, which refuses this one (see refusalBarrier).
++		switch barrier := h.refusalBarrier(a); {
++		case refusal != "":
++			a.PendingPasswordChange = barrier
++		case a.PendingPasswordChange == barrier:
++			a.PendingPasswordChange = ""
++		}
+ 		return a, nil
+ 	}
+ 	if err := h.Storage.UpdateAuthRequest(ctx, authReq.ID, updater); err != nil {
+@@ -105,6 +126,11 @@ func (h *Handler) finalizeLogin(ctx context.Context, identity connector.Identity
+ 	// Keep the in-memory copy in sync with what was persisted so later reads
+ 	// (the next-step decision below) see the identity we just stored.
+ 	authReq, _ = updater(authReq)
++	if refusal != "" {
++		// Neither a successful login nor the upstream credential of one: the
++		// dispatcher refuses the login after its second factor.
++		return h.Storage.GetAuthRequest(ctx, authReq.ID)
++	}
+ 
+ 	user := signinlog.ClaimsUser(claims)
+ 	if !claims.EmailVerified {
+@@ -177,6 +203,45 @@ func (h *Handler) finalizeLogin(ctx context.Context, identity connector.Identity
+ 	return h.Storage.GetAuthRequest(ctx, authReq.ID)
+ }
+ 
++// refusalBarrier is the PendingPasswordChange of a login the allow-lists
++// refused: the change page without the signature of a login, which answers 401.
++// It replaces a password change the login put off, which a refused login never
++// gets to. This Dex refuses the login before it would go there. A Dex of the
++// same patches without this one keeps the field, as it knows it, though it
++// drops AllowListRefusal when it writes the request: its dispatcher then sends
++// the login to the page instead of issuing a code. A login that signs in again
++// into the request puts its own change off anew before finalizeLogin.
++func (h *Handler) refusalBarrier(authReq storage.AuthRequest) string {
++	return h.IssuerURL.AbsPath(PasswordChangePath) + "?req=" + url.QueryEscape(authReq.ID)
++}
++
++// allowListRefusal applies the allow-lists of the client and the connector of
++// authReq to claims (see applyAllowLists). A refusal is returned as the error
++// when no second factor follows the login: the login is refused at once and
++// records nothing. When a second factor follows, the refusing rule is returned
++// instead, the login goes on to the factor like any other, and the dispatcher
++// refuses it after the factor (refuseAfterSecondFactor), so that the answers to
++// the first factor do not tell whether the user may sign in here (Deckhouse).
++// The decision is taken here, once, on the claims of this login.
++func (h *Handler) allowListRefusal(ctx context.Context, authReq storage.AuthRequest, claims *storage.Claims) (allowlist.Rule, error) {
++	err := h.applyAllowLists(ctx, authReq.ClientID, authReq.ConnectorID, claims)
++	var notAllowed *allowlist.NotAllowedError
++	if !errors.As(err, &notAllowed) {
++		return "", err
++	}
++	outstanding, mfaErr := h.mfaOutstanding(ctx, authReq)
++	if mfaErr != nil {
++		// Refused at once rather than let in.
++		h.Logger.ErrorContext(ctx, "failed to check the second factor of a refused login", "err", mfaErr)
++	}
++	if mfaErr != nil || !outstanding {
++		h.logNotAllowed(ctx, err, *claims)
++		return "", err
++	}
++	h.logNotAllowed(ctx, err, *claims, "after_second_factor", true)
++	return notAllowed.Rule, nil
++}
++
+ // replacesSharedCredential reports whether the connector data of a login
+ // replaces the upstream credential the offline session shares between the
+ // clients of the user: the identity of a SAML login always does, a credential
+diff --git a/server/authflow/password.go b/server/authflow/password.go
+index 817be9f..116cddc 100644
+--- a/server/authflow/password.go
++++ b/server/authflow/password.go
+@@ -203,10 +203,7 @@ func (h *Handler) handlePasswordLogin(w http.ResponseWriter, r *http.Request) {
+ 		}
+ 		authReq = finalized
+ 
+-		rememberMe := r.FormValue("remember_me") == "on"
+-		if err := h.Sessions.CreateOrUpdateAuthSession(ctx, r, w, authReq, rememberMe); err != nil {
+-			h.Logger.ErrorContext(ctx, "failed to create/update auth session", "err", err)
+-		}
++		h.startSession(ctx, r, w, authReq, r.FormValue("remember_me") == "on")
+ 
+ 		http.Redirect(w, r, h.buildContinueURL(authReq), http.StatusSeeOther)
+ 	default:
+diff --git a/server/authflow/passwordchange.go b/server/authflow/passwordchange.go
+index e1f58e2..31c2044 100644
+--- a/server/authflow/passwordchange.go
++++ b/server/authflow/passwordchange.go
+@@ -287,6 +287,10 @@ func (h *Handler) handlePasswordChange(w http.ResponseWriter, r *http.Request) {
+ 			h.renderError(r, w, http.StatusUnauthorized, "Unauthorized request.")
+ 			return
+ 		}
++		// The dispatcher refuses such a login before it opens the page.
++		if h.refuseAfterSecondFactor(w, r, authReq) {
++			return
++		}
+ 		// The page serves only the user the login is complete for. A login of
+ 		// another user into the same request keeps its page here when it writes it
+ 		// before that login completes, and is refused only after.
+diff --git a/server/authflow/response.go b/server/authflow/response.go
+index d0717b5..cf4dcb7 100644
+--- a/server/authflow/response.go
++++ b/server/authflow/response.go
+@@ -26,6 +26,11 @@ import (
+ // it mints the code (and, for implicit/hybrid flows, the tokens) and redirects
+ // the browser back to the client, or renders the out-of-band page.
+ func (h *Handler) writeResponse(w http.ResponseWriter, r *http.Request, authReq storage.AuthRequest) {
++	// The dispatcher refuses a login an allow-list refused before it gets here;
++	// no path issues a response to it (Deckhouse).
++	if h.refuseAfterSecondFactor(w, r, authReq) {
++		return
++	}
+ 	h.Sessions.UpdateTokenIssuedAt(r, authReq.ClientID)
+ 
+ 	ctx := r.Context()
+diff --git a/server/grants/password.go b/server/grants/password.go
+index c17ad0d..a030049 100644
+--- a/server/grants/password.go
++++ b/server/grants/password.go
+@@ -87,7 +87,7 @@ func (g *password) Authorize(ctx context.Context, req *Request, client storage.C
+ 		g.logger.WarnContext(ctx, "failed login attempt: Invalid credentials.",
+ 			append(signinlog.Refused(signinlog.ReasonInvalidCredentials, g.connectorID, client.ID, signinlog.IdentityUser(identity).Typed(req.Username)),
+ 				"grant_type", oauth2.GrantTypePassword)...)
+-		return nil, &oauth2.Error{Type: oauth2.AccessDenied, Description: "Invalid username or password", Status: http.StatusUnauthorized}
++		return nil, invalidCredentials()
+ 	}
+ 
+ 	auth := tokens.Authorization{
+@@ -106,11 +106,17 @@ func (g *password) Authorize(ctx context.Context, req *Request, client storage.C
+ 	}
+ 
+ 	// The allow-lists of the client and the connector decide whether the user
+-	// may sign in here at all; the tokens carry the groups they admit.
++	// may sign in here at all; the tokens carry the groups they admit. A refused
++	// user gets the answer to a wrong password, so that the answer does not tell
++	// a right password that the lists refuse from a wrong one (Deckhouse); the
++	// log line keeps the reason.
+ 	issued := auth.Claims
+ 	err = allowlist.Apply(ctx, g.storage, client, g.connectorID, &issued)
+ 	if oerr := allowListError(ctx, g.logger, err, "password grant denied by access filter",
+ 		g.connectorID, client.ID, signinlog.ClaimsUser(issued)); oerr != nil {
++		if oerr.Type == oauth2.AccessDenied {
++			return nil, invalidCredentials()
++		}
+ 		return nil, oerr
+ 	}
+ 
+@@ -137,3 +143,9 @@ func (g *password) Authorize(ctx context.Context, req *Request, client storage.C
+ 
+ 	return issueTokens(ctx, g.logger, g.issuer, auth, "", shouldIssueRefreshToken(conn, req.Scopes))
+ }
++
++// invalidCredentials is the answer to a wrong username or password, and to a
++// user the allow-lists refuse.
++func invalidCredentials() *oauth2.Error {
++	return &oauth2.Error{Type: oauth2.AccessDenied, Description: "Invalid username or password", Status: http.StatusUnauthorized}
++}
+diff --git a/server/mfa/handler.go b/server/mfa/handler.go
+index 214ac88..b761b77 100644
+--- a/server/mfa/handler.go
++++ b/server/mfa/handler.go
+@@ -239,7 +239,10 @@ func (h *Handler) CompleteStep(ctx context.Context, authReq storage.AuthRequest,
+ 		return "", fmt.Errorf("get user identity: %w", err)
+ 	}
+ 
+-	if nextAuthenticator := h.nextFactor(identity, mfaChain, passed); nextAuthenticator != "" {
++	// A login an allow-list refused has passed every factor the user has when the next one is to be registered:
++	// it completes, to be refused (see refusedLogin).
++	if nextAuthenticator := h.nextFactor(identity, mfaChain, passed); nextAuthenticator != "" &&
++		!(refusedLogin(authReq) && !h.hasFactor(identity, nextAuthenticator)) {
+ 		return h.buildRedirectURL(authReq, nextAuthenticator), nil
+ 	}
+ 
+@@ -332,6 +335,11 @@ func (h *Handler) handleMFA(w http.ResponseWriter, r *http.Request) {
+ 	if next == "" {
+ 		next = h.orderForIdentity(identity, chain)[0]
+ 	}
++	// The factors the user has come first, so a login sent to register one has none left to pass.
++	if refusedLogin(authReq) && !h.hasFactor(identity, next) {
++		h.renderRefused(r, w, authReq)
++		return
++	}
+ 	http.Redirect(w, r, h.buildRedirectURL(authReq, next), http.StatusSeeOther)
+ }
+ 
+diff --git a/server/mfa/oneof.go b/server/mfa/oneof.go
+index cb469fc..9ab7bbf 100644
+--- a/server/mfa/oneof.go
++++ b/server/mfa/oneof.go
+@@ -160,6 +160,8 @@ func (h *Handler) routeChoice(w http.ResponseWriter, r *http.Request, authReq st
+ 
+ 	registered := h.registeredOf(identity, chain)
+ 	switch {
++	case len(registered) == 0 && refusedLogin(authReq):
++		h.renderRefused(r, w, authReq)
+ 	case len(registered) == 0:
+ 		h.renderChoice(w, r, authReq, chain, true)
+ 	case r.FormValue("choose") != "" && len(registered) > 1:
+diff --git a/server/mfa/order.go b/server/mfa/order.go
+index 56ff3dd..7b01294 100644
+--- a/server/mfa/order.go
++++ b/server/mfa/order.go
+@@ -174,6 +174,8 @@ type registration struct {
+ 	// factors are the authenticators of the connector, of the chain or not (patch 340): a client may name a chain
+ 	// of its own, and a factor the user has outside it, which the login cannot pass, blocks the registration too.
+ 	factors []string
++	// refused is a login an allow-list refused (see refusedLogin): it registers nothing.
++	refused bool
+ }
+ 
+ func (h *Handler) registration(ctx context.Context, authReq storage.AuthRequest, authenticatorID string) (registration, error) {
+@@ -192,11 +194,15 @@ func (h *Handler) registration(ctx context.Context, authReq storage.AuthRequest,
+ 		authenticatorID: authenticatorID,
+ 		choice:          rc.choice(),
+ 		factors:         rc.factors,
++		refused:         refusedLogin(current),
+ 	}, nil
+ }
+ 
+ // allowed reports whether the login may register the factor for the user it was loaded for, or stored since.
+ func (g registration) allowed(identity storage.UserIdentity) bool {
++	if g.refused {
++		return false
++	}
+ 	return g.choice || g.h.mayRegister(identity, g.factors, g.passed, g.authenticatorID)
+ }
+ 
+@@ -207,6 +213,10 @@ func (g registration) refuse(w http.ResponseWriter, r *http.Request, authReq sto
+ 		g.h.redirectToEntry(w, r, authReq)
+ 		return
+ 	}
++	if g.refused {
++		g.h.renderRefused(r, w, authReq)
++		return
++	}
+ 	g.h.renderError(r, w, http.StatusForbidden, enrollmentClosedMsg)
+ }
+ 
+diff --git a/server/mfa/refused.go b/server/mfa/refused.go
+new file mode 100644
+index 0000000..0fca6ed
+--- /dev/null
++++ b/server/mfa/refused.go
+@@ -0,0 +1,34 @@
++package mfa
++
++// refused.go keeps a login that an allow-list refused from registering a factor
++// (Deckhouse).
++
++import (
++	"net/http"
++
++	"github.com/dexidp/dex/server/signinlog"
++	"github.com/dexidp/dex/storage"
++)
++
++// accessDeniedMsg is the text of the refusal of an allow-list, the one the login
++// form shows (authflow.ErrMsgAccessDenied).
++const accessDeniedMsg = "Access denied. Please contact your administrator."
++
++// refusedLogin reports whether an allow-list refused the user of authReq. Such
++// a login passes the factors the user has, as any other, and the dispatcher
++// refuses it after them (authflow.finalizeLogin), so that the answers until
++// then do not tell whether the user may sign in. It registers no factor: where
++// the login would offer to register one, every factor the user has is passed,
++// and the login is refused there, or completes to be refused.
++func refusedLogin(authReq storage.AuthRequest) bool {
++	return authReq.AllowListRefusal != ""
++}
++
++// renderRefused refuses a login that an allow-list refused where it would
++// register a factor.
++func (h *Handler) renderRefused(r *http.Request, w http.ResponseWriter, authReq storage.AuthRequest) {
++	h.Logger.WarnContext(r.Context(), "access denied instead of the registration of a second factor",
++		append(signinlog.Refused(signinlog.ReasonNotAllowed, authReq.ConnectorID, authReq.ClientID,
++			signinlog.ClaimsUser(authReq.Claims)), "rule", authReq.AllowListRefusal)...)
++	h.renderError(r, w, http.StatusUnauthorized, accessDeniedMsg)
++}
+diff --git a/server/mfa/webauthn.go b/server/mfa/webauthn.go
+index 31bdf45..48b71c9 100644
+--- a/server/mfa/webauthn.go
++++ b/server/mfa/webauthn.go
+@@ -509,7 +509,8 @@ func (h *Handler) handleWebAuthnLoginFinish(w http.ResponseWriter, r *http.Reque
+ 
+ 	// "Add a key" (Deckhouse patch 360): the registered key has confirmed the sign-in, and the user registers a
+ 	// new one next. The login completes after the registration.
+-	if r.FormValue("addKey") != "" && provider.CanAdd(mfa.identity, mfa.authenticatorID) {
++	// A login an allow-list refused completes instead, to be refused (see refusedLogin).
++	if r.FormValue("addKey") != "" && provider.CanAdd(mfa.identity, mfa.authenticatorID) && !refusedLogin(mfa.authReq) {
+ 		if err := h.setKeyConfirmed(ctx, mfa.authReq, mfa.authenticatorID); err != nil {
+ 			h.Logger.ErrorContext(ctx, "failed to update session data", "err", err)
+ 			writeJSONError(w, http.StatusInternalServerError, "Internal server error.")
+diff --git a/server/server_allowlist_mfa_test.go b/server/server_allowlist_mfa_test.go
+new file mode 100644
+index 0000000..c2b77e1
+--- /dev/null
++++ b/server/server_allowlist_mfa_test.go
+@@ -0,0 +1,672 @@
++package server
++
++// A login that the allow-lists refuse is refused after its second factor, so
++// that the answers to its password do not tell whether the user may sign in
++// (Deckhouse, see authflow.finalizeLogin).
++
++import (
++	"bytes"
++	"encoding/json"
++	"log/slog"
++	"net/http"
++	"net/http/httptest"
++	"net/url"
++	"slices"
++	"strings"
++	"testing"
++	"time"
++
++	"github.com/pquerna/otp/totp"
++	"github.com/stretchr/testify/require"
++	"golang.org/x/crypto/bcrypt"
++
++	"github.com/dexidp/dex/connector"
++	"github.com/dexidp/dex/server/connectors"
++	"github.com/dexidp/dex/server/mfa"
++	"github.com/dexidp/dex/storage"
++)
++
++const (
++	// mfaAllowListSecret is the TOTP secret of the users that have one.
++	mfaAllowListSecret = "JBSWY3DPEHPK3PXP"
++	// mfaAllowListClient admits the group admins only.
++	mfaAllowListClient   = "app"
++	mfaAllowListRedirect = "https://app.example/cb"
++	// mfaAllowListPassword is the password of every user: the users differ in
++	// their groups and factors.
++	mfaAllowListPassword = "dh-test-secret-0123456789abcdef"
++)
++
++// mfaAllowListUser is a local user of the tests.
++type mfaAllowListUser struct {
++	id, email, password string
++	groups              []string
++	// totp reports whether the user has a confirmed TOTP secret.
++	totp bool
++}
++
++var (
++	// mfaAdmitted is in the group the client admits.
++	mfaAdmitted = mfaAllowListUser{id: "jane-id", email: "jane@example.com", password: mfaAllowListPassword, groups: []string{"admins"}, totp: true}
++	// mfaRefused is not.
++	mfaRefused = mfaAllowListUser{id: "john-id", email: "john@example.com", password: mfaAllowListPassword, groups: []string{"guests"}, totp: true}
++	// mfaAdmittedNoFactor and mfaRefusedNoFactor have no second factor yet.
++	mfaAdmittedNoFactor = mfaAllowListUser{id: "ann-id", email: "ann@example.com", password: mfaAllowListPassword, groups: []string{"admins"}}
++	mfaRefusedNoFactor  = mfaAllowListUser{id: "bob-id", email: "bob@example.com", password: mfaAllowListPassword, groups: []string{"guests"}}
++)
++
++// mfaDeviceHash is the device mark hash of every browser of the tests.
++const mfaDeviceHash = "device-hash"
++
++// mfaLastLogin is the LastLogin the users with a factor start with.
++var mfaLastLogin = time.Date(2026, 11, 1, 10, 0, 0, 0, time.UTC)
++
++// newMFAAllowListServer serves the local connector with the users above, the
++// chain [totp] and the client app limited to the group admins. client changes
++// the client before it is stored.
++func newMFAAllowListServer(t *testing.T, sessions bool, logs *bytes.Buffer, updateConfig func(*Config), client func(*storage.Client)) *Server {
++	t.Helper()
++	ctx := t.Context()
++	setSessionsEnabled(t, sessions)
++	httpServer, s := newTestServer(t, func(c *Config) {
++		c.PasswordConnector = connectors.LocalConnector
++		c.MFAProviders = map[string]mfa.Provider{"totp": mfa.NewTOTPProvider("dex", nil)}
++		c.DefaultMFAChain = []string{"totp"}
++		c.SkipApprovalScreen = true
++		c.Now = time.Now
++		if logs != nil {
++			c.Logger = slog.New(slog.NewJSONHandler(logs, &slog.HandlerOptions{Level: slog.LevelInfo}))
++		}
++		if updateConfig != nil {
++			updateConfig(c)
++		}
++	})
++	t.Cleanup(httpServer.Close)
++
++	app := storage.Client{ID: mfaAllowListClient, Secret: "secret", RedirectURIs: []string{mfaAllowListRedirect}, AllowedGroups: []string{"admins"}}
++	if client != nil {
++		client(&app)
++	}
++	require.NoError(t, s.storage.CreateClient(ctx, app))
++	localConn := storage.Connector{ID: connectors.LocalConnector, Type: connectors.LocalConnector, Name: "Email", ResourceVersion: "1"}
++	require.NoError(t, s.storage.CreateConnector(ctx, localConn))
++	_, err := s.connectors.Open(localConn)
++	require.NoError(t, err)
++
++	for _, u := range []mfaAllowListUser{mfaAdmitted, mfaRefused, mfaAdmittedNoFactor, mfaRefusedNoFactor} {
++		hash, err := bcrypt.GenerateFromPassword([]byte(u.password), bcrypt.DefaultCost)
++		require.NoError(t, err)
++		require.NoError(t, s.storage.CreatePassword(ctx, storage.Password{
++			Email: u.email, Username: strings.Split(u.email, "@")[0], UserID: u.id, Groups: u.groups, Hash: hash, HashUpdatedAt: time.Now(),
++		}))
++		if !u.totp {
++			continue
++		}
++		require.NoError(t, s.storage.CreateUserIdentity(ctx, storage.UserIdentity{
++			UserID: u.id, ConnectorID: connectors.LocalConnector, LastLogin: mfaLastLogin,
++			Claims: storage.Claims{UserID: u.id, Email: u.email, Groups: u.groups},
++			MFASecrets: map[string]*storage.MFASecret{"totp": {
++				AuthenticatorID: "totp", Type: "TOTP", Confirmed: true,
++				Secret: "otpauth://totp/dex:" + u.email + "?issuer=dex&secret=" + mfaAllowListSecret,
++			}},
++		}))
++	}
++	return s
++}
++
++// mfaBrowser is one browser: its auth request and its cookies.
++type mfaBrowser struct {
++	t       *testing.T
++	s       *Server
++	request string
++	cookies map[string]*http.Cookie
++}
++
++func newMFABrowser(t *testing.T, s *Server, request string) *mfaBrowser {
++	t.Helper()
++	require.NoError(t, s.storage.CreateAuthRequest(t.Context(), storage.AuthRequest{
++		ID: request, ClientID: mfaAllowListClient, ConnectorID: connectors.LocalConnector,
++		ResponseTypes: []string{"code"}, Scopes: []string{"openid", "email", "groups"}, RedirectURI: mfaAllowListRedirect,
++		Expiry: time.Now().Add(time.Hour), HMACKey: []byte("0123456789abcdef0123456789abcdef"),
++		DeviceHash: mfaDeviceHash,
++	}))
++	return &mfaBrowser{t: t, s: s, request: request, cookies: map[string]*http.Cookie{}}
++}
++
++func (b *mfaBrowser) do(req *http.Request) *httptest.ResponseRecorder {
++	for _, c := range b.cookies {
++		req.AddCookie(c)
++	}
++	rr := httptest.NewRecorder()
++	b.s.ServeHTTP(rr, req)
++	for _, c := range rr.Result().Cookies() {
++		if c.MaxAge < 0 || c.Value == "" {
++			delete(b.cookies, c.Name)
++			continue
++		}
++		b.cookies[c.Name] = c
++	}
++	return rr
++}
++
++func (b *mfaBrowser) post(target string, form url.Values) *httptest.ResponseRecorder {
++	req := httptest.NewRequest(http.MethodPost, target, strings.NewReader(form.Encode()))
++	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
++	return b.do(req)
++}
++
++func (b *mfaBrowser) login(u mfaAllowListUser) *httptest.ResponseRecorder {
++	return b.post("/auth/local/login?state="+b.request, url.Values{"login": {u.email}, "password": {u.password}})
++}
++
++// follow serves rr's redirects within dex and returns the first answer that is
++// not one, with the address it answered. A redirect to the client ends the walk.
++func (b *mfaBrowser) follow(rr *httptest.ResponseRecorder) (*httptest.ResponseRecorder, string) {
++	b.t.Helper()
++	target := ""
++	for range 8 {
++		location := rr.Header().Get("Location")
++		if rr.Code != http.StatusSeeOther && rr.Code != http.StatusFound || strings.HasPrefix(location, mfaAllowListRedirect) {
++			return rr, target
++		}
++		next, err := url.Parse(location)
++		require.NoError(b.t, err)
++		target = next.RequestURI()
++		rr = b.do(httptest.NewRequest(http.MethodGet, target, nil))
++	}
++	b.t.Fatalf("too many redirects, last to %s", target)
++	return nil, ""
++}
++
++// passTOTP posts a code of the TOTP page at totpURL.
++func (b *mfaBrowser) passTOTP(totpURL string, valid bool) *httptest.ResponseRecorder {
++	b.t.Helper()
++	code := "000000"
++	if valid {
++		var err error
++		code, err = totp.GenerateCode(mfaAllowListSecret, time.Now())
++		require.NoError(b.t, err)
++	}
++	return b.post(totpURL, url.Values{"totp": {code}})
++}
++
++// answerShape is what an observer of a response sees apart from the values
++// bound to the request: the status, the path of the redirect and the names of
++// the cookies set.
++type answerShape struct {
++	Status      int
++	Path        string
++	Query       []string
++	SetsCookies []string
++}
++
++func shapeOf(t *testing.T, rr *httptest.ResponseRecorder) answerShape {
++	t.Helper()
++	shape := answerShape{Status: rr.Code}
++	if location := rr.Header().Get("Location"); location != "" {
++		u, err := url.Parse(location)
++		require.NoError(t, err)
++		shape.Path = u.Path
++		for key := range u.Query() {
++			shape.Query = append(shape.Query, key)
++		}
++		slices.Sort(shape.Query)
++	}
++	for _, c := range rr.Result().Cookies() {
++		shape.SetsCookies = append(shape.SetsCookies, c.Name)
++	}
++	slices.Sort(shape.SetsCookies)
++	return shape
++}
++
++func requireAccessDenied(t *testing.T, rr *httptest.ResponseRecorder) {
++	t.Helper()
++	require.Equal(t, http.StatusUnauthorized, rr.Code, rr.Body.String())
++	require.Contains(t, rr.Body.String(), "Access denied. Please contact your administrator.")
++}
++
++// The password of a user the client refuses is answered as the one of a user it
++// admits: the second factor follows. A wrong code is a wrong code; a right one
++// is refused, and the refusal records no login, no device and no session.
++func TestAllowListRefusalAfterSecondFactor(t *testing.T) {
++	for _, sessions := range []bool{false, true} {
++		t.Run(map[bool]string{false: "sessions off", true: "sessions on"}[sessions], func(t *testing.T) {
++			ctx := t.Context()
++			var logs bytes.Buffer
++			s := newMFAAllowListServer(t, sessions, &logs, nil, nil)
++			admitted := newMFABrowser(t, s, "req-admitted")
++			refused := newMFABrowser(t, s, "req-refused")
++
++			// The password: the same answer for both, a redirect on to the second factor.
++			admittedAnswer := admitted.login(mfaAdmitted)
++			refusedAnswer := refused.login(mfaRefused)
++			require.Equal(t, http.StatusSeeOther, refusedAnswer.Code, refusedAnswer.Body.String())
++			require.Equal(t, shapeOf(t, admittedAnswer), shapeOf(t, refusedAnswer))
++			require.NotContains(t, shapeOf(t, refusedAnswer).SetsCookies, "dex_session", "the session waits for the second factor")
++
++			admittedPage, admittedTOTP := admitted.follow(admittedAnswer)
++			refusedPage, refusedTOTP := refused.follow(refusedAnswer)
++			require.True(t, strings.HasPrefix(refusedTOTP, "/mfa/totp?"), "%s: %s", refusedTOTP, refusedPage.Body.String())
++			require.True(t, strings.HasPrefix(admittedTOTP, "/mfa/totp?"), admittedTOTP)
++			require.Equal(t, admittedPage.Code, refusedPage.Code)
++			require.Equal(t, http.StatusOK, refusedPage.Code)
++
++			// A wrong code: the code page again, as for the admitted user, no refusal.
++			wrong := refused.passTOTP(refusedTOTP, false)
++			require.Equal(t, admitted.passTOTP(admittedTOTP, false).Code, wrong.Code)
++			require.Contains(t, wrong.Body.String(), "Invalid code.")
++			require.NotContains(t, wrong.Body.String(), "Access denied")
++			authReq, err := s.storage.GetAuthRequest(ctx, refused.request)
++			require.NoError(t, err)
++			require.False(t, authReq.MFAValidated)
++
++			// The right code: refused, no code issued.
++			denied, _ := refused.follow(refused.passTOTP(refusedTOTP, true))
++			requireAccessDenied(t, denied)
++			require.NotContains(t, denied.Body.String(), mfaRefused.email, "the page must not name the user")
++			authReq, err = s.storage.GetAuthRequest(ctx, refused.request)
++			require.NoError(t, err, "a code was issued: the request is gone")
++			require.Equal(t, "client_allowed_groups", authReq.AllowListRefusal)
++
++			ui, err := s.storage.GetUserIdentity(ctx, mfaRefused.id, connectors.LocalConnector)
++			require.NoError(t, err)
++			require.True(t, ui.LastLogin.Equal(mfaLastLogin), "LastLogin moved to %s", ui.LastLogin)
++			require.Empty(t, ui.KnownDevices)
++
++			authSessions, err := s.storage.ListAuthSessions(ctx)
++			require.NoError(t, err)
++			for _, as := range authSessions {
++				require.NotEqual(t, mfaRefused.id, as.UserID, "the refused login keeps a session: %+v", as)
++			}
++			require.NotContains(t, refused.cookies, "dex_session")
++
++			// The admitted user signs in.
++			issued, _ := admitted.follow(admitted.passTOTP(admittedTOTP, true))
++			require.True(t, strings.HasPrefix(issued.Header().Get("Location"), mfaAllowListRedirect+"?code="),
++				"%d %s %s", issued.Code, issued.Header().Get("Location"), issued.Body.String())
++			ui, err = s.storage.GetUserIdentity(ctx, mfaAdmitted.id, connectors.LocalConnector)
++			require.NoError(t, err)
++			require.True(t, ui.LastLogin.After(mfaLastLogin))
++			require.Len(t, ui.KnownDevices, 1, "the device of the admitted login is remembered")
++			if sessions {
++				// The session is made after the second factor, which it records,
++				// and the code is issued from a request that carries it.
++				require.Contains(t, admitted.cookies, "dex_session")
++				authSessions, err := s.storage.ListAuthSessions(ctx)
++				require.NoError(t, err)
++				require.Len(t, authSessions, 1)
++				require.Equal(t, mfaAdmitted.id, authSessions[0].UserID)
++				require.Contains(t, authSessions[0].ClientStates, mfaAllowListClient)
++				require.Equal(t, []string{"totp"}, authSessions[0].MFAAuthenticators)
++			}
++
++			// The log keeps the reason, and no success for the refused user.
++			var deniedLines, finalLines, refusedSuccess int
++			for line := range strings.Lines(logs.String()) {
++				var record map[string]any
++				require.NoError(t, json.Unmarshal([]byte(line), &record))
++				switch record["msg"] {
++				case "access denied":
++					deniedLines++
++					require.Equal(t, "client_allowed_groups", record["rule"])
++					require.Equal(t, true, record["after_second_factor"])
++				case "access denied after the second factor":
++					finalLines++
++					require.Equal(t, "WARN", record["level"])
++					require.Equal(t, "client_allowed_groups", record["rule"])
++				case "login successful":
++					if record["user_id"] == mfaRefused.id {
++						refusedSuccess++
++					}
++				}
++			}
++			require.Equal(t, 1, deniedLines, logs.String())
++			require.Equal(t, 1, finalLines, logs.String())
++			require.Zero(t, refusedSuccess)
++		})
++	}
++}
++
++// A refused login on a browser that has a session of the user for another
++// client leaves that session as it was: no new secret, no activity, no device.
++func TestAllowListRefusalLeavesTheSessionAlone(t *testing.T) {
++	ctx := t.Context()
++	s := newMFAAllowListServer(t, true, nil, nil, nil)
++	require.NoError(t, s.storage.CreateClient(ctx, storage.Client{ID: "other", Secret: "secret", RedirectURIs: []string{mfaAllowListRedirect}}))
++	browser := newMFABrowser(t, s, "req-other")
++	require.NoError(t, s.storage.UpdateAuthRequest(ctx, "req-other", func(a storage.AuthRequest) (storage.AuthRequest, error) {
++		a.ClientID = "other"
++		return a, nil
++	}))
++	_, totpURL := browser.follow(browser.login(mfaRefused))
++	issued, _ := browser.follow(browser.passTOTP(totpURL, true))
++	require.True(t, strings.HasPrefix(issued.Header().Get("Location"), mfaAllowListRedirect+"?code="), issued.Body.String())
++
++	// The same browser signs in to app, which refuses the user. The code of the
++	// first login would be a replay.
++	require.NoError(t, s.storage.UpdateUserIdentity(ctx, mfaRefused.id, connectors.LocalConnector, func(old storage.UserIdentity) (storage.UserIdentity, error) {
++		old.MFASecrets["totp"].LastUsedCounter = 0
++		return old, nil
++	}))
++	browser.request = "req-app"
++	require.NoError(t, s.storage.CreateAuthRequest(ctx, storage.AuthRequest{
++		ID: "req-app", ClientID: mfaAllowListClient, ConnectorID: connectors.LocalConnector,
++		ResponseTypes: []string{"code"}, Scopes: []string{"openid"}, RedirectURI: mfaAllowListRedirect,
++		Expiry: time.Now().Add(time.Hour), HMACKey: []byte("0123456789abcdef0123456789abcdef"),
++	}))
++	before, err := s.storage.ListAuthSessions(ctx)
++	require.NoError(t, err)
++	require.Len(t, before, 1)
++	cookie := browser.cookies["dex_session"]
++	require.NotNil(t, cookie)
++
++	password := browser.login(mfaRefused)
++	require.Empty(t, password.Result().Cookies())
++	_, totpURL = browser.follow(password)
++	require.True(t, strings.HasPrefix(totpURL, "/mfa/totp?"), totpURL)
++	denied, _ := browser.follow(browser.passTOTP(totpURL, true))
++	requireAccessDenied(t, denied)
++
++	after, err := s.storage.ListAuthSessions(ctx)
++	require.NoError(t, err)
++	require.Equal(t, before, after)
++	require.Equal(t, cookie, browser.cookies["dex_session"])
++}
++
++// A client that asks for no second factor refuses at once, as before.
++func TestAllowListRefusalWithoutSecondFactor(t *testing.T) {
++	s := newMFAAllowListServer(t, false, nil, nil, func(c *storage.Client) { c.MFAChain = []string{} })
++	browser := newMFABrowser(t, s, "req-refused")
++
++	requireAccessDenied(t, browser.login(mfaRefused))
++	authReq, err := s.storage.GetAuthRequest(t.Context(), browser.request)
++	require.NoError(t, err)
++	require.False(t, authReq.LoggedIn)
++	require.Empty(t, authReq.AllowListRefusal)
++}
++
++// A refused user without a second factor is refused where an admitted one
++// registers it, and registers nothing.
++func TestAllowListRefusalWithoutRegisteredFactor(t *testing.T) {
++	for _, tc := range []struct {
++		name             string
++		choice, sessions bool
++	}{
++		{name: "every factor"},
++		{name: "one of the factors", choice: true},
++		{name: "sessions on", sessions: true},
++	} {
++		choice := tc.choice
++		t.Run(tc.name, func(t *testing.T) {
++			s := newMFAAllowListServer(t, tc.sessions, nil, func(c *Config) {
++				if choice {
++					c.MFAOneOfConnectorTypes = []string{connectors.LocalConnector}
++				}
++			}, nil)
++			admitted := newMFABrowser(t, s, "req-admitted")
++			refused := newMFABrowser(t, s, "req-refused")
++
++			admittedAnswer := admitted.login(mfaAdmittedNoFactor)
++			refusedAnswer := refused.login(mfaRefusedNoFactor)
++			require.Equal(t, shapeOf(t, admittedAnswer), shapeOf(t, refusedAnswer))
++
++			page, target := admitted.follow(admittedAnswer)
++			require.Equal(t, http.StatusOK, page.Code, "%s: %s", target, page.Body.String())
++
++			denied, target := refused.follow(refusedAnswer)
++			require.True(t, strings.HasPrefix(target, "/mfa?"), target)
++			requireAccessDenied(t, denied)
++
++			_, err := s.storage.GetUserIdentity(t.Context(), mfaRefusedNoFactor.id, connectors.LocalConnector)
++			require.ErrorIs(t, err, storage.ErrNotFound, "a refused login records nothing")
++			authSessions, err := s.storage.ListAuthSessions(t.Context())
++			require.NoError(t, err)
++			for _, as := range authSessions {
++				require.NotEqual(t, mfaRefusedNoFactor.id, as.UserID, "the refused login keeps a session")
++			}
++		})
++	}
++}
++
++// A locked account is refused for the lock before its password is judged,
++// whether the client admits the user or not.
++func TestAllowListRefusalOfLockedAccount(t *testing.T) {
++	ctx := t.Context()
++	s := newMFAAllowListServer(t, false, nil, nil, nil)
++	for _, u := range []mfaAllowListUser{mfaAdmitted, mfaRefused} {
++		require.NoError(t, s.storage.UpdateUserIdentity(ctx, u.id, connectors.LocalConnector, func(old storage.UserIdentity) (storage.UserIdentity, error) {
++			old.BlockedUntil = time.Now().Add(time.Hour)
++			return old, nil
++		}))
++	}
++	admitted := newMFABrowser(t, s, "req-admitted").login(mfaAdmitted)
++	refused := newMFABrowser(t, s, "req-refused").login(mfaRefused)
++	require.Equal(t, shapeOf(t, admitted), shapeOf(t, refused))
++	require.Equal(t, admitted.Body.String(), refused.Body.String())
++	require.NotContains(t, refused.Body.String(), "Access denied")
++}
++
++// With a chain of both factors, a refused user who has the code and no key is
++// refused once the code is passed, where an admitted one registers the key.
++func TestAllowListRefusalBeforeRegistrationOfNextFactor(t *testing.T) {
++	s := newMFAAllowListServer(t, false, nil, func(c *Config) {
++		webAuthn, err := mfa.NewWebAuthnProvider("dex", "", nil, "", "", "http://localhost", nil)
++		require.NoError(t, err)
++		c.MFAProviders["webauthn"] = webAuthn
++		c.DefaultMFAChain = []string{"totp", "webauthn"}
++	}, nil)
++	admitted := newMFABrowser(t, s, "req-admitted")
++	refused := newMFABrowser(t, s, "req-refused")
++
++	_, admittedTOTP := admitted.follow(admitted.login(mfaAdmitted))
++	_, refusedTOTP := refused.follow(refused.login(mfaRefused))
++	require.True(t, strings.HasPrefix(refusedTOTP, "/mfa/totp?"), refusedTOTP)
++
++	// The key page of the login before the code: back to the code, as for anyone.
++	keyPage := strings.Replace(strings.Replace(refusedTOTP, "/mfa/totp?", "/mfa/webauthn?", 1), "authenticator=totp", "authenticator=webauthn", 1)
++	_, target := refused.follow(refused.do(httptest.NewRequest(http.MethodGet, keyPage, nil)))
++	require.NotContains(t, target, "/mfa/webauthn")
++
++	page, target := admitted.follow(admitted.passTOTP(admittedTOTP, true))
++	require.Equal(t, http.StatusOK, page.Code, page.Body.String())
++	require.True(t, strings.HasPrefix(target, "/mfa/webauthn?"), target)
++
++	denied, target := refused.follow(refused.passTOTP(refusedTOTP, true))
++	requireAccessDenied(t, denied)
++	require.False(t, strings.HasPrefix(target, "/mfa/webauthn"), target)
++	ui, err := s.storage.GetUserIdentity(t.Context(), mfaRefused.id, connectors.LocalConnector)
++	require.NoError(t, err)
++	require.Empty(t, ui.WebAuthnCredentials)
++	require.True(t, ui.LastLogin.Equal(mfaLastLogin))
++}
++
++// No browser session is made before the second factor, for an admitted user
++// either: a login abandoned there leaves none, and a new sign-in to the client
++// from the browser does not tell whether the client admits the user.
++func TestAllowListRefusalNoSessionBeforeSecondFactor(t *testing.T) {
++	s := newMFAAllowListServer(t, true, nil, nil, nil)
++	admitted := newMFABrowser(t, s, "req-admitted")
++	refused := newMFABrowser(t, s, "req-refused")
++	admitted.login(mfaAdmitted)
++	refused.login(mfaRefused)
++	require.NotContains(t, admitted.cookies, "dex_session")
++	require.NotContains(t, refused.cookies, "dex_session")
++	authSessions, err := s.storage.ListAuthSessions(t.Context())
++	require.NoError(t, err)
++	require.Empty(t, authSessions)
++
++	again := "/auth/local?" + url.Values{
++		"client_id": {mfaAllowListClient}, "redirect_uri": {mfaAllowListRedirect},
++		"response_type": {"code"}, "scope": {"openid email groups"}, "state": {"again"},
++	}.Encode()
++	admittedAgain := admitted.do(httptest.NewRequest(http.MethodGet, again, nil))
++	refusedAgain := refused.do(httptest.NewRequest(http.MethodGet, again, nil))
++	require.Equal(t, shapeOf(t, admittedAgain), shapeOf(t, refusedAgain))
++	admittedPage, admittedTarget := admitted.follow(admittedAgain)
++	refusedPage, refusedTarget := refused.follow(refusedAgain)
++	require.Equal(t, admittedPage.Code, refusedPage.Code)
++	require.Equal(t, strings.Split(admittedTarget, "?")[0], strings.Split(refusedTarget, "?")[0])
++	require.Equal(t, http.StatusOK, refusedPage.Code, refusedPage.Body.String())
++	require.Contains(t, refusedPage.Body.String(), `name="password"`, "the password form")
++}
++
++// The limits of the provider are refused after the second factor too, and the
++// refused login writes no claims the provider's limits refuse into the user
++// identity.
++func TestAllowListRefusalOfTheProviderLimits(t *testing.T) {
++	ctx := t.Context()
++	s := newMFAAllowListServer(t, false, nil, nil, func(c *storage.Client) { c.AllowedGroups = nil })
++	require.NoError(t, s.storage.UpdateConnector(ctx, connectors.LocalConnector, func(old storage.Connector) (storage.Connector, error) {
++		old.AllowedGroups = []string{"admins"}
++		return old, nil
++	}))
++	// The stored claims are those of a login the limits admitted.
++	stored := storage.Claims{UserID: mfaRefused.id, Email: mfaRefused.email, Groups: []string{"admins"}}
++	require.NoError(t, s.storage.UpdateUserIdentity(ctx, mfaRefused.id, connectors.LocalConnector, func(old storage.UserIdentity) (storage.UserIdentity, error) {
++		old.Claims = stored
++		return old, nil
++	}))
++	browser := newMFABrowser(t, s, "req-refused")
++
++	_, totpURL := browser.follow(browser.login(mfaRefused))
++	require.True(t, strings.HasPrefix(totpURL, "/mfa/totp?"), totpURL)
++	denied, _ := browser.follow(browser.passTOTP(totpURL, true))
++	requireAccessDenied(t, denied)
++
++	authReq, err := s.storage.GetAuthRequest(ctx, browser.request)
++	require.NoError(t, err)
++	require.Equal(t, "connector_allowed_groups", authReq.AllowListRefusal)
++	ui, err := s.storage.GetUserIdentity(ctx, mfaRefused.id, connectors.LocalConnector)
++	require.NoError(t, err)
++	require.Equal(t, stored, ui.Claims)
++	require.True(t, ui.LastLogin.Equal(mfaLastLogin))
++}
++
++// A login through the callback of a provider is refused after the second
++// factor as the one through the password form, and its callback is answered
++// as the one of an admitted user.
++func TestAllowListRefusalAfterSecondFactorOfCallback(t *testing.T) {
++	ctx := t.Context()
++	s := newMFAAllowListServer(t, true, nil, nil, nil)
++	// callbackBrowser signs in through a callback connector of its own, which
++	// asserts one user in groups.
++	callbackBrowser := func(connectorID, userID, email string, groups []string) *mfaBrowser {
++		t.Helper()
++		conn := storage.Connector{ID: connectorID, Type: "mockCallback", Name: connectorID, ResourceVersion: "1"}
++		require.NoError(t, s.storage.CreateConnector(ctx, conn))
++		s.connectors.Set(connectorID, connectors.Connector{
++			ResourceVersion: conn.ResourceVersion,
++			Connector: allowListIdentityConnector{connector.Identity{
++				UserID: userID, Email: email, EmailVerified: true, Groups: groups,
++			}},
++		})
++		require.NoError(t, s.storage.CreateUserIdentity(ctx, storage.UserIdentity{
++			UserID: userID, ConnectorID: connectorID, LastLogin: mfaLastLogin,
++			Claims: storage.Claims{UserID: userID, Email: email, Groups: groups},
++			MFASecrets: map[string]*storage.MFASecret{"totp": {
++				AuthenticatorID: "totp", Type: "TOTP", Confirmed: true,
++				Secret: "otpauth://totp/dex:" + email + "?issuer=dex&secret=" + mfaAllowListSecret,
++			}},
++		}))
++		browser := newMFABrowser(t, s, "req-"+connectorID)
++		require.NoError(t, s.storage.UpdateAuthRequest(ctx, browser.request, func(a storage.AuthRequest) (storage.AuthRequest, error) {
++			a.ConnectorID = connectorID
++			return a, nil
++		}))
++		return browser
++	}
++	refused := callbackBrowser("corp", mockCallbackUser, mockCallbackEmail, []string{"authors"})
++	admitted := callbackBrowser("corp-admins", "admin-id", "admin@corp.example", []string{"admins"})
++
++	refusedAnswer := refused.do(httptest.NewRequest(http.MethodGet, "/callback/corp?state="+refused.request, nil))
++	admittedAnswer := admitted.do(httptest.NewRequest(http.MethodGet, "/callback/corp-admins?state="+admitted.request, nil))
++	require.Equal(t, http.StatusSeeOther, refusedAnswer.Code, refusedAnswer.Body.String())
++	require.Equal(t, shapeOf(t, admittedAnswer), shapeOf(t, refusedAnswer))
++	require.NotContains(t, shapeOf(t, refusedAnswer).SetsCookies, "dex_session")
++
++	_, totpURL := refused.follow(refusedAnswer)
++	require.True(t, strings.HasPrefix(totpURL, "/mfa/totp?"), totpURL)
++	denied, _ := refused.follow(refused.passTOTP(totpURL, true))
++	requireAccessDenied(t, denied)
++
++	ui, err := s.storage.GetUserIdentity(ctx, mockCallbackUser, "corp")
++	require.NoError(t, err)
++	require.True(t, ui.LastLogin.Equal(mfaLastLogin))
++	require.Empty(t, ui.KnownDevices)
++	require.NotContains(t, refused.cookies, "dex_session")
++}
++
++// While Dex pods without the refusal serve too (a rolling update), such a pod
++// drops AllowListRefusal when it writes the request. The login is still sent to
++// the password change page without a signature, which refuses it, and no code
++// is issued: a password change the login put off included.
++func TestAllowListRefusalSurvivesADexWithoutIt(t *testing.T) {
++	for _, tc := range []struct {
++		name           string
++		passwordChange bool
++	}{
++		{name: "no password change"},
++		{name: "a password change put off", passwordChange: true},
++	} {
++		t.Run(tc.name, func(t *testing.T) {
++			ctx := t.Context()
++			s := newMFAAllowListServer(t, false, nil, nil, nil)
++			if tc.passwordChange {
++				require.NoError(t, s.storage.UpdatePassword(ctx, mfaRefused.email, func(old storage.Password) (storage.Password, error) {
++					old.RequireResetHashOnNextSuccLogin = true
++					return old, nil
++				}))
++			}
++			admitted := newMFABrowser(t, s, "req-admitted")
++			refused := newMFABrowser(t, s, "req-refused")
++			admitted.login(mfaAdmitted)
++			_, totpURL := refused.follow(refused.login(mfaRefused))
++			require.True(t, strings.HasPrefix(totpURL, "/mfa/totp?"), totpURL)
++
++			authReq, err := s.storage.GetAuthRequest(ctx, admitted.request)
++			require.NoError(t, err)
++			require.Empty(t, authReq.PendingPasswordChange)
++			authReq, err = s.storage.GetAuthRequest(ctx, refused.request)
++			require.NoError(t, err)
++			require.Equal(t, "/password/change?req="+refused.request, authReq.PendingPasswordChange)
++
++			// A pod without the refusal writes the request.
++			require.NoError(t, s.storage.UpdateAuthRequest(ctx, refused.request, func(a storage.AuthRequest) (storage.AuthRequest, error) {
++				a.AllowListRefusal = ""
++				return a, nil
++			}))
++			denied, target := refused.follow(refused.passTOTP(totpURL, true))
++			require.False(t, strings.HasPrefix(denied.Header().Get("Location"), mfaAllowListRedirect), "a code was issued")
++			require.True(t, strings.HasPrefix(target, "/password/change?"), target)
++			require.Equal(t, http.StatusUnauthorized, denied.Code, denied.Body.String())
++			_, err = s.storage.GetAuthRequest(ctx, refused.request)
++			require.NoError(t, err, "a code was issued: the request is gone")
++		})
++	}
++}
++
++// The remember-me choice of the password form reaches the session made after
++// the second factor.
++func TestAllowListSessionAfterSecondFactorRemembers(t *testing.T) {
++	for _, remember := range []bool{false, true} {
++		t.Run(map[bool]string{false: "forget", true: "remember"}[remember], func(t *testing.T) {
++			s := newMFAAllowListServer(t, true, nil, nil, nil)
++			browser := newMFABrowser(t, s, "req-admitted")
++			form := url.Values{"login": {mfaAdmitted.email}, "password": {mfaAdmitted.password}}
++			if remember {
++				form.Set("remember_me", "on")
++			}
++			_, totpURL := browser.follow(browser.post("/auth/local/login?state="+browser.request, form))
++			issued, _ := browser.follow(browser.passTOTP(totpURL, true))
++			require.True(t, strings.HasPrefix(issued.Header().Get("Location"), mfaAllowListRedirect+"?code="), issued.Body.String())
++
++			authSessions, err := s.storage.ListAuthSessions(t.Context())
++			require.NoError(t, err)
++			require.Len(t, authSessions, 1)
++			require.Equal(t, remember, authSessions[0].RememberMe)
++			cookie := browser.cookies["dex_session"]
++			require.NotNil(t, cookie)
++			require.Equal(t, remember, cookie.MaxAge > 0 || !cookie.Expires.IsZero(), "a persistent cookie only when remembered")
++		})
++	}
++}
+diff --git a/server/server_allowlist_test.go b/server/server_allowlist_test.go
+index b29a7e2..e1bde10 100644
+--- a/server/server_allowlist_test.go
++++ b/server/server_allowlist_test.go
+@@ -10,6 +10,7 @@ import (
+ 	"encoding/json"
+ 	"fmt"
+ 	"log/slog"
++	"maps"
+ 	"net/http"
+ 	"net/http/httptest"
+ 	"net/url"
+@@ -39,6 +40,9 @@ const (
+ var (
+ 	allowListGroups     = []string{"admins", "developers"}
+ 	accessDeniedRefusal = `{"error":"access_denied","error_description":"User is not allowed."}`
++	// invalidCredentialsRefusal is the answer of the password grant to a wrong
++	// password, and to a user the allow-lists refuse.
++	invalidCredentialsRefusal = `{"error":"access_denied","error_description":"Invalid username or password"}`
+ )
+ 
+ // allowListLimits are the allow-lists of one test: of the client "app", of the
+@@ -324,8 +328,15 @@ func TestPasswordGrantAllowLists(t *testing.T) {
+ 			rr := postAllowListToken(t, s, allowListPasswordGrant)
+ 
+ 			if tc.expectedGroups == nil {
++				// A refused user gets the answer to a wrong password (Deckhouse).
++				wrongPassword := maps.Clone(allowListPasswordGrant)
++				wrongPassword.Set("password", "wrong")
++				wrong := postAllowListToken(t, s, wrongPassword)
+ 				require.Equal(t, http.StatusUnauthorized, rr.Code)
+-				require.JSONEq(t, accessDeniedRefusal, rr.Body.String())
++				require.JSONEq(t, invalidCredentialsRefusal, rr.Body.String())
++				require.Equal(t, wrong.Code, rr.Code)
++				require.Equal(t, wrong.Body.String(), rr.Body.String())
++				require.Equal(t, wrong.Header(), rr.Header())
+ 				return
+ 			}
+ 			require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
+diff --git a/storage/kubernetes/types.go b/storage/kubernetes/types.go
+index f9c0c62..7667ae9 100644
+--- a/storage/kubernetes/types.go
++++ b/storage/kubernetes/types.go
+@@ -459,6 +459,10 @@ type AuthRequest struct {
+ 	UserAgent             string `json:"userAgent,omitempty"`
+ 	DeviceHash            string `json:"deviceHash,omitempty"`
+ 	PendingPasswordChange string `json:"pendingPasswordChange,omitempty"`
++	AllowListRefusal      string `json:"allowListRefusal,omitempty"`
++
++	SessionAfterSecondFactor bool `json:"sessionAfterSecondFactor,omitempty"`
++	RememberMe               bool `json:"rememberMe,omitempty"`
+ }
+ 
+ // AuthRequestList is a list of AuthRequests.
+@@ -498,6 +502,8 @@ func toStorageAuthRequest(req AuthRequest) storage.AuthRequest {
+ 	a.Generation = req.Generation
+ 	a.IPAddress, a.UserAgent, a.DeviceHash = req.IPAddress, req.UserAgent, req.DeviceHash
+ 	a.PendingPasswordChange = req.PendingPasswordChange
++	a.AllowListRefusal = req.AllowListRefusal
++	a.SessionAfterSecondFactor, a.RememberMe = req.SessionAfterSecondFactor, req.RememberMe
+ 	return a
+ }
+ 
+@@ -536,6 +542,8 @@ func (cli *client) fromStorageAuthRequest(a storage.AuthRequest) AuthRequest {
+ 	req.Generation = a.Generation
+ 	req.IPAddress, req.UserAgent, req.DeviceHash = a.IPAddress, a.UserAgent, a.DeviceHash
+ 	req.PendingPasswordChange = a.PendingPasswordChange
++	req.AllowListRefusal = a.AllowListRefusal
++	req.SessionAfterSecondFactor, req.RememberMe = a.SessionAfterSecondFactor, a.RememberMe
+ 	return req
+ }
+ 
+diff --git a/storage/kubernetes/types_allowlist_test.go b/storage/kubernetes/types_allowlist_test.go
+new file mode 100644
+index 0000000..f50494e
+--- /dev/null
++++ b/storage/kubernetes/types_allowlist_test.go
+@@ -0,0 +1,40 @@
++package kubernetes
++
++import (
++	"encoding/json"
++	"testing"
++	"time"
++
++	"github.com/stretchr/testify/require"
++
++	"github.com/dexidp/dex/storage"
++)
++
++// TestAuthRequestAllowListRefusalRoundTrip checks that the refusal a login keeps
++// until its second factor is done survives the custom resource (Deckhouse).
++func TestAuthRequestAllowListRefusalRoundTrip(t *testing.T) {
++	cli := newTypesTestClient()
++	want := storage.AuthRequest{
++		ID:               "req",
++		ClientID:         "client",
++		RedirectURI:      "https://client.example.com/callback",
++		ConnectorID:      "local",
++		Expiry:           time.Date(2026, 11, 23, 12, 10, 0, 0, time.UTC),
++		HMACKey:          []byte("key"),
++		MaxAge:           -1,
++		LoggedIn:         true,
++		AllowListRefusal: "client_allowed_groups",
++
++		SessionAfterSecondFactor: true,
++		RememberMe:               true,
++	}
++
++	raw, err := json.Marshal(cli.fromStorageAuthRequest(want))
++	require.NoError(t, err)
++	require.Contains(t, string(raw), `"allowListRefusal":"client_allowed_groups"`)
++	require.Contains(t, string(raw), `"sessionAfterSecondFactor":true`)
++	var decoded AuthRequest
++	require.NoError(t, json.Unmarshal(raw, &decoded))
++
++	require.Equal(t, want, toStorageAuthRequest(decoded))
++}
+diff --git a/storage/storage.go b/storage/storage.go
+index e975bb2..521bb2c 100644
+--- a/storage/storage.go
++++ b/storage/storage.go
+@@ -375,6 +375,17 @@ type AuthRequest struct {
+ 	// password policy requires a new password and a second factor comes first, so
+ 	// that a login that knows only the password cannot set a new one.
+ 	PendingPasswordChange string
++	// AllowListRefusal is the rule of the allow-list that refused the user of
++	// the login (Deckhouse, allowlist.Rule), empty when none did. The login
++	// passes its second factor first, so that until then its answers do not
++	// depend on the refusal, and it is refused after it: no code is issued.
++	AllowListRefusal string
++	// SessionAfterSecondFactor reports that the browser session of the login
++	// waits for its second factor (Deckhouse): the dispatcher creates or joins
++	// it once the factor is done, with RememberMe, the remember-me choice of
++	// the login.
++	SessionAfterSecondFactor bool
++	RememberMe               bool
+ }
+ 
+ // AuthCode represents a code which can be exchanged for an OAuth2 token response.

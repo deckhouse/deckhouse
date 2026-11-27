@@ -261,7 +261,8 @@ var upstreamDexErrorMessages = []string{
 
 // upstreamDexErrorConstants are the constants of upstream Dex that the renderError calls of the patches pass.
 var upstreamDexErrorConstants = map[string]string{
-	"ErrMsgLoginError": "Login error. Please contact your administrator or try again later.",
+	"ErrMsgInternalServerError": "Internal server error. Please contact your administrator or try again later.",
+	"ErrMsgLoginError":          "Login error. Please contact your administrator or try again later.",
 }
 
 var (
