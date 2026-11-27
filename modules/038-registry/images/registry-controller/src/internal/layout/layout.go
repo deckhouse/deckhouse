@@ -579,39 +579,8 @@ func storageBackend(access Access) registryv1alpha1.Backend {
 			Auth:   access.Auth,
 		}
 	}
-	// among is the address here of the replica a candidate names, or "" when it names none of them.
-	among := func(candidate string) string {
-		for _, address := range access.Addresses {
-			if sameHost(address, candidate) {
-				return address
-			}
-		}
-		return ""
-	}
 
-	// The leader as the endpoint. The leader is the replica whose completeness authorized dropping
-	// the upstream, so it is the one that holds the set; a follower one image behind answers 404
-	// for an image the cluster holds, and a 404 from the Storage endpoint is final.
-	//
-	// Without a leader, the endpoint the nodes already have, for as long as that replica is still
-	// one of the addresses: the lease is empty for the whole of a planned handover, and moving the
-	// endpoint there only to move it again once the new leader reports rewrote every node's layout
-	// twice and, in between, could hand them a follower. See Access.Previous.
-	//
-	// Only with neither, the given order: some endpoint is needed, and serving no storage backend
-	// at all is worse than an imperfect first choice. That is a cache turned on a moment ago, or a
-	// replica that has left the cluster along with its master.
-	//
-	// Matched by host: the leader's address is what it reported, and the nodes' endpoint is what an
-	// earlier layout wrote, and either may be spelled or have its port chosen differently from the
-	// addresses here — the port above all, while the replicas move to the one they serve on now. See
-	// StorageAddresses.
-	primary := access.Addresses[0]
-	if address := among(access.Leader); address != "" {
-		primary = address
-	} else if address := among(access.Previous); address != "" {
-		primary = address
-	}
+	primary := StorageEndpoint(access)
 
 	backend := registryv1alpha1.Backend{
 		Name:     registryv1alpha1.BackendStorage,
@@ -623,6 +592,51 @@ func storageBackend(access Access) registryv1alpha1.Backend {
 		}
 	}
 	return backend
+}
+
+// StorageEndpoint is the replica the nodes read the image set from, the endpoint of the Storage
+// backend, as one of access.Addresses; "" without addresses. The Service named after the in-cluster
+// key leads pods to the same replica, from this same answer, so that a pod never reads from another
+// replica than the nodes do: not from a follower, and not from nowhere while the nodes have one.
+//
+// The leader. The leader is the replica whose completeness authorized dropping the upstream, so it
+// is the one that holds the set; a follower one image behind answers 404 for an image the cluster
+// holds, and a 404 from the Storage endpoint is final.
+//
+// Without a leader, the endpoint the nodes already have, for as long as that replica is still one
+// of the addresses: the lease is empty for the whole of a planned handover, and moving the endpoint
+// there only to move it again once the new leader reports rewrote every node's layout twice and, in
+// between, could hand them a follower. See Access.Previous.
+//
+// Only with neither, the given order: some endpoint is needed, and serving no storage backend at
+// all is worse than an imperfect first choice. That is a cache turned on a moment ago, or a replica
+// that has left the cluster along with its master.
+//
+// Matched by host: the leader's address is what it reported, and the nodes' endpoint is what an
+// earlier layout wrote, and either may be spelled or have its port chosen differently from the
+// addresses here — the port above all, while the replicas move to the one they serve on now. See
+// StorageAddresses.
+func StorageEndpoint(access Access) string {
+	if len(access.Addresses) == 0 {
+		return ""
+	}
+	// among is the address here of the replica a candidate names, or "" when it names none of them.
+	among := func(candidate string) string {
+		for _, address := range access.Addresses {
+			if sameHost(address, candidate) {
+				return address
+			}
+		}
+		return ""
+	}
+
+	if address := among(access.Leader); address != "" {
+		return address
+	}
+	if address := among(access.Previous); address != "" {
+		return address
+	}
+	return access.Addresses[0]
 }
 
 // withPersistedAuth gives a held upstream back the credentials it was working with.

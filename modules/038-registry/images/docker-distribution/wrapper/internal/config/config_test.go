@@ -20,6 +20,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -125,6 +126,14 @@ func TestLoadRefusesWhatCannotWork(t *testing.T) {
 			content:  "scope: system/deckhouse\nupstream:\n  address: registry\n  scheme: ftp\n",
 			contains: "neither http nor https",
 		},
+		"a TTL that is not a duration": {
+			content:  "scope: system/deckhouse\nupstream:\n  address: registry\n  ttl: soon\n",
+			contains: "upstream.ttl",
+		},
+		"a negative TTL": {
+			content:  "scope: system/deckhouse\nupstream:\n  address: registry\n  ttl: -1m\n",
+			contains: "upstream.ttl",
+		},
 		"a token service with no address": {
 			content:  "scope: system/deckhouse\nauthProxy:\n  ca: /pki/ca.crt\n",
 			contains: "authProxy.url is required",
@@ -215,4 +224,15 @@ func TestTheReserveIsTakenOfTheSizeItIsGiven(t *testing.T) {
 	odd := Store{Reserve: []ReservePart{{Percent: 7, AtMost: 1 << 62}}}
 	assert.Equal(t, 7*gib/100, odd.ReserveFor(gib))
 	assert.Positive(t, odd.ReserveFor(1<<62))
+}
+
+// The cache keeps what it fetched forever; a store that only proxies for pods keeps it as long as asked.
+func TestAMissIsKeptForeverUnlessATTLIsGiven(t *testing.T) {
+	forever, err := Load(write(t, "scope: system/deckhouse\nupstream:\n  address: registry\nstore:\n  reserve:\n  - percent: 10\n    atMost: 1073741824\n"))
+	require.NoError(t, err)
+	assert.Zero(t, forever.Upstream.KeepFor())
+
+	brief, err := Load(write(t, "scope: system/deckhouse\nupstream:\n  address: registry\n  ttl: 10m\nstore:\n  reserve:\n  - percent: 10\n    atMost: 1073741824\n"))
+	require.NoError(t, err)
+	assert.Equal(t, 10*time.Minute, brief.Upstream.KeepFor())
 }

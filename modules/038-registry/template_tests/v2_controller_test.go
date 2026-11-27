@@ -120,6 +120,10 @@ internal:
         name: registry-rw
         password: RW-PASSWORD
         passwordHash: RW-HASH
+      pods:
+        name: registry-pods
+        password: PODS-PASSWORD
+        passwordHash: PODS-HASH
 `
 
 // v2AirGapPublished is v2AirGap with the publication fields of the previous schema filled in — the
@@ -174,6 +178,10 @@ internal:
         name: registry-rw
         password: RW-PASSWORD
         passwordHash: RW-HASH
+      pods:
+        name: registry-pods
+        password: PODS-PASSWORD
+        passwordHash: PODS-HASH
 `
 
 // The module at its default. `enabled` is the switch discriminator — this implementation
@@ -236,6 +244,10 @@ internal:
         name: registry-rw
         password: RW-PASSWORD
         passwordHash: RW-HASH
+      pods:
+        name: registry-pods
+        password: PODS-PASSWORD
+        passwordHash: PODS-HASH
 `
 
 // Managed with the cache turned off: the node agent owns the pull path, and nothing is
@@ -253,6 +265,10 @@ internal:
           path: /deckhouse/ee
       storage:
         cache: false
+    proxyUpstream:
+      host: registry.deckhouse.io
+      path: /deckhouse/ee
+      scheme: https
     pki:
       ca:
         cert: CA-CERT
@@ -282,6 +298,10 @@ internal:
         name: registry-rw
         password: RW-PASSWORD
         passwordHash: RW-HASH
+      pods:
+        name: registry-pods
+        password: PODS-PASSWORD
+        passwordHash: PODS-HASH
 `
 
 // A cluster on its first converge: this module has weight 38 and cert-manager 101, so
@@ -802,9 +822,9 @@ var _ = Describe("Module :: registry :: helm template :: v2 storage", func() {
 			service := f.KubernetesResource("Service", "d8-system", "registry")
 			Expect(service.Exists()).To(BeTrue())
 			Expect(service.Field("spec.ports.0.port").String()).To(Equal("5001"))
-			// The storage pods and nothing else: every image reference in the cluster is built
-			// from this name.
-			Expect(service.Field("spec.selector.app").String()).To(Equal("registry-storage"))
+			// No selector with the cache: the registry controller points it at the leader, the replica
+			// that holds everything published, as it points the nodes.
+			Expect(service.Field("spec.selector").Exists()).To(BeFalse())
 		})
 
 		It("serves the index of the store through the proxy, on its own subresource and the registry's certificate", func() {
@@ -1485,9 +1505,52 @@ var _ = Describe("Module :: registry :: helm template :: v2 token service rules"
 			if rule.Match["type"] == "registry" && rule.Match["name"] == "catalog" {
 				continue
 			}
+			if len(rule.Actions) == 0 {
+				Expect(rule.Match["name"]).To(HavePrefix(`/^system/deckhouse/`),
+					"a denying rule for %s narrows the platform's path, nothing else", rule.Match["account"])
+				continue
+			}
 			Expect(rule.Match).To(HaveKeyWithValue("name", `/^system/deckhouse(/.*)?$/`),
 				"the rule for %s reaches repositories outside the platform's path", rule.Match["account"])
 		}
+	})
+
+	// The account in the global registry values, so in the pull secrets of every module's namespace: the
+	// image set, and not the module sources the store keeps beside it, which may be someone's private
+	// modules.
+	It("knows the pods' account, by its hash", func() {
+		config := f.KubernetesResource("Secret", "d8-system", "registry-storage-auth-config").
+			Field("stringData.auth_config\\.yaml").String()
+		var parsed struct {
+			Users map[string]struct {
+				Password string `yaml:"password"`
+			} `yaml:"users"`
+		}
+		Expect(yaml.Unmarshal([]byte(config), &parsed)).To(Succeed())
+		Expect(parsed.Users).To(HaveKey("registry-pods"),
+			"without it every pod reading the in-cluster address gets 401")
+		Expect(parsed.Users["registry-pods"].Password).To(Equal("PODS-HASH"))
+		Expect(config).NotTo(ContainSubstring("PODS-PASSWORD"))
+	})
+
+	It("lets the pods' account pull the image set and not the module sources", func() {
+		for _, repository := range []string{platform, platform + "/install", platform + "/modules/console", platform + "/security/trivy-db"} {
+			Expect(aclAuthorize(acl, "registry-pods", "repository", repository, "pull")).
+				To(Equal([]string{"pull"}), repository)
+		}
+		for _, repository := range []string{
+			platform + "/module-sources",
+			platform + "/module-sources/partner/some-module",
+			platform + "/module-sources/flant/console",
+			"other/x",
+		} {
+			Expect(aclAuthorize(acl, "registry-pods", "repository", repository, "pull")).
+				To(BeEmpty(), repository)
+		}
+		Expect(aclAuthorize(acl, "registry-pods", "repository", platform+"/x", "pull", "push")).
+			To(Equal([]string{"pull"}), "never writes")
+		Expect(aclAuthorize(acl, "registry-pods", "registry", "catalog", "*")).
+			To(BeEmpty(), "does not list the catalogue")
 	})
 
 	It("lets the node account pull the platform's path and nothing else", func() {
@@ -1803,16 +1866,22 @@ var _ = Describe("Module :: registry :: helm template :: v2 what gets deployed",
 	Context("managed with the cache turned off", func() {
 		BeforeEach(func() { renderWith(globalValues, v2ManagedNoCache) })
 
-		It("deploys the controller but no storage", func() {
+		// No cache: the proxy for pods behind the Service, and nothing of the cache's.
+		It("deploys the controller and the proxy for pods, but no cache", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
 			Expect(f.KubernetesResource("Deployment", "d8-system", "registry-controller").Exists()).To(BeTrue())
 			Expect(f.KubernetesGlobalResource("RegistryConfig", "registry").Exists()).To(BeTrue())
 
+			Expect(f.KubernetesResource("Deployment", "d8-system", "registry-storage-proxy").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("Service", "d8-system", "registry").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("Secret", "d8-system", "registry-storage-pki").Exists()).To(BeTrue())
+
 			Expect(f.KubernetesResource("StatefulSet", "d8-system", "registry-storage").Exists()).To(BeFalse())
 			Expect(f.KubernetesResource("DaemonSet", "d8-system", "registry-storage-image-holder").Exists()).To(BeFalse())
-			Expect(f.KubernetesResource("Service", "d8-system", "registry").Exists()).To(BeFalse())
-			Expect(f.KubernetesResource("Secret", "d8-system", "registry-storage-pki").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("Secret", "d8-system", "registry-storage-access").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("Secret", "d8-system", "registry-storage-client").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("Service", "d8-system", "registry-push").Exists()).To(BeFalse())
 			Expect(f.KubernetesResource("PodMonitor", "d8-monitoring", "registry-storage").Exists()).To(BeFalse())
 		})
 	})

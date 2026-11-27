@@ -97,6 +97,11 @@ const (
 	// `pull,push`, is issued `pull` and has every reference refused with "insufficient
 	// scope", while its status says only that it is replicating from the leader.
 	UserSync = "registry-sync"
+
+	// UserPods is what pods read the in-cluster address with, from the global registry values and so
+	// from the pull secrets of every module's namespace: pull on the platform's image set and nothing
+	// else, not the module sources the store also keeps, which may be someone's private modules.
+	UserPods = "registry-pods"
 )
 
 // CertKey is a certificate with its private key, in PEM.
@@ -130,6 +135,9 @@ type State struct {
 
 	// Sync is what a replica writes to its own store with. See UserSync.
 	Sync User `json:"sync"`
+
+	// Pods: see UserPods. Added to a state written before it by EnsurePodsUser.
+	Pods User `json:"pods"`
 }
 
 // Hosts the serving certificate has to be valid for.
@@ -204,6 +212,9 @@ func Generate(hosts Hosts) (State, error) {
 	}
 	if state.Sync, err = generateUser(UserSync); err != nil {
 		return State{}, fmt.Errorf("generating the sync user: %w", err)
+	}
+	if state.Pods, err = generateUser(UserPods); err != nil {
+		return State{}, fmt.Errorf("generating the %s user: %w", UserPods, err)
 	}
 	if state.RW, err = generateUser(UserRW); err != nil {
 		return State{}, fmt.Errorf("generating the write user: %w", err)
@@ -315,6 +326,20 @@ func (s *State) reissueIngressClient() (pki.CertKey, error) {
 		return pki.CertKey{}, fmt.Errorf("encoding the %s certificate: %w", CommonNameIngressClient, err)
 	}
 	return certificate, nil
+}
+
+// EnsurePodsUser adds the pods' account to a state written before it, leaving everything else as it
+// is: not part of Complete, which would have regenerated the whole state, authority included.
+func (s *State) EnsurePodsUser() (bool, error) {
+	if s.Pods.Name != "" && s.Pods.Password != "" && s.Pods.PasswordHash != "" {
+		return false, nil
+	}
+	user, err := generateUser(UserPods)
+	if err != nil {
+		return false, fmt.Errorf("generating the %s user: %w", UserPods, err)
+	}
+	s.Pods = user
+	return true, nil
 }
 
 // Complete reports whether the state has everything the storage needs.

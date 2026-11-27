@@ -28,6 +28,40 @@
 {{- if and ( or ( eq .cri "Containerd") ( eq .cri "ContainerdV2") ) ( not .registry.agent ) }}
 {{- $exist_registry_host_list := list }}
 
+# A node leaving the agent stops it before this step writes the directory: a running agent owns it,
+# removes what this step writes and restores its `_default`. Step 053 removes what it left.
+registry_agent_containers() {
+  crictl ps --name '^registry-agent$' --label io.kubernetes.pod.namespace=kube-system -q
+}
+if [[ -f /etc/kubernetes/manifests/registry-agent.yaml ]] || { command -v crictl >/dev/null 2>&1 && [[ -n "$(registry_agent_containers 2>/dev/null)" ]]; }; then
+  rm -f /etc/kubernetes/manifests/registry-agent.yaml
+  if ! command -v crictl >/dev/null 2>&1; then
+    >&2 echo "crictl is not available to stop the registry agent, which would overwrite what this step writes"
+    exit 1
+  fi
+  agent_stopped=""
+  for i in $(seq 1 60); do
+    if agent_containers="$(registry_agent_containers)" && [[ -z "${agent_containers}" ]]; then
+      agent_stopped=yes
+      break
+    fi
+    sleep 1
+  done
+  # Not stopped by the kubelet, which may not be running: a later step starts it.
+  if [[ -z "${agent_stopped}" ]] && agent_containers="$(registry_agent_containers)"; then
+    if [[ -n "${agent_containers}" ]]; then
+      crictl stop --timeout 10 ${agent_containers} >/dev/null 2>&1 || true
+    fi
+    if agent_containers="$(registry_agent_containers)" && [[ -z "${agent_containers}" ]]; then
+      agent_stopped=yes
+    fi
+  fi
+  if [[ -z "${agent_stopped}" ]]; then
+    >&2 echo "the registry agent is not seen stopped, and it would overwrite what this step writes"
+    exit 1
+  fi
+fi
+
 # PR: https://github.com/deckhouse/deckhouse/pull/11939
 #
 # Enabled by settings in /etc/containerd/config.toml:

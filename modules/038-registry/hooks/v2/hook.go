@@ -254,6 +254,14 @@ func handle(_ context.Context, input *go_hook.HookInput) error {
 		input.Logger.Info("re-encoded the ingress client key as PKCS#8, which the ingress controller can load")
 	}
 
+	added, err := state.EnsurePodsUser()
+	if err != nil {
+		return fmt.Errorf("adding the pods' account: %w", err)
+	}
+	if added {
+		input.Logger.Info("added the account pods read the in-cluster address with", "user", pki.UserPods)
+	}
+
 	current.PKI = state
 	current.StorageAddresses = addresses
 	current.StorePath = storePath(input)

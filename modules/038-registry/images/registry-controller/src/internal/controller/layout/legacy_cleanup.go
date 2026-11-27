@@ -112,8 +112,8 @@ const legacyServiceSelector = "registry-service"
 
 // removeLegacyService deletes the Service of that name only if it is the previous implementation's.
 //
-// The name is shared: this implementation's store is published under `registry` too, a headless
-// Service over the storage replicas, because that is the name every image reference is built from.
+// The name is shared: this implementation's store is published under `registry` too, a Service over
+// the storage replicas, because that is the name every image reference is built from.
 // Deleted by name, as it was, the store's own Service went on every reconciliation — and with it the
 // in-cluster name, for everything that dials it rather than going through a node agent. Measured in
 // an air-gapped cluster: the infrastructure converger failing on `lookup registry.d8-system.svc: no

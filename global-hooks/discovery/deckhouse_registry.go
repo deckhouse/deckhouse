@@ -17,6 +17,7 @@ package hooks
 import (
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -42,6 +43,7 @@ import (
 const (
 	imageModulesD8RegistryConfSnap = "d8_registry_secret"
 	imageAddressSnap               = "registry_image_address"
+	inClusterAccessSnap            = "registry_incluster_access"
 
 	// imageAddressConfigMapName is where the registry module publishes the address
 	// container image references are to be rendered from.
@@ -114,6 +116,20 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			},
 			FilterFunc: applyImageAddressFilter,
 		},
+		{
+			Name:       inClusterAccessSnap,
+			ApiVersion: "v1",
+			Kind:       "Secret",
+			NameSelector: &types.NameSelector{
+				MatchNames: []string{registry_const.InClusterAccessSecretName},
+			},
+			NamespaceSelector: &types.NamespaceSelector{
+				NameSelector: &types.NameSelector{
+					MatchNames: []string{"d8-system"},
+				},
+			},
+			FilterFunc: applyInClusterAccessFilter,
+		},
 	},
 }, dependency.WithExternalDependencies(discoveryDeckhouseRegistry))
 
@@ -136,6 +152,28 @@ func applyD8RegistrySecretFilter(obj *unstructured.Unstructured) (go_hook.Filter
 		Path:              string(secret.Data["path"]),
 		Scheme:            string(scheme),
 		CA:                string(secret.Data["ca"]),
+	}, nil
+}
+
+// inClusterAccess is the account and authority a pod reads the in-cluster key with, as the registry
+// module publishes them once its Service leads a pod to the store.
+type inClusterAccess struct {
+	Name         string `json:"name"`
+	DockerConfig []byte `json:"dockercfg"`
+	CA           string `json:"ca"`
+}
+
+func applyInClusterAccessFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	var secret v1core.Secret
+
+	if err := sdk.FromUnstructured(obj, &secret); err != nil {
+		return nil, fmt.Errorf("from unstructured: %w", err)
+	}
+
+	return &inClusterAccess{
+		Name:         secret.Name,
+		DockerConfig: secret.Data["dockercfg"],
+		CA:           string(secret.Data["ca"]),
 	}, nil
 }
 
@@ -259,7 +297,11 @@ func discoveryDeckhouseRegistry(ctx context.Context, input *go_hook.HookInput, d
 	if published != "" {
 		input.Logger.Info("the cluster pulls through the node agent, so it is described as the in-cluster registry",
 			slog.String("address", published))
-		return setRegistryValues(input, inClusterRegistry(), published)
+		registry, err := withInClusterAccess(input, inClusterRegistry())
+		if err != nil {
+			return err
+		}
+		return setRegistryValues(input, registry, published)
 	}
 
 	// The in-cluster address in the secret with nothing published is a cluster still pulling through
@@ -319,11 +361,13 @@ func discoveryDeckhouseRegistry(ctx context.Context, input *go_hook.HookInput, d
 
 // inClusterRegistry is the in-cluster registry as the platform records it.
 //
-// No authority and no account, and both on purpose. Whatever dials this address from a node goes
-// through the agent, which serves under an authority generated on that node and asks the client for
-// no credentials; a container runtime is redirected into the agent by a drop-in, and the agent drops
-// whatever a pull secret offers it. An account here would be an account for something that never
-// asks for one — and the one that used to be here was the upstream's.
+// No authority and no account of its own. Whatever dials this address from a node goes through the
+// agent, which serves under an authority generated on that node and asks the client for no
+// credentials; a container runtime is redirected into the agent by a drop-in, and the agent drops
+// whatever a pull secret offers it. The upstream's account, which used to be here, must never be. A pod
+// reaches the address through the registry module's Service instead, and the module's account for pods
+// (registry-pods: the platform's image set, not the module sources) and the store's authority for that
+// are added by withInClusterAccess once the module publishes them.
 //
 // The host is still in the docker config, without credentials, because what reads the secret looks
 // the registry up by host there: the admission webhook refuses a secret with no registry in it, and
@@ -335,6 +379,45 @@ func inClusterRegistry() registrySecret {
 		Path:              registry_const.Path,
 		Scheme:            registry_const.Scheme,
 	}
+}
+
+// withInClusterAccess adds the account and authority for the key once the registry module publishes them.
+//
+// A pod has no agent: it dials the key, and the registry module's Service leads it to the store, which
+// asks for an account and serves under the module's authority. Without them a module that fetches from a
+// pod by these values, such as operator-trivy, fails the handshake and then the authorization. Nothing on a
+// node is affected: a container runtime is redirected to the agent, which drops the account, and Deckhouse
+// itself drops both for the key. Until they are published the key is described without them, as before.
+func withInClusterAccess(input *go_hook.HookInput, registry registrySecret) (registrySecret, error) {
+	published, err := sdkobjectpatch.UnmarshalToStruct[inClusterAccess](input.Snapshots, inClusterAccessSnap)
+	if err != nil {
+		return registry, fmt.Errorf("failed to unmarshal %s snapshot: %w", inClusterAccessSnap, err)
+	}
+	// By name as well as by the binding's selector, which not every client applies.
+	var access *inClusterAccess
+	for i := range published {
+		if published[i].Name == registry_const.InClusterAccessSecretName {
+			access = &published[i]
+		}
+	}
+	if access == nil {
+		return registry, nil
+	}
+
+	// A docker config without the key's host would leave the platform's secret unreadable by what looks
+	// the registry up by host (the admission webhook, dhctl), so a malformed one is not taken.
+	var config struct {
+		Auths map[string]json.RawMessage `json:"auths"`
+	}
+	if err := json.Unmarshal(access.DockerConfig, &config); err != nil || config.Auths[registry_const.Host] == nil {
+		input.Logger.Warn("the registry module's in-cluster access has no account for the key, describing it without one",
+			slog.String("secret", registry_const.InClusterAccessSecretName))
+		return registry, nil
+	}
+
+	registry.RegistryDockercfg = access.DockerConfig
+	registry.CA = access.CA
+	return registry, nil
 }
 
 // setRegistryValues writes the registry the platform renders from.

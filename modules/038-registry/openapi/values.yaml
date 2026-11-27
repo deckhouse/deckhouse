@@ -212,6 +212,35 @@ properties:
               node's agent fell behind would re-render the whole cluster back onto the
               upstream, which in an air-gapped cluster answers nothing at all. It is
               withdrawn by the mode leaving `Managed` or the module being disabled.
+          inClusterAccess:
+            type: boolean
+            description: |
+              Whether the Service named after the in-cluster key leads a pod to a serving store, so the
+              account and authority for the key may be published for the global registry values. Sticky
+              once set. See `hooks/v2/incluster_access.go`.
+          proxyUpstream:
+            type: object
+            description: |
+              The upstream the proxy for pods fetches from without the cache: the one the nodes fetch from,
+              which the registry controller holds (`RegistryConfig.status.effectiveUpstream`), or the
+              configured one before any has passed its probe, with its credentials. See
+              `hooks/v2/proxy_upstream.go`.
+            properties:
+              host:
+                type: string
+              path:
+                type: string
+              scheme:
+                type: string
+              ca:
+                type: string
+              auth:
+                type: string
+          legacyService:
+            type: boolean
+            description: |
+              Whether the Service named after the in-cluster key is still the previous implementation's.
+              The store's Service is not rendered until the controller removes it.
           bashibleConfig:
             type: object
             description: |
@@ -350,6 +379,8 @@ properties:
               sync:
                 <<: *v2User
               rw:
+                <<: *v2User
+              pods:
                 <<: *v2User
       customCertificateData:
         type: object

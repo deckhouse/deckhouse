@@ -43,8 +43,8 @@ metadata:
   namespace: d8-system
   {{- include "helm_lib_module_labels" (list . (dict "app" "registry-storage")) | nindent 2 }}
 spec:
-  # A routable service, unlike the headless one the cluster pulls through: the ingress controller
-  # needs an address to send a write to.
+  # A Service of its own, apart from `registry`, which leads to every replica: the ingress controller
+  # needs an address to send a write to, and only the leader takes one.
   #
   # And no selector: a push goes to the storage leader and to no other replica. The cluster reads
   # from the leader — agents ask it first, and its 404 does not fall through to the followers — and

@@ -258,7 +258,7 @@ func (w *Watcher) processStoreEvent(secretEvent watch.Event) {
 	case watch.Added, watch.Modified:
 		// The store as dialled, at the port its replicas serve on, and not the recorded address: this
 		// answer is used only where there is no agent, and the recorded `:5001` is the agent's port.
-		// The Service is headless, so the name resolves to the masters' node addresses, and there the
+		// While the Service was headless the name resolved to the masters' node addresses, where the
 		// agent listens on the loopback only — the recorded address was refused on every master
 		// (job 8069309: `dial tcp <master>:5001: connect: connection refused`, the agent never
 		// installed, no node joined). Get still matches requests by the recorded address; only what it

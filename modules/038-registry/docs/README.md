@@ -116,10 +116,25 @@ The Deckhouse controller pulls through the same agent — at `127.0.0.1:5001` �
 channel and the module sources it owns. A different address, but the same agent: the
 controller is a process and has to dial a connection, whereas an image reference is resolved by
 the container runtime, which a drop-in redirects to the agent, so it can
-name a service that nothing ever connects to. This is exactly what makes changing the registry a single
+name a service the runtime itself never connects to. This is exactly what makes changing the registry a single
 change: the configuration is edited in one place, the agents are reconfigured, and both what the nodes pull
 and what the controller fetches follow — with no registry address for the
 controller written down anywhere, and so none that could be left pointing at the old one.
+
+A pod can use the in-cluster address too, `registry.d8-system.svc:5001`, as the platform describes it in
+`global.modulesImages.registry`: the Service `d8-system/registry` leads it to the replica the nodes read
+from, and the platform gives that address the store's certificate authority and an account of its own,
+`registry-pods`, that can only pull the platform's image set, not the module sources the store keeps beside
+it. The account is in the pull secrets of the modules' namespaces and in the platform's module sources,
+ModuleSource `deckhouse` and PackageRepository `deckhouse-modules`, which record the same address: the
+`viewer` role sees the address, while `spec.registry.dockerCfg` is masked without the `*/sensitive`
+subresources. The account is also in `d8-system/registry-incluster-access`. A module that fetches its own artifacts from a pod, such as
+`operator-trivy`, works with or without the cache, and nothing changes in the sources when the upstream
+does. Without the cache the Service leads to `registry-storage-proxy`: pods in the pod network on the master
+nodes that fetch from the upstream the nodes use — the last one that passed its check — and keep nothing
+beyond a few minutes. The nodes never go there; they pull through the agent. When the account and
+certificate authority first appear in `global.modulesImages.registry`, every module converges once, and
+Deckhouse restarts.
 
 {% alert level="warning" %}
 Use a separate disk for the cache directory and for etcd data. Sharing one
@@ -167,7 +182,7 @@ The cache runs in the host network, so its ports are open on the address of ever
 
 | Port | Purpose | Protection |
 |---|---|---|
-| `4281/TCP` | Reading: the agents of all nodes pull through it, the other replicas replicate from it. | TLS with the module's own certificate authority. Every request needs a token from the module's token service. The read credentials, which every node uses to get one, are on every node, so whoever has taken them from any node and can reach this port can pull everything the cache holds. The port does not accept writes, whatever the credentials: a push or a delete is refused, in an air-gapped cluster as well, where the port serves the store itself rather than a cache in front of an upstream. The store accepts writes only on `4283/TCP`, which requires a client certificate. |
+| `4281/TCP` | Reading: the agents of all nodes pull through it, the other replicas replicate from it, and pods reach the leader through the Service `d8-system/registry`. | TLS with the module's own certificate authority. Every request needs a token from the module's token service. The read credentials, which every node uses to get one, are on every node, so whoever has taken them from any node and can reach this port can pull everything the cache holds. Pods use a separate account, `registry-pods`, which is in the `deckhouse-registry` pull secret of every module's namespace and can pull the platform's image set but not the module sources the cache keeps beside it. The port does not accept writes, whatever the credentials: a push or a delete is refused, in an air-gapped cluster as well, where the port serves the store itself rather than a cache in front of an upstream. The store accepts writes only on `4283/TCP`, which requires a client certificate. |
 | `4283/TCP` | Writing: `d8 mirror push` through the Ingress, and the replica's own filling, replication and garbage collection. | Mutual TLS. The connection is refused during the TLS handshake unless the client presents a certificate issued by the module's certificate authority to the ingress controller or to the cache's own pod. After that, the write credentials are checked. [`whitelistSourceRanges`](configuration.html#parameters-whitelistsourceranges) is applied by the Ingress only: the port does not filter by source address. A connection made directly to the port, or to the `registry-push` Service inside the cluster, without such a certificate fails at TLS. |
 | `4285/TCP` | Metrics. | `kube-rbac-proxy`: a request needs a token of a subject allowed to get the `prometheus-metrics` subresource of the `registry-storage` StatefulSet in `d8-system`. The registry's own metrics and debug listeners are behind it, on the loopback. |
 

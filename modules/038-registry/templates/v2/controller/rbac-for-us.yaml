@@ -240,7 +240,7 @@ rules:
   # them, and this controller is the only party that knows when every node has stopped depending
   # on them.
   #
-  # The Service is also READ, because its name is shared: the storage's own headless Service is
+  # The Service is also READ, because its name is shared: the storage's own Service is
   # `registry` too. Deleted by name alone it went on every reconciliation — the in-cluster name
   # stopped resolving, and an air-gapped cluster's infrastructure converger with it — so the
   # controller looks at what it selects first and takes only the previous implementation's.
