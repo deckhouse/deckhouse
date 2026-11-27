@@ -4419,7 +4419,7 @@ alerts:
       description: |
         Node {{ $labels.node }} in NodeGroup {{ $labels.node_group }} does not support cgroup v2.
         Starting from Kubernetes 1.35, cgroup v1 is [deprecated](https://github.com/kubernetes/kubernetes/blob/master/CHANGELOG/CHANGELOG-1.35.md#no-really-you-must-read-this-before-you-upgrade-1).
-        To migrate to cgroup v2, please upgrade the kernel to version 5.8 or newer. For more information, please refer to the [documentation](https://kubernetes.io/docs/concepts/architecture/cgroups/#migrating-cgroupv2).
+        To migrate to cgroup v2, upgrade the kernel to version 5.8 or newer (6.12.29+ is recommended). For more information, please refer to the [documentation](https://kubernetes.io/docs/concepts/architecture/cgroups/#migrating-cgroupv2).
       summary: |
         Node {{ $labels.node }} is using deprecated cgroup v1 – migration to v2 required.
       severity: "8"
@@ -4433,6 +4433,9 @@ alerts:
         Node {{ $labels.node }} in NodeGroup {{ $labels.node_group }} does not support containerd v2.
         Starting from Kubernetes 1.38, containerd v1.y [will no longer be supported](https://kubernetes.io/docs/setup/production-environment/container-runtimes/#systemd-cgroup-driver).
         Please check the requirements for containerd v2 and schedule your migration plan.
+
+        For better performance with containerd v2, we recommend upgrading to a compatible Linux kernel
+        version 6.12.29 or later.
 
         The exact reason is listed in the `node.deckhouse.io/containerd-v2-err` annotation on the node.
 
