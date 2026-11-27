@@ -146,11 +146,12 @@ func Run(ctx context.Context, distribution *configuration.Configuration, wrapper
 			}
 		}()
 
-		// Never expires. The store holds what the cluster needs to pull while the upstream is
-		// unreachable, so nothing in it may be evicted on a timer — upstream reads a zero TTL as
-		// exactly that, which is what replaced this module's own patches.
-		never := time.Duration(0)
-		distribution.Proxy = configuration.Proxy{RemoteURL: "http://" + rewriter.Address, TTL: &never}
+		// Never expires unless told to. The cache holds what the cluster needs to pull while the upstream
+		// is unreachable, so nothing in it may be evicted on a timer — upstream reads a zero TTL as
+		// exactly that, which is what replaced this module's own patches. A store that only proxies
+		// for pods sets one, and keeps a miss only that long.
+		keep := wrapper.Upstream.KeepFor()
+		distribution.Proxy = configuration.Proxy{RemoteURL: "http://" + rewriter.Address, TTL: &keep}
 		log.Info("the cache will fetch misses through the loopback upstream",
 			"upstream", wrapper.Upstream.Address, "path", wrapper.Upstream.Path)
 	} else {

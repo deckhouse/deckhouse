@@ -92,6 +92,19 @@ type Values struct {
 	// second from running ahead of the first.
 	ImageAddress string `json:"imageAddress,omitempty"`
 
+	// InClusterAccess reports that the Service leads a pod dialling the key to a serving store, so the
+	// account and authority for the key may be published (templates/v2/incluster-access-secret.yaml).
+	// Sticky once set. See hooks/v2/incluster_access.go.
+	InClusterAccess bool `json:"inClusterAccess,omitempty"`
+
+	// ProxyUpstream is the upstream the proxy for pods fetches from without the cache: the one the
+	// controller holds, with its credentials. See hooks/v2/proxy_upstream.go.
+	ProxyUpstream *ProxyUpstream `json:"proxyUpstream,omitempty"`
+
+	// LegacyService reports that the Service named after the key is still the previous implementation's,
+	// which the controller removes; the store's Service waits for it to go.
+	LegacyService bool `json:"legacyService,omitempty"`
+
 	// APIServerCert is the serving certificate of registry-controller's aggregated API, written by
 	// the hook in apiserver_cert.go. Carried here, though no hook of this package reads it, because
 	// every write of this struct replaces the whole object: a field missing here is erased by the
@@ -136,4 +149,14 @@ func accessor(input *go_hook.HookInput) helpers.ValuesAccessor[Values] {
 // rather than the one that starts a second writer.
 func IsActive(input *go_hook.HookInput) bool {
 	return accessor(input).Get().Enabled
+}
+
+// ProxyUpstream is an upstream in effect as the proxy for pods is configured with it. Auth is the encoded
+// `user:password`, as the controller stores it.
+type ProxyUpstream struct {
+	Host   string `json:"host"`
+	Path   string `json:"path,omitempty"`
+	Scheme string `json:"scheme,omitempty"`
+	CA     string `json:"ca,omitempty"`
+	Auth   string `json:"auth,omitempty"`
 }

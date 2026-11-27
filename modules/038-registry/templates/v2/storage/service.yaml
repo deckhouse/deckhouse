@@ -1,0 +1,51 @@
+{{- /*
+  The Service every image reference is named after: `registry.d8-system.svc`.
+
+  Routable, so that a pod which dials the key, `registry.d8-system.svc:5001`, reaches the store: a module
+  that fetches its own artifacts by `global.modulesImages.registry.base`, such as operator-trivy, works
+  unchanged. The node agent stays on its loopback; nodes never dial this Service, they are redirected to
+  the agent. Port 4281 keeps StorageHost (go_lib/registry/const) for what reads the store by name: dhctl
+  in the cluster, docs-builder, registry-packages-proxy on a master without an agent, module sources.
+
+  It was headless, and a clusterIP cannot change: hooks/v2/incluster_access.go deletes the headless one
+  for this one to be created. Nothing needs the headless form: agents and replication address replicas
+  by node address from the controller, and no one resolves the replicas' own records.
+
+  While the previous implementation's Service of this name exists (headless, its in-cluster proxy behind
+  it), nothing is rendered under the name, with the cache or without: Helm cannot change its clusterIP,
+  and taking it over would send a node still on that implementation to the store. The controller's
+  cleanup removes it once every node's agent serves (legacy_cleanup.go), and the Service follows.
+*/ -}}
+{{- if eq (include "registry_v2_stores" .) "true" }}
+{{- $legacy := ((.Values.registry.internal).v2).legacyService }}
+{{- if not $legacy }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: registry
+  namespace: d8-system
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "registry-storage")) | nindent 2 }}
+spec:
+  type: ClusterIP
+  {{- if ne (include "registry_v2_caches" .) "true" }}
+  # Without the cache, the proxy for pods (proxy.yaml).
+  selector:
+    app: registry-storage-proxy
+  {{- end }}
+  # With the cache, no selector: the registry controller points the Service at the leader alone
+  # (service_endpoint.go), as it points the nodes. A follower holds only the image set it replicates,
+  # not what is published beside it, such as the security databases.
+  ports:
+  # The key's port, ServicePort: what a pod dials.
+  - name: registry
+    port: 5001
+    targetPort: 4281
+    protocol: TCP
+  # StorageHost's port.
+  - name: storage
+    port: 4281
+    targetPort: 4281
+    protocol: TCP
+{{- end }}
+{{- end }}

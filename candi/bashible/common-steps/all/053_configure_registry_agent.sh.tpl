@@ -547,12 +547,9 @@ EOF
 
 # The agent does not own the runtime configuration here, so nothing of it should remain.
 #
-# Its drop-in in the runtime's directory is not removed from this side, and does not have
-# to be: step 030 is the writer again now, and it removes every host directory listed in
-# `deckhouse_hosts_state.json` that its own configuration does not name. The agent
-# records the directory it created in that same file for exactly this reason, so the
-# handover works in both directions without either step reaching into the other's
-# output.
+# Step 030 removes the agent's drop-in through `deckhouse_hosts_state.json`, but an agent still
+# running restores it from its layout, which outlives the module in `Unmanaged`; stopped, it
+# never removes it. So the drop-in is removed again below, once the agent is gone.
 #
 # What is removed here is the pod, the material only the agent reads, and the agent's metrics
 # file. The agent removes that file itself when the kubelet stops it, but not when it is killed
@@ -564,5 +561,52 @@ rm -f /etc/kubernetes/manifests/registry-agent.yaml
 rm -rf /etc/kubernetes/registry-agent
 rm -rf /var/lib/deckhouse/registry-agent
 rm -f /var/run/node-exporter-textfile/registry-agent.prom
+
+  {{- if or ( eq .cri "Containerd") ( eq .cri "ContainerdV2") }}
+
+# Only a drop-in the agent wrote: an administrator's `_default` stays. Removed once the agent is seen
+# stopped, since a live one restores it; until then the step fails and bashible runs it again. Waited for
+# whether `_default` is there or not: step 030 may have removed it while the agent was still running.
+#
+# Step 030 stops the agent before it writes. When the kubelet does not stop it — it is not running, and a
+# later step is what starts it — the agent is stopped here too; with the manifest gone nothing restarts it.
+agent_drop_in=/etc/containerd/registry.d/_default
+if command -v crictl >/dev/null 2>&1; then
+  registry_agent_containers() {
+    crictl ps --name '^registry-agent$' --label io.kubernetes.pod.namespace=kube-system -q
+  }
+  agent_stopped=""
+  for i in $(seq 1 60); do
+    if agent_containers="$(registry_agent_containers)" && [[ -z "${agent_containers}" ]]; then
+      agent_stopped=yes
+      break
+    fi
+    sleep 1
+  done
+  if [[ -z "${agent_stopped}" ]] && agent_containers="$(registry_agent_containers)"; then
+    if [[ -n "${agent_containers}" ]]; then
+      crictl stop --timeout 10 ${agent_containers} >/dev/null 2>&1 || true
+    fi
+    if agent_containers="$(registry_agent_containers)" && [[ -z "${agent_containers}" ]]; then
+      agent_stopped=yes
+    fi
+  fi
+  if [[ -z "${agent_stopped}" ]]; then
+    >&2 echo "the registry agent is not seen stopped, ${agent_drop_in} stays until it is"
+    exit 1
+  fi
+  if grep -qs '^# Managed by the Deckhouse registry agent' "${agent_drop_in}/hosts.toml"; then
+    rm -rf "${agent_drop_in}"
+    hosts_state_file=/etc/containerd/registry.d/deckhouse_hosts_state.json
+    if [[ -f "${hosts_state_file}" ]]; then
+      /opt/deckhouse/bin/jq -c 'map(select(. != "_default"))' "${hosts_state_file}" > "${hosts_state_file}.new"
+      mv "${hosts_state_file}.new" "${hosts_state_file}"
+    fi
+  fi
+elif grep -qs '^# Managed by the Deckhouse registry agent' "${agent_drop_in}/hosts.toml"; then
+  >&2 echo "crictl is not available to tell whether the registry agent has stopped, ${agent_drop_in} stays until it is"
+  exit 1
+fi
+  {{- end }}
 
 {{- end }}

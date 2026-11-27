@@ -32,6 +32,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"gopkg.in/yaml.v3"
 )
@@ -141,6 +142,19 @@ type Upstream struct {
 	// how the community edition is pulled.
 	Username string `yaml:"username,omitempty"`
 	Password string `yaml:"password,omitempty"`
+
+	// TTL is how long a miss is kept, a Go duration. Empty or zero: forever, which is what the cache is
+	// for. Set by a store that only proxies for pods and keeps nothing on purpose.
+	TTL string `yaml:"ttl,omitempty"`
+}
+
+// KeepFor is the TTL as a duration, zero for forever. Validate has checked it.
+func (u *Upstream) KeepFor() time.Duration {
+	if u == nil || u.TTL == "" {
+		return 0
+	}
+	keep, _ := time.ParseDuration(u.TTL)
+	return keep
 }
 
 // WriteEndpoint is the listener that accepts a push.
@@ -218,6 +232,11 @@ func (w *Wrapper) Validate() error {
 		case "", "http", "https":
 		default:
 			return fmt.Errorf("upstream.scheme %q is neither http nor https", w.Upstream.Scheme)
+		}
+		if w.Upstream.TTL != "" {
+			if keep, err := time.ParseDuration(w.Upstream.TTL); err != nil || keep < 0 {
+				return fmt.Errorf("upstream.ttl %q is not a non-negative duration", w.Upstream.TTL)
+			}
 		}
 	}
 

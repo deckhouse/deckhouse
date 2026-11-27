@@ -24,6 +24,8 @@ package hooks
 
 import (
 	"encoding/base64"
+	"fmt"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -203,6 +205,62 @@ spec:
 		})
 	})
 
+	// Once the registry module's Service leads a pod to the store, the key is described with the module's
+	// account for pods and the store's authority: a module that fetches from a pod by these values, such
+	// as operator-trivy, needs both. Nodes are unaffected; the agent drops the account.
+	Context("The registry module has published an image address and the in-cluster access", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(stateDeckhouseRegistrySecret + statePublishedImageAddress +
+				inClusterAccessState(`{"auths":{"registry.d8-system.svc:5001":{"auth":"dXNlcm5hbWU6cGFzc3dvcmQ="}}}`)))
+			f.RunHook()
+		})
+
+		It("describes the key with the store's account and authority", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("global.modulesImages.registry.base").String()).
+				To(Equal("registry.d8-system.svc:5001/system/deckhouse"))
+			Expect(f.ValuesGet("global.modulesImages.registry.CA").String()).To(Equal("STORE-CA"))
+
+			raw, err := base64.StdEncoding.DecodeString(f.ValuesGet("global.modulesImages.registry.dockercfg").String())
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(string(raw)).To(MatchJSON(`{"auths":{"registry.d8-system.svc:5001":{"auth":"dXNlcm5hbWU6cGFzc3dvcmQ="}}}`))
+		})
+	})
+
+	// An account for another host would leave the platform's secret without the key's host, which the
+	// admission webhook and dhctl look the registry up by.
+	Context("The published in-cluster access names another host", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(stateDeckhouseRegistrySecret + statePublishedImageAddress +
+				inClusterAccessState(`{"auths":{"registry.example.com":{"auth":"dXNlcm5hbWU6cGFzc3dvcmQ="}}}`)))
+			f.RunHook()
+		})
+
+		It("describes the key without an account", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("global.modulesImages.registry.CA").String()).To(BeEmpty())
+
+			raw, err := base64.StdEncoding.DecodeString(f.ValuesGet("global.modulesImages.registry.dockercfg").String())
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(string(raw)).To(MatchJSON(`{"auths":{"registry.d8-system.svc:5001":{}}}`))
+		})
+	})
+
+	// The access describes the key only: without an image address the cluster is not on the key.
+	Context("The in-cluster access is published without an image address", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(stateDeckhouseRegistrySecret +
+				inClusterAccessState(`{"auths":{"registry.d8-system.svc:5001":{"auth":"dXNlcm5hbWU6cGFzc3dvcmQ="}}}`)))
+			f.RunHook()
+		})
+
+		It("keeps the registry the cluster was installed with", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("global.modulesImages.registry.base").String()).To(Equal("registry.test.com/deckhouse"))
+			Expect(f.ValuesGet("global.modulesImages.registry.CA").String()).To(Equal("CACACA"))
+		})
+	})
+
 	// Absent is the normal case, and the one every cluster upgrading into this must land
 	// in: the module not managing the pull path, the module still on its previous
 	// implementation, and node agents that have not applied their layout yet all leave it
@@ -285,3 +343,19 @@ spec:
 	})
 
 })
+
+// inClusterAccessState is the registry module's in-cluster access Secret for a docker config, encoded
+// here so that only its account, from the list of test values, is written down.
+func inClusterAccessState(dockerConfig string) string {
+	return fmt.Sprintf(`
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: registry-incluster-access
+  namespace: d8-system
+data:
+  dockercfg: %s
+  ca: %s
+`, base64.StdEncoding.EncodeToString([]byte(dockerConfig)), base64.StdEncoding.EncodeToString([]byte("STORE-CA")))
+}

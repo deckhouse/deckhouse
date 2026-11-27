@@ -12,6 +12,7 @@
 
     active   the switch has happened; the previous implementation owns nothing
     manages  ... and the configuration asks this module to own the pull path
+    stores   ... and so the store runs: with the cache as one, without it as a proxy for pods
     caches   ... and it asks for the in-cluster cache
 
   Conditions rather than booleans, because Helm templates have no booleans:
@@ -36,6 +37,17 @@ true
   {{- if eq (((.Values.registry.internal.v2).registryConfig).mode | default "") "Managed" -}}
 true
   {{- end -}}
+{{- end -}}
+{{- end -}}
+
+{{- /*
+  The store runs whenever the module manages the pull path: with the cache it is the cache, without it
+  a proxy that serves pods the key through the Service (templates/v2/storage/service.yaml). Same answer
+  as manages today, named apart because the store's own templates mean this one.
+*/ -}}
+{{- define "registry_v2_stores" -}}
+{{- if eq (include "registry_v2_manages" .) "true" -}}
+true
 {{- end -}}
 {{- end -}}
 

@@ -995,6 +995,33 @@ func TestAgentsArePointedAtTheLeader(t *testing.T) {
 	})
 }
 
+// TestStorageEndpointIsTheNodesEndpoint: the controller points the Service pods read through at
+// StorageEndpoint, so it has to be exactly the replica the nodes' Storage backend names, in every case
+// TestAgentsArePointedAtTheLeader covers. Otherwise a pod reads from a follower, or from nowhere while
+// the nodes have a replica.
+func TestStorageEndpointIsTheNodesEndpoint(t *testing.T) {
+	access := testAccess()
+	access.Addresses = []string{"10.0.0.1:4281", "10.0.0.2:4281", "10.0.0.3:4281"}
+
+	for _, tc := range []struct{ leader, previous string }{
+		{"10.0.0.3:4281", ""},
+		{"", ""},
+		{"10.9.9.9:4281", ""},
+		{"", "10.0.0.3:4281"},
+		{"10.0.0.2:4281", "10.0.0.3:4281"},
+		{"", "10.9.9.9:4281"},
+		{"", "10.0.0.3:5001"},
+		{"10.0.0.2:5001", ""},
+	} {
+		access.Leader, access.Previous = tc.leader, tc.previous
+		assert.Equal(t, storageBackend(access).Endpoint.Host, StorageEndpoint(access),
+			"leader %q, previous %q", tc.leader, tc.previous)
+	}
+
+	access.Addresses = nil
+	assert.Empty(t, StorageEndpoint(access), "no replica to name")
+}
+
 // TestComputeNeedSyncWaitsForTheFollowers: one switch for every replica. A full leader with a
 // follower behind keeps it up, in a cluster with an upstream and in an air-gapped one alike — the
 // followers have no other way to learn that there is something to copy.

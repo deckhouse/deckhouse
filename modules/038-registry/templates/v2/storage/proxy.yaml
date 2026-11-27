@@ -1,0 +1,220 @@
+{{- /*
+  The store without the cache: a proxy for pods, so that a pod which dials the key through the Service
+  (service.yaml) reaches the upstream with the store's account and authority, as it reaches the cache
+  when there is one. Node agents never use it: without the cache they go to the upstream themselves.
+
+  The same registry and token service as the cache, in the pod network, with nothing of the cache's: no
+  host network, no store on the node, no fill, no replication, no collection, no syncer. Its
+  configuration is rendered here rather than by the syncer, which renders the cache's from the
+  RegistryStorage object the controller writes for the cache alone; it follows the syncer's
+  (images/registry-syncer/src/internal/distribution/config.go, wrapper.go), less the write endpoint.
+
+  It keeps a miss for `ttl` on an emptyDir within `budget`: the registry proxies only through its
+  storage, and a blob it may not keep still reaches the client whole (the wrapper's settle); a manifest it
+  may not keep fails the read. So the reserve is small, 5% of the disk up to 5 GiB, not the cache's 20%:
+  the emptyDir's sizeLimit and the kubelet's eviction protect the node, and refusing writes long before
+  that would fail every manifest miss on a master short of space.
+*/ -}}
+{{- define "registry_storage_proxy_ttl" }}10m{{ end }}
+{{- define "registry_storage_proxy_budget" }}2147483648{{ end }}
+{{- define "registry_storage_proxy_data_limit" }}4Gi{{ end }}
+
+{{- if and (eq (include "registry_v2_stores" .) "true") (ne (include "registry_v2_caches" .) "true") }}
+{{- $pki := (.Values.registry.internal.v2).pki }}
+{{- /* The upstream the nodes fetch from, as the controller decides it: see hooks/v2/proxy_upstream.go. */}}
+{{- $upstream := (.Values.registry.internal.v2).proxyUpstream | default dict }}
+{{- if and $pki $upstream.host }}
+{{- $images := include "registry_storage_images" $ | fromYaml }}
+
+{{- $wrapperUpstream := dict "address" $upstream.host "scheme" (lower ($upstream.scheme | default "HTTPS")) "ttl" (include "registry_storage_proxy_ttl" $) }}
+{{- with (trimSuffix "/" ($upstream.path | default "")) }}
+  {{- $_ := set $wrapperUpstream "path" . }}
+{{- end }}
+{{- if $upstream.auth }}
+  {{- $pair := splitn ":" 2 (b64dec $upstream.auth) }}
+  {{- $_ := set $wrapperUpstream "username" $pair._0 }}
+  {{- $_ := set $wrapperUpstream "password" ($pair._1 | default "") }}
+{{- end }}
+{{- if $upstream.ca }}
+  {{- $_ := set $wrapperUpstream "ca" "/config/upstream-registry-ca.crt" }}
+{{- end }}
+
+{{- $wrapper := dict
+  "scope" "system/deckhouse"
+  "upstream" $wrapperUpstream
+  "authProxy" (dict "url" "https://127.0.0.1:5051/auth" "ca" "/pki/ca.crt")
+  "store" (dict "budget" (include "registry_storage_proxy_budget" $ | int64) "reserve" (list (dict "percent" 5 "atMost" 5368709120)))
+}}
+
+{{- $distribution := dict
+  "version" "0.1"
+  "log" (dict "level" "info")
+  "storage" (dict
+    "filesystem" (dict "rootdirectory" "/data")
+    "delete" (dict "enabled" true)
+    "redirect" (dict "disable" true)
+    "maintenance" (dict "uploadpurging" (dict "enabled" false) "readonly" (dict "enabled" false)))
+  "http" (dict
+    "addr" ":4281"
+    "prefix" "/"
+    "secret" $pki.httpSecret
+    "debug" (dict "addr" "127.0.0.1:5002" "prometheus" (dict "enabled" true "path" "/metrics"))
+    "tls" (dict "certificate" "/pki/distribution.crt" "key" "/pki/distribution.key"))
+  "auth" (dict "token" (dict
+    "realm" "https://registry.d8-system.svc:4281/auth/token"
+    "service" "Deckhouse registry"
+    "issuer" "Registry server"
+    "rootcertbundle" "/pki/token.crt"
+    "autoredirect" true
+    "autoredirectpath" "/auth/token"
+    "proxy" (dict "url" "https://127.0.0.1:5051/auth" "ca" "/pki/ca.crt")))
+}}
+---
+apiVersion: v1
+kind: Secret
+type: Opaque
+metadata:
+  name: registry-storage-proxy-config
+  namespace: d8-system
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "registry-storage-proxy")) | nindent 2 }}
+data:
+  config.yaml: {{ $distribution | toYaml | b64enc | quote }}
+  deckhouse.yaml: {{ $wrapper | toYaml | b64enc | quote }}
+  {{- if $upstream.ca }}
+  upstream-registry-ca.crt: {{ $upstream.ca | b64enc | quote }}
+  {{- end }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: registry-storage-proxy
+  namespace: d8-system
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "registry-storage-proxy")) | nindent 2 }}
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: registry-storage-proxy
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: registry-storage-proxy
+  namespace: d8-system
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "registry-storage-proxy")) | nindent 2 }}
+spec:
+  replicas: {{ include "helm_lib_is_ha_to_value" (list $ 2 1) }}
+  revisionHistoryLimit: 2
+  # The token service beside the registry has no probe of its own (it listens on the loopback): a pod
+  # counts as available only once it has stayed ready a while, so a rollout does not outrun it.
+  minReadySeconds: 10
+  # In the pod network: no host port to free first, so a replacement starts before its predecessor goes.
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: registry-storage-proxy
+  template:
+    metadata:
+      labels:
+        app: registry-storage-proxy
+      annotations:
+        checksum/config: {{ list $distribution $wrapper ($upstream.ca | default "") | toJson | sha256sum }}
+        checksum/pki: {{ $pki | toJson | sha256sum }}
+    spec:
+      {{- include "helm_lib_priority_class" (tuple $ "system-cluster-critical") | nindent 6 }}
+      {{- include "helm_lib_node_selector" (tuple $ "master") | nindent 6 }}
+      {{- include "registry_master_tolerations" (dict "context" $ "leaveUnreachableNode" true) | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse_with_writable_fs" $ | nindent 6 }}
+      automountServiceAccountToken: false
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchLabels:
+                  app: registry-storage-proxy
+              topologyKey: kubernetes.io/hostname
+      containers:
+      - name: distribution
+        image: {{ index $images "distribution" }}
+        imagePullPolicy: IfNotPresent
+        {{- include "helm_lib_module_container_security_context_run_as_user_deckhouse_pss_restricted" $ | nindent 8 }}
+        args: ["serve", "/config/config.yaml"]
+        {{- /* The upstream is reached from the pod network, through the cluster's proxy where there is one. */}}
+        {{- $proxyEnv := include "helm_lib_envs_for_proxy" $ | trim }}
+        {{- if $proxyEnv }}
+        env:
+        {{- $proxyEnv | nindent 8 }}
+        {{- end }}
+        ports:
+        - name: registry
+          containerPort: 4281
+        readinessProbe:
+          tcpSocket:
+            port: registry
+        livenessProbe:
+          httpGet:
+            path: /
+            port: registry
+            scheme: HTTPS
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 6
+        volumeMounts:
+        - name: config
+          mountPath: /config
+          readOnly: true
+        - name: pki
+          mountPath: /pki
+          readOnly: true
+        - name: data
+          mountPath: /data
+        resources:
+          requests:
+            # The misses it keeps on the node's disk, up to the budget, beside the logs.
+            ephemeral-storage: {{ add (include "registry_storage_proxy_budget" $ | int64) 52428800 }}
+            {{- include "registry_storage_distribution_resources" $ | nindent 12 }}
+      # The token service, on the loopback, as beside the cache: the registry fetches tokens for its
+      # clients through it.
+      - name: auth
+        image: {{ index $images "auth" }}
+        imagePullPolicy: IfNotPresent
+        {{- include "helm_lib_module_container_security_context_run_as_user_deckhouse_pss_restricted" $ | nindent 8 }}
+        args:
+        - -logtostderr
+        - /auth/auth_config.yaml
+        volumeMounts:
+        - name: auth-config
+          mountPath: /auth
+          readOnly: true
+        - name: pki
+          mountPath: /pki
+          readOnly: true
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" $ | nindent 12 }}
+            {{- include "registry_storage_auth_resources" $ | nindent 12 }}
+      volumes:
+      # Group-readable: the pod runs as the deckhouse user, whose group fsGroup gives the files.
+      - name: config
+        secret:
+          secretName: registry-storage-proxy-config
+          defaultMode: 0440
+      - name: pki
+        secret:
+          secretName: registry-storage-pki
+          defaultMode: 0440
+      - name: auth-config
+        secret:
+          secretName: registry-storage-auth-config
+          defaultMode: 0440
+      - name: data
+        emptyDir:
+          sizeLimit: {{ include "registry_storage_proxy_data_limit" $ }}
+{{- end }}
+{{- end }}

@@ -51,10 +51,10 @@ const (
 	// proxy dials while the node it runs on has no agent — see Watcher.Get. Source of truth:
 	// `StorageHost`.
 	//
-	// The Service behind the name is headless, so the name resolves to the masters' node addresses
-	// and the port is the client's own; recordedHost's `:5001` there is the agent's port, which the
-	// agent binds on the loopback only, so the node address refuses it. The store's serving
-	// certificate names the Service, so the name verifies at this port.
+	// The Service behind the name carries this port to the store's own. It carries recordedHost's
+	// `:5001` there too, for pods; this port is kept because it is the one that also reached the
+	// store while the Service was headless. The store's serving certificate names the Service, so the
+	// name verifies at either port.
 	storageHost = "registry.d8-system.svc:4281"
 
 	// storeRepository is the repository read from the store directly.

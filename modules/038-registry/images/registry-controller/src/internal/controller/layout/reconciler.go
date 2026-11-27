@@ -112,6 +112,10 @@ const (
 	// apart from one attempt. Retrying means a registry that was merely down gets
 	// picked up on its own, without the operator having to touch the object.
 	probeRetryInterval = time.Minute
+
+	// serviceRetryInterval: how soon the store's selectorless Service is looked for again once Helm may
+	// have created it, after the previous implementation's Service went.
+	serviceRetryInterval = 15 * time.Second
 )
 
 func init() {
@@ -318,6 +322,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	// Before anything that references them. The layouts below name keys in this Secret
 	// instead of carrying credentials, so an agent that reads a layout whose key is not
 	// there yet authenticates with nothing and gets a 401 that explains none of this.
+	// serviceAwaited: the cache runs and the Service is not yet the store's selectorless one, which
+	// nothing watched here announces (Services are not watched); asked again rather than left empty.
+	serviceAwaited := false
 	if err := r.applyAuthSecret(ctx, desired.Credentials); err != nil {
 		return ctrl.Result{}, fmt.Errorf("applying the resolved auth Secret: %w", err)
 	}
@@ -334,6 +341,13 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		if err := r.applyPushEndpoint(ctx, storage, inputs.StorageAccess.Leader); err != nil {
 			return ctrl.Result{}, err
 		}
+		// And where a pod reads: the replica the nodes read from, by the same choice. See
+		// applyServiceEndpoint.
+		pointed, err := r.applyServiceEndpoint(ctx, storage, layout.StorageEndpoint(inputs.StorageAccess))
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+		serviceAwaited = !pointed
 	}
 	if err := r.applyNodes(ctx, desired.Nodes); err != nil {
 		return ctrl.Result{}, fmt.Errorf("applying RegistryNode objects: %w", err)
@@ -387,6 +401,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		// Held only on what still names the upstream, and nothing watched here changes when a
 		// rollout elsewhere finishes. Asked again rather than left to the next unrelated event.
 		return ctrl.Result{RequeueAfter: referenceScanInterval}, nil
+	}
+	if serviceAwaited {
+		return ctrl.Result{RequeueAfter: serviceRetryInterval}, nil
 	}
 	return ctrl.Result{}, nil
 }

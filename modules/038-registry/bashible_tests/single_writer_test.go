@@ -218,6 +218,11 @@ func TestTheAgentStepFollowsTheSameDecision(t *testing.T) {
 		require.Contains(t, body, "rm -f /etc/kubernetes/manifests/registry-agent.yaml")
 		require.NotContains(t, body, "bb-sync-file /etc/kubernetes/manifests/registry-agent.yaml",
 			"the step both installs and removes the agent in the same run")
+		// An agent running when step 030 removed its drop-in puts it back.
+		require.Contains(t, body, "^# Managed by the Deckhouse registry agent")
+		require.Contains(t, body, "crictl ps --name '^registry-agent$' --label io.kubernetes.pod.namespace=kube-system -q",
+			"the static pod's container, not a namesake in someone else's pod")
+		require.Contains(t, body, `rm -rf "${agent_drop_in}"`)
 	})
 }
 

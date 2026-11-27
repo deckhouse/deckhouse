@@ -30,9 +30,11 @@ const (
 	// directory for.
 	//
 	// A literal, and deliberately not assembled from any port below. It is a key, not an address:
-	// nothing dials it — a container runtime is redirected to the node agent by a drop-in, and a
-	// process translates it to ProxyHost first — so the `:5001` in it says nothing about where
-	// anything listens. What it does say is recorded in every pod spec of every cluster, and a change
+	// nothing on a node dials it — a container runtime is redirected to the node agent by a drop-in,
+	// and a process translates it to ProxyHost first — so the `:5001` in it says nothing about where
+	// anything listens on a node. A pod does dial it: the Service of this name (ServiceName) leads its
+	// port ServicePort to the store, so a module fetching from a pod by the global registry values
+	// works. What it does say is recorded in every pod spec of every cluster, and a change
 	// to it would rename every image the cluster runs: a rollout of everything, and on an air-gapped
 	// cluster a pull of every image again, under a name nothing has cached. It used to be derived
 	// from the one port constant there was, which made moving the store's listener a change to every
@@ -177,6 +179,17 @@ const (
 
 	// ImageAddressConfigMapKey is its only key.
 	ImageAddressConfigMapKey = "base"
+
+	// ServiceName is the Service the key, Host, is the name of. Routable: its port 5001 leads a pod to
+	// the store (ServicePort), its port 4281 is StorageHost.
+	ServiceName = "registry"
+
+	// ServicePort is the key's port on the Service, so a pod that dials the key reaches the store.
+	ServicePort = 5001
+
+	// InClusterAccessSecretName holds the account and authority a pod reads the key with (keys
+	// `dockercfg`, `ca`), for the global registry values. Published once the Service serves.
+	InClusterAccessSecretName = "registry-incluster-access"
 )
 
 var (
@@ -200,20 +213,14 @@ var (
 	//     proxy pod runs on it without one. It keeps this address as a literal, pinned to this one
 	//     by its test.
 	//
-	// Host's port does not get it there. The Service is headless, so its name resolves to the
-	// masters' node addresses and a client dials them at whatever port it names; the Service's
-	// targetPort applies to none of that. At Host's `:5001` a node has only the agent, on its
-	// loopback, and the node address refuses the connection. The serving certificate names the
-	// Service, so the name verifies at this port as it did at the old one.
+	// The Service is routable and carries this port as well as Host's, both to the store's 4281; it
+	// was headless, resolving to the masters' node addresses, until pods were given Host. The serving
+	// certificate names the Service, so the name verifies at either port. Without the cache the
+	// Service leads to the proxy for pods instead, which serves the same paths from the upstream.
 	//
 	// Derived from StoragePort, unlike Host: this one is an address, and it moves with the
-	// listener. During the update to the current ports a replica still on the previous pod spec
-	// serves at LegacyStoragePort and refuses this one. A dialer moves on to the next address the
-	// name resolves to, so the read fails only while no replica is on the current spec — on a
-	// cluster with one replica, until it is replaced. Nothing falls back to the old port for it:
-	// dhctl retries on its next run, and the proxy on the next fetch a node's bashible retries. A
-	// running cluster's masters all have an agent, so the proxy reads the store this way only on
-	// a fresh installation, where every replica is already on the current spec.
+	// listener. Nothing falls back to an old port for it: dhctl retries on its next run, and the
+	// proxy on the next fetch a node's bashible retries.
 	StorageHost         = fmt.Sprintf("registry.d8-system.svc:%d", StoragePort)
 	StorageHostWithPath = fmt.Sprintf("%s/%s", StorageHost, strings.TrimLeft(Path, "/"))
 
@@ -222,9 +229,9 @@ var (
 	//
 	// The two name the same agent and differ only in who is asking. A container runtime is
 	// handed a drop-in that redirects any registry to the agent, so its references can name
-	// a service that nothing dials. A process has no such redirection and has to dial, and
-	// the only address that always works is the loopback one: the agent is on every node,
-	// while the Service in front of the cache exists only when there is a cache.
+	// a service it never dials. A process on a node has no such redirection and has to dial, and
+	// the address that always works there is the loopback one: the agent is on every node and
+	// asks for no account, while the Service leads to the store, which does.
 	ProxyHostWithPath = fmt.Sprintf("%s/%s", ProxyHost, strings.TrimLeft(Path, "/"))
 
 	// AgentDropInFile is the one file the node agent writes for the container runtime.
@@ -241,8 +248,8 @@ var (
 
 // IsInCluster reports whether a repository names the in-cluster registry.
 //
-// This is the address everything records — pod image references, a ModuleSource, a status —
-// and the one nothing dials: a container runtime is redirected to the node agent by a drop-in,
+// This is the address everything records — pod image references, a ModuleSource, a status.
+// On a node nothing dials it: a container runtime is redirected to the node agent by a drop-in,
 // while a process has to translate it to the loopback address first.
 func IsInCluster(repository string) bool {
 	return repository == Host || strings.HasPrefix(repository, Host+"/")

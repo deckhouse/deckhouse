@@ -417,3 +417,28 @@ func TestEnsureIngressClientKeyReissuesAPairThatDoesNotMatch(t *testing.T) {
 		})
 	}
 }
+
+// A state written before the pods' account gets one, and keeps everything else: regenerating it would
+// hand every node a new authority.
+func TestEnsurePodsUserAddsTheAccountToAnOlderState(t *testing.T) {
+	generated, err := Generate(Hosts{Service: "registry.d8-system.svc"})
+	require.NoError(t, err)
+	require.Equal(t, UserPods, generated.Pods.Name, "a new state has it from the start")
+
+	older := generated
+	older.Pods = User{}
+	require.True(t, older.Complete(), "an older state without it is still complete, not regenerated")
+
+	added, err := older.EnsurePodsUser()
+	require.NoError(t, err)
+	require.True(t, added)
+	require.Equal(t, UserPods, older.Pods.Name)
+	require.NotEmpty(t, older.Pods.Password)
+	require.NotEmpty(t, older.Pods.PasswordHash)
+	require.Equal(t, generated.CA, older.CA)
+	require.Equal(t, generated.RO, older.RO)
+
+	again, err := older.EnsurePodsUser()
+	require.NoError(t, err)
+	require.False(t, again, "an account once added stays as it is")
+}

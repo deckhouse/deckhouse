@@ -276,9 +276,9 @@ const storeAccessSecret = "registry-storage-access"
 //
 // It dials the store under the Service's name at the port the replicas serve on
 // (registry_const.StorageHost), not at the in-cluster address everything records
-// (registry_const.Host). The Service is headless: its name resolves to the masters' node addresses,
-// and the port is the client's own. `:5001` there is the node agent's, bound to each node's loopback,
-// so this process — in the pod network, with no agent of its own — reaches nothing at it. The docker
+// (registry_const.Host). Both lead to the store now, but this one is also where the store was while
+// the Service was headless and resolved to the masters' node addresses, where `:5001` is the node
+// agent's, bound to each node's loopback, and refused this process in the pod network. The docker
 // config is keyed by the same host, because a lazy pull looks the account up by the repository's.
 //
 // `found` is false, without an error, wherever the store cannot be read this way — no cache, a cluster

@@ -1098,12 +1098,11 @@ image availability exporter of the `extended-monitoring` module checks images fr
 the name is looked up in cluster DNS instead, so it reports every such image as
 `…ImageAvailabilityUnknownError`:
 
-- without the in-cluster cache, or while no storage replica is ready, the name does not resolve
-  from a pod: `no such host`;
-- with the cache, the name is a headless Service that resolves to the master nodes running ready
-  storage replicas. The storage answers there with a certificate issued by the module's own
-  certificate authority, which the exporter does not trust: `x509: certificate signed by unknown
-  authority`.
+- the name is the Service `d8-system/registry`, which leads a pod to the storage replica the nodes
+  read from, or without the cache to `registry-storage-proxy`. Both answer with a certificate issued
+  by the module's own certificate authority, which the exporter does not trust: `x509: certificate
+  signed by unknown authority`;
+- while no replica or proxy pod is ready, the connection is refused.
 
 Nothing is wrong with the images: what the exporter would detect is covered by this module's own
 alerts — `D8RegistryStorageIncomplete`, `D8RegistryUpstreamProbeFailing`,
