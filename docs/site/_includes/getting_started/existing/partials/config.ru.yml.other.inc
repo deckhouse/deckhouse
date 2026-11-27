@@ -5,14 +5,14 @@
 apiVersion: deckhouse.io/v1
 kind: InitConfiguration
 deckhouse:
-  # [<en>] Address of the container registry with Deckhouse images.
+  # [<en>] Address of the container registry with Deckhouse Platform images.
   # [<ru>] Адрес хранилища образов контейнеров Deckhouse.
   imagesRepo: registry.deckhouse.ru/deckhouse/<REVISION>
   # [<en>] Base64-encoded Docker configuration to access the container registry (generated automatically from your license key).
   # [<ru>] Строка авторизации в формате Base64 для доступа к хранилищу образов контейнеров (сгенерирована автоматически из вашего лицензионного ключа).
   registryDockerCfg: <YOUR_ACCESS_STRING_IS_HERE>
 ---
-# [<en>] Deckhouse module settings.
+# [<en>] deckhouse module settings.
 # [<en>] https://deckhouse.io/modules/deckhouse/configuration.html
 # [<ru>] Настройки модуля deckhouse.
 # [<ru>] https://deckhouse.ru/modules/deckhouse/configuration.html
@@ -28,9 +28,9 @@ spec:
     releaseChannel: Stable
     logLevel: Info
 ---
-# [<en>] Global Deckhouse settings.
+# [<en>] Global Deckhouse Platform settings.
 # [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters
-# [<ru>] Глобальные настройки Deckhouse.
+# [<ru>] Глобальные настройки Deckhouse Platform.
 # [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/reference/api/global.html#%D0%BF%D0%B0%D1%80%D0%B0%D0%BC%D0%B5%D1%82%D1%80%D1%8B
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig

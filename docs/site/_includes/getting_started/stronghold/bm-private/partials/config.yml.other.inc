@@ -55,7 +55,7 @@ spec:
             global:
               kubeconfigGeneratorMasterCA: ""
 ---
-# [<en>] Deckhouse module settings.
+# [<en>] deckhouse module settings.
 # [<en>] https://deckhouse.io/modules/deckhouse/configuration.html
 # [<ru>] Настройки модуля deckhouse.
 # [<ru>] https://deckhouse.ru/modules/deckhouse/configuration.html
@@ -70,13 +70,13 @@ spec:
     bundle: Default
     releaseChannel: Stable
     logLevel: Info
-    # [<en>] Settings for accessing the container registry with Deckhouse images.
-    # [<ru>] Настройки для доступа к хранилищу образов контейнеров с образами Deckhouse.
+    # [<en>] Settings for accessing the container registry with Deckhouse Platform images.
+    # [<ru>] Настройки для доступа к хранилищу образов контейнеров с образами Deckhouse Platform.
     registry:
       mode: Unmanaged
       unmanaged:
         # [<en>] Address of the Docker registry where the Deckhouse images are located.
-        # [<ru>] Адрес хранилища образов контейнеров с образами Deckhouse.
+        # [<ru>] Адрес хранилища образов контейнеров с образами Deckhouse Platform.
         imagesRepo: <IMAGES_REPO_URI>
         # [<en>] The username for authenticating with the container registry.
         # [<ru>] Имя пользователя для аутентификации в хранилище образов контейнеров.
@@ -89,9 +89,9 @@ spec:
         # [<ru>] Корневой сертификат центра сертификации (CA) в формате PEM для проверки серверного сертификата хранилища образов контейнеров.
         ca: <REGISTRY_CA>
 ---
-# [<en>] Global Deckhouse settings.
+# [<en>] Global Deckhouse Platform settings.
 # [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters
-# [<ru>] Глобальные настройки Deckhouse.
+# [<ru>] Глобальные настройки Deckhouse Platform.
 # [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/reference/api/global.html#%D0%BF%D0%B0%D1%80%D0%B0%D0%BC%D0%B5%D1%82%D1%80%D1%8B
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig

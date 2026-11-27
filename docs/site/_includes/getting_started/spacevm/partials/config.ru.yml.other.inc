@@ -49,7 +49,7 @@ spec:
             global:
               kubeconfigGeneratorMasterCA: ""
 ---
-# [<en>] Deckhouse module settings.
+# [<en>] deckhouse module settings.
 # [<en>] https://deckhouse.io/modules/deckhouse/configuration.html
 # [<ru>] Настройки модуля deckhouse.
 # [<ru>] https://deckhouse.ru/modules/deckhouse/configuration.html
@@ -64,17 +64,17 @@ spec:
     bundle: Default
     releaseChannel: Stable
     logLevel: Info
-    # [<en>] Settings for accessing the container registry with Deckhouse images.
-    # [<ru>] Настройки для доступа к хранилищу образов контейнеров с образами Deckhouse.
+    # [<en>] Settings for accessing the container registry with Deckhouse Platform images.
+    # [<ru>] Настройки для доступа к хранилищу образов контейнеров с образами Deckhouse Platform.
     registry:
       mode: Unmanaged
       unmanaged:
         imagesRepo: registry.deckhouse.ru/deckhouse/<REVISION>
         license: <YOUR_ACCESS_STRING_IS_HERE>
 ---
-# [<en>] Global Deckhouse settings.
+# [<en>] Global Deckhouse Platform settings.
 # [<en>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters
-# [<ru>] Глобальные настройки Deckhouse.
+# [<ru>] Глобальные настройки Deckhouse Platform.
 # [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/reference/api/global.html#%D0%BF%D0%B0%D1%80%D0%B0%D0%BC%D0%B5%D1%82%D1%80%D1%8B
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig

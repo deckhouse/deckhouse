@@ -52,7 +52,7 @@ spec:
             global:
               kubeconfigGeneratorMasterCA: ""
 ---
-# [<en>] Deckhouse module settings.
+# [<en>] deckhouse module settings.
 # [<en>] https://deckhouse.io/modules/deckhouse/configuration.html
 # [<ru>] Настройки модуля deckhouse.
 # [<ru>] https://deckhouse.ru/modules/deckhouse/configuration.html
@@ -68,9 +68,9 @@ spec:
     releaseChannel: EarlyAccess
     logLevel: Info
 ---
-# [<en>] Global Deckhouse settings.
+# [<en>] Global Deckhouse Platform settings.
 # [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters
-# [<ru>] Глобальные настройки Deckhouse.
+# [<ru>] Глобальные настройки Deckhouse Platform.
 # [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/reference/api/global.html#%D0%BF%D0%B0%D1%80%D0%B0%D0%BC%D0%B5%D1%82%D1%80%D1%8B
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig

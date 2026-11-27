@@ -63,8 +63,8 @@ spec:
     bundle: Default
     releaseChannel: Stable
     logLevel: Info
-    # [<en>] Settings for accessing the container registry with Deckhouse images.
-    # [<ru>] Настройки для доступа к хранилищу образов контейнеров с образами Deckhouse.
+    # [<en>] Settings for accessing the container registry with Deckhouse Platform images.
+    # [<ru>] Настройки для доступа к хранилищу образов контейнеров с образами Deckhouse Platform.
     registry:
       mode: Unmanaged
       unmanaged:
