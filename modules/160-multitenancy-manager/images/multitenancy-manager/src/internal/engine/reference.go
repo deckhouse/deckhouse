@@ -57,6 +57,10 @@ func EntryPathProblems(factory jsonpath.Factory, i int, fp v1alpha1.FieldPath) [
 				"'spec.fieldPaths[%d].missingPath' %q is not a valid RFC 9535 JSONPath: %v", i, fp.MissingPath, err))
 		}
 	}
+	if fp.MissingName != "" && fp.MissingPath == "" {
+		problems = append(problems, fmt.Sprintf(
+			"'spec.fieldPaths[%d].missingName' %q has no effect without 'spec.fieldPaths[%d].missingPath'", i, fp.MissingName, i))
+	}
 	if fp.Match != nil {
 		if _, err := factory.Path(fp.Match.FieldPath); err != nil {
 			problems = append(problems, fmt.Sprintf(

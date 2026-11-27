@@ -202,6 +202,21 @@ func TestHandle_PathsCompile(t *testing.T) {
 		assert.True(t, resp.Allowed, resp.Result.Message)
 	})
 
+	t.Run("allowed: missingName with missingPath", func(t *testing.T) {
+		fp := withMissing("$.spec.volumeClaimTemplates[?!@.spec.storageClassName]")
+		fp.MissingName = "local"
+		resp := v.Handle(ctx, request(t, admissionv1.Create, reference("ok", fp)))
+		assert.True(t, resp.Allowed, resp.Result.Message)
+	})
+
+	t.Run("denied: missingName without missingPath", func(t *testing.T) {
+		fp := withMissing("")
+		fp.MissingName = "local"
+		resp := v.Handle(ctx, request(t, admissionv1.Create, reference("broken", fp)))
+		assert.False(t, resp.Allowed)
+		assert.Contains(t, resp.Result.Message, "'spec.fieldPaths[0].missingName' \"local\" has no effect without 'spec.fieldPaths[0].missingPath'")
+	})
+
 	t.Run("denied: an uncompilable path is reported once, not also as undefaultable", func(t *testing.T) {
 		resp := v.Handle(ctx, request(t, admissionv1.Create,
 			reference("broken", fieldPath("$.spec.foo-bar", grantsv1alpha1.DefaultingFillEmpty))))

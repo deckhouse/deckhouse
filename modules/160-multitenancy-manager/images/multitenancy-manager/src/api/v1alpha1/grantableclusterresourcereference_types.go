@@ -78,6 +78,7 @@ type MatchPredicate struct {
 // whose Match holds on the object the most specific one wins (Resources beats APIGroups beats
 // APIVersions, and at equal scope an entry with Match beats one without it); an entry with empty
 // scope and no Match is the fallback, and "*" in a scope dimension counts as unrestricted.
+// +kubebuilder:validation:XValidation:rule="!has(self.missingName) || has(self.missingPath)",message="missingName requires missingPath"
 type FieldPath struct {
 	// APIGroups restricts this entry to these groups (empty = any matched group).
 	// +optional
@@ -116,6 +117,16 @@ type FieldPath struct {
 	// +optional
 	// +kubebuilder:validation:MaxLength=256
 	MissingPath string `json:"missingPath,omitempty"`
+
+	// MissingName is the name the places MissingPath selects are decided as, instead of the cluster
+	// default of the GrantableClusterResourceDefinition (or, without defaultFrom, instead of the denial
+	// in a namespace a ClusterResourceGrantPolicy applies to). Set it when such places are served by one
+	// object by name whatever the cluster default is, e.g. an Ingress without a class is served by the
+	// controllers of the nginx IngressClass. An object in which MissingPath selects anything is denied
+	// when this name is not available to the project. Requires MissingPath: the CRD rejects it alone.
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	MissingName string `json:"missingName,omitempty"`
 
 	// Match guards this entry; it applies only when the predicate holds on the object.
 	// +optional

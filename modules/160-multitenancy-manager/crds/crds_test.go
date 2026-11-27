@@ -301,6 +301,9 @@ func TestGrantableClusterResourceReferenceRules(t *testing.T) {
 		{name: "explicit group is accepted", spec: spec([]any{"", "batch"}, nil)},
 		{name: "wildcard group is rejected", spec: spec([]any{"*"}, nil), wantErr: "apiGroups must list the groups explicitly"},
 		{name: "wildcard fieldPaths resources is accepted", spec: spec([]any{""}, []any{"*"})},
+		{name: "missingName with missingPath is accepted", spec: withFieldPath(spec([]any{""}, nil), "missingPath", "$[?@ == 'Pod']", "missingName", "x")},
+		{name: "missingPath alone is accepted", spec: withFieldPath(spec([]any{""}, nil), "missingPath", "$[?@ == 'Pod']")},
+		{name: "missingName without missingPath is rejected", spec: withFieldPath(spec([]any{""}, nil), "missingName", "x"), wantErr: "missingName requires missingPath"},
 	}
 
 	for _, tt := range tests {
@@ -314,4 +317,13 @@ func TestGrantableClusterResourceReferenceRules(t *testing.T) {
 			assert.Contains(t, errs.ToAggregate().Error(), tt.wantErr)
 		})
 	}
+}
+
+// withFieldPath sets the given key/value pairs on the first spec.fieldPaths item.
+func withFieldPath(spec map[string]any, kv ...string) map[string]any {
+	fp := spec["fieldPaths"].([]any)[0].(map[string]any)
+	for i := 0; i+1 < len(kv); i += 2 {
+		fp[kv[i]] = kv[i+1]
+	}
+	return spec
 }

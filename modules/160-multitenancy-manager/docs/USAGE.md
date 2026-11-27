@@ -1816,6 +1816,8 @@ If the reference is stored in the elements of a list of templates, an element ca
 
 If the GrantableClusterResourceDefinition has [`defaultFrom`](cr.html#grantableclusterresourcedefinition-v1alpha1-spec-defaultfrom), an object in which `missingPath` selects anything is rejected only if the cluster-wide default that `defaultFrom` finds is not available to the project, and is admitted if there is no such default. Without `defaultFrom`, such an object is rejected in a project to which a ClusterResourceGrantPolicy with an entry for the cluster-wide resource applies, and admitted in other projects. Default assignment cannot fill in an element of a list, so use `missingPath` with `defaulting: None`.
 
+If an object without the reference is served by one cluster-wide resource by its name whatever the cluster-wide default is, set the [`missingName`](cr.html#grantableclusterresourcereference-v1alpha1-spec-fieldpaths-missingname) parameter of the item to that name. The places `missingPath` selects are then checked against it, with or without `defaultFrom`. For example, an Ingress without a class is served by the controller of the `nginx` IngressClass even if another IngressClass is the default, so a reference to IngressClass from Ingress sets `missingName: nginx`.
+
 For descriptions of GrantableClusterResourceReference parameters, default assignment modes, `match` conditions, and configuration for resources with multiple API versions, refer to the [resource description](cr.html#grantableclusterresourcereference).
 
 #### Registering a new cluster-wide resource

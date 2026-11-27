@@ -1826,6 +1826,8 @@ spec:
 
 Если в GrantableClusterResourceDefinition задан [`defaultFrom`](cr.html#grantableclusterresourcedefinition-v1alpha1-spec-defaultfrom), объект, в котором `missingPath` что-либо выбирает, отклоняется, только если ресурс по умолчанию, который находит `defaultFrom`, недоступен проекту, а если такого ресурса нет, допускается. Без `defaultFrom` такой объект отклоняется в проекте, к которому применяется ClusterResourceGrantPolicy с записью для этого cluster-wide-ресурса, и допускается в остальных проектах. Подстановка значения по умолчанию не может заполнить элемент списка, поэтому используйте `missingPath` с `defaulting: None`.
 
+Если объект без ссылки обслуживает один cluster-wide-ресурс по своему имени, независимо от ресурса по умолчанию, укажите это имя в [параметре `missingName`](cr.html#grantableclusterresourcereference-v1alpha1-spec-fieldpaths-missingname) элемента. Тогда места, выбранные `missingPath`, проверяются по нему — с `defaultFrom` или без него. Например, Ingress без класса обслуживает контроллер IngressClass `nginx`, даже если по умолчанию отмечен другой IngressClass, поэтому в ссылке Ingress на IngressClass задаётся `missingName: nginx`.
+
 Описание параметров GrantableClusterResourceReference, режимов подстановки значений по умолчанию, условий `match` и настройки ресурсов с несколькими API-версиями приведено [в описании ресурса](cr.html#grantableclusterresourcereference).
 
 #### Регистрация нового cluster-wide-ресурса

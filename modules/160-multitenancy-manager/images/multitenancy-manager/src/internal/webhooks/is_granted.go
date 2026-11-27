@@ -269,8 +269,13 @@ func (v *IsGrantedValidator) decide(ctx context.Context, req *admissionv1.Admiss
 			continue
 		}
 		entries := resolve.EntriesFor(grants, def.Name)
+		// clusterDefault is the name the places missingPath selects are decided as: the missingName of
+		// the entry when it sets one, otherwise the cluster default that defaultFrom finds.
 		var clusterDefault string
-		if c.missing > 0 {
+		fixedMissingName := c.missing > 0 && c.fp.MissingName != ""
+		if fixedMissingName {
+			clusterDefault = c.fp.MissingName
+		} else if c.missing > 0 {
 			if def.IsValueBacked() || len(resolve.DefaultFromKeys(def.Spec.DefaultFrom)) == 0 {
 				if len(entries) > 0 {
 					msg := fmt.Sprintf(
@@ -341,6 +346,12 @@ func (v *IsGrantedValidator) decide(ctx context.Context, req *admissionv1.Admiss
 				"[multitenancy] %s %q leaves the %s unset where one is expected, so it gets the cluster default %s %q, "+
 					"which is not available to project %q: name a %s that is available to the project.",
 				req.Kind.Kind, req.Name, noun, noun, clusterDefault, project, noun)
+			if fixedMissingName {
+				msg = fmt.Sprintf(
+					"[multitenancy] %s %q leaves the %s unset where one is expected, so it is handled as %s %q, "+
+						"which is not available to project %q: name a %s that is available to the project.",
+					req.Kind.Kind, req.Name, noun, noun, clusterDefault, project, noun)
+			}
 			if c.fp.Message != "" {
 				msg += " " + c.fp.Message
 			}

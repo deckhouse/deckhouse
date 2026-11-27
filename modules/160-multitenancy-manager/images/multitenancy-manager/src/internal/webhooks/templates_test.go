@@ -139,6 +139,15 @@ const (
 // replicated only, and "open" has no policy. edit changes the shipped definitions first.
 func shippedTemplatesValidator(t *testing.T, classes []*storagev1.StorageClass, edit func(*v1alpha1.GrantableClusterResourceDefinition)) *IsGrantedValidator {
 	t.Helper()
+	return shippedTemplatesValidatorWithReferences(t, classes, edit, nil)
+}
+
+// shippedTemplatesValidatorWithReferences is shippedTemplatesValidator that also lets editRef change
+// the shipped references.
+func shippedTemplatesValidatorWithReferences(t *testing.T, classes []*storagev1.StorageClass,
+	edit func(*v1alpha1.GrantableClusterResourceDefinition), editRef func(*v1alpha1.GrantableClusterResourceReference),
+) *IsGrantedValidator {
+	t.Helper()
 	objs := []client.Object{
 		projectNS("restricted", map[string]string{"env": "prod"}),
 		projectNS("denylist", map[string]string{"env": "dev"}),
@@ -168,6 +177,9 @@ func shippedTemplatesValidator(t *testing.T, classes []*storagev1.StorageClass, 
 		objs = append(objs, def)
 	}
 	for _, ref := range testutil.RenderShipped[v1alpha1.GrantableClusterResourceReference](t, "GrantableClusterResourceReference") {
+		if editRef != nil {
+			editRef(ref)
+		}
 		objs = append(objs, ref)
 	}
 	return isGranted(t, objs...)
@@ -348,5 +360,77 @@ func TestMissingPathWithoutDefaultFrom(t *testing.T) {
 				t.Fatalf("%s in %s: unexpected denial %q", name, project, resp.Result.Message)
 			}
 		}
+	}
+}
+
+// TestMissingName checks that missingName decides the places missingPath selects as the given name,
+// in place of the cluster default that defaultFrom finds and, without defaultFrom, in place of the
+// denial in a project that a ClusterResourceGrantPolicy restricts.
+func TestMissingName(t *testing.T) {
+	setMissingName := func(name string) func(*v1alpha1.GrantableClusterResourceReference) {
+		return func(ref *v1alpha1.GrantableClusterResourceReference) {
+			for i := range ref.Spec.FieldPaths {
+				if ref.Spec.FieldPaths[i].MissingPath != "" {
+					ref.Spec.FieldPaths[i].MissingName = name
+				}
+			}
+		}
+	}
+	noDefaultFrom := func(def *v1alpha1.GrantableClusterResourceDefinition) { def.Spec.DefaultFrom = nil }
+	cases := []struct {
+		name        string
+		classes     []*storagev1.StorageClass
+		edit        func(*v1alpha1.GrantableClusterResourceDefinition)
+		missingName string
+		// denied lists the projects where a template without a class is refused.
+		denied []string
+	}{
+		{
+			name:        "an unavailable name over an available cluster default",
+			classes:     []*storagev1.StorageClass{storageClass("local", 0, isDefaultClass), storageClass("replicated", 1)},
+			missingName: "replicated",
+			denied:      []string{"restricted", "denylist"},
+		},
+		{
+			name:        "an available name over an unavailable cluster default",
+			classes:     []*storagev1.StorageClass{storageClass("local", 0), storageClass("replicated", 1, isDefaultClass)},
+			missingName: "local",
+		},
+		{
+			name:        "an unavailable name without a cluster default",
+			classes:     []*storagev1.StorageClass{storageClass("local", 0), storageClass("replicated", 1)},
+			missingName: "replicated",
+			denied:      []string{"restricted", "denylist"},
+		},
+		{
+			name:        "an available name without defaultFrom",
+			classes:     []*storagev1.StorageClass{storageClass("local", 0), storageClass("replicated", 1)},
+			edit:        noDefaultFrom,
+			missingName: "local",
+		},
+		{
+			name:        "an unavailable name without defaultFrom",
+			classes:     []*storagev1.StorageClass{storageClass("local", 0), storageClass("replicated", 1)},
+			edit:        noDefaultFrom,
+			missingName: "replicated",
+			denied:      []string{"restricted", "denylist"},
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			v := shippedTemplatesValidatorWithReferences(t, c.classes, c.edit, setMissingName(c.missingName))
+			for _, project := range []string{"restricted", "denylist", "open"} {
+				for name, obj := range noClassObjects() {
+					resp := decideWorkload(t, v, admissionv1.Create, project, workloadKindOf(name), obj, nil)
+					want := slices.Contains(c.denied, project)
+					if resp.Allowed == want {
+						t.Fatalf("%s in %s: allowed = %v, want %v: %v", name, project, resp.Allowed, !want, resp.Result)
+					}
+					if want && !strings.Contains(resp.Result.Message, `so it is handled as StorageClass "`+c.missingName+`"`) {
+						t.Fatalf("%s in %s: the denial must name %q, got %q", name, project, c.missingName, resp.Result.Message)
+					}
+				}
+			}
+		})
 	}
 }

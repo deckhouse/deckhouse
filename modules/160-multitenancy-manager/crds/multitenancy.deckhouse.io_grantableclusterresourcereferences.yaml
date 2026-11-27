@@ -147,13 +147,22 @@ spec:
                         Use it to tell the user what to do, for example why the value cannot be replaced with the project default.
                       maxLength: 512
                       type: string
+                    missingName:
+                      description: |-
+                        Name of the cluster-wide resource the places selected by `missingPath` are checked as, instead of the cluster-wide default.
+
+                        Use it when an object without a reference is served by one cluster-wide resource by its name whatever the cluster-wide default is. For example, an Ingress without a class is served by the controller of the `nginx` IngressClass even if another IngressClass is marked as the default.
+
+                        An object in which `missingPath` selects anything is rejected if this resource is unavailable to the project, whether the GrantableClusterResourceDefinition has `defaultFrom` or not. Requires `missingPath`; an object with `missingName` and without `missingPath` is rejected.
+                      maxLength: 253
+                      type: string
                     missingPath:
                       description: |-
                         JSONPath to the places of the object where a reference to the cluster-wide resource is expected but not given.
 
                         Use it for a list of templates whose elements can leave the field from `path` unset, for example `$.spec.volumeClaimTemplates[?!@.spec.storageClassName]` selects the StatefulSet volume claim templates without `storageClassName`. Such an element gets the cluster-wide default, for example the default StorageClass of the cluster, which `path` does not see.
 
-                        If the GrantableClusterResourceDefinition has `defaultFrom`, the cluster-wide default it finds is checked as if the object referenced it: an object in which the path selects anything is rejected if that default is unavailable to the project, and admitted if there is no default. Without `defaultFrom`, such an object is rejected if a ClusterResourceGrantPolicy with an entry for the cluster-wide resource applies to the namespace, and admitted otherwise. On update, only the places the old object did not have are taken into account.
+                        If the GrantableClusterResourceDefinition has `defaultFrom`, the cluster-wide default it finds is checked as if the object referenced it: an object in which the path selects anything is rejected if that default is unavailable to the project, and admitted if there is no default. Without `defaultFrom`, such an object is rejected if a ClusterResourceGrantPolicy with an entry for the cluster-wide resource applies to the namespace, and admitted otherwise. With `missingName`, the resource it names is checked instead in both cases. On update, only the places the old object did not have are taken into account.
 
                         Must be a valid RFC 9535 JSONPath of at most 256 characters; an object with a path that does not parse is rejected.
                       maxLength: 256
@@ -181,6 +190,9 @@ spec:
                   required:
                   - path
                   type: object
+                  x-kubernetes-validations:
+                    - rule: "!has(self.missingName) || has(self.missingPath)"
+                      message: "missingName requires missingPath"
                 minItems: 1
                 type: array
               grantableClusterResourceName:
