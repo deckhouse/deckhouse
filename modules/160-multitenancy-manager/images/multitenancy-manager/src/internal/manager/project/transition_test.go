@@ -25,7 +25,9 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	"github.com/prometheus/client_golang/prometheus"
 	promtestutil "github.com/prometheus/client_golang/prometheus/testutil"
+	dto "github.com/prometheus/client_model/go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
@@ -210,6 +212,26 @@ func keptObjectsSeries(project string) float64 {
 		return 0
 	}
 	return promtestutil.ToFloat64(keptObjectsProjects.WithLabelValues(project))
+}
+
+// hasKeptObjectsSeries reports whether the kept objects series of the project is published, without
+// creating it the way keptObjectsSeries does.
+func hasKeptObjectsSeries(t *testing.T, project string) bool {
+	t.Helper()
+	series := make(chan prometheus.Metric)
+	go func() {
+		keptObjectsProjects.Collect(series)
+		close(series)
+	}()
+	found := false
+	for metric := range series {
+		written := new(dto.Metric)
+		require.NoError(t, metric.Write(written))
+		for _, label := range written.GetLabel() {
+			found = found || label.GetName() == "project" && label.GetValue() == project
+		}
+	}
+	return found
 }
 
 // storedProject is the project as the fake cluster stores it.
@@ -422,6 +444,77 @@ func TestManager_RefreshKeptObjects(t *testing.T) {
 	assert.Zero(t, recheck)
 	assert.Empty(t, project.Status.KeptObjects)
 	assert.Zero(t, keptObjectsSeries("proj"))
+}
+
+// The objects a built-in template left on an update of Deckhouse are not the users' of the project to
+// sort out, so the series behind the MultitenancyManagerProjectKeepsHelmTemplateObjects alert leaves
+// out the projects of the built-in templates, of the virtual projects and of a template another
+// Deckhouse module ships. A project of the user's own template keeps it, and so does one whose
+// template is gone. status.keptObjects lists the objects either way.
+func TestManager_KeptObjectsSeriesLeavesOutBuiltinTemplates(t *testing.T) {
+	ctx := context.Background()
+	template := func(name string, labels map[string]string) *v1alpha2.ProjectTemplate {
+		return &v1alpha2.ProjectTemplate{ObjectMeta: metav1.ObjectMeta{Name: name, Labels: labels}}
+	}
+	tests := []struct {
+		name      string
+		template  string
+		published bool
+	}{
+		{name: "the user's template", template: "custom", published: true},
+		{name: "a template that is gone", template: "missing", published: true},
+		{name: "a template labelled with another heritage", template: "other-heritage", published: true},
+		{name: "default", template: "default"},
+		{name: "secure", template: "secure"},
+		{name: "secure-with-dedicated-nodes", template: "secure-with-dedicated-nodes"},
+		{name: "simple", template: "simple"},
+		{name: "virtual", template: v1alpha3.VirtualProjectTemplateName},
+		{name: "a template of another Deckhouse module", template: "module-template"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m, _ := newTransitionManager(t,
+				template("custom", nil),
+				template("other-heritage", map[string]string{v1alpha3.ResourceLabelHeritage: v1alpha3.ResourceHeritageMultitenancy}),
+				template("module-template", map[string]string{v1alpha3.ResourceLabelHeritage: v1alpha3.ResourceHeritageDeckhouse}),
+			)
+			t.Cleanup(func() { m.Forget("proj") })
+			project := helmProject()
+			project.Spec.ProjectTemplateName = tt.template
+			project.Status.KeptObjects = []v1alpha3.KeptObject{
+				{APIVersion: "v1", Kind: "ConfigMap", Namespace: "proj", Name: "a"},
+				{APIVersion: "v1", Kind: "ConfigMap", Namespace: "proj", Name: "b"},
+			}
+
+			m.publishSeries(ctx, project)
+			assert.Equal(t, tt.published, hasKeptObjectsSeries(t, "proj"), "a reconcile")
+			if tt.published {
+				assert.InDelta(t, 2, keptObjectsSeries("proj"), 0)
+			}
+
+			// a look at the list within a minute of the last one publishes the series too
+			m.Forget("proj")
+			m.keptChecks.Store("proj", time.Now())
+			recheck, err := m.refreshKeptObjects(ctx, project)
+			require.NoError(t, err)
+			assert.Equal(t, leftObjectsRecheck, recheck)
+			assert.Equal(t, tt.published, hasKeptObjectsSeries(t, "proj"), "a look at the kept objects")
+			assert.Len(t, project.Status.KeptObjects, 2)
+		})
+	}
+
+	t.Run("a move to a built-in template drops the series", func(t *testing.T) {
+		m, _ := newTransitionManager(t, template("custom", nil))
+		t.Cleanup(func() { m.Forget("proj") })
+		project := helmProject()
+		project.Status.KeptObjects = []v1alpha3.KeptObject{{APIVersion: "v1", Kind: "ConfigMap", Namespace: "proj", Name: "a"}}
+		m.publishSeries(ctx, project)
+		require.True(t, hasKeptObjectsSeries(t, "proj"))
+
+		project.Spec.ProjectTemplateName = "default"
+		m.publishSeries(ctx, project)
+		assert.False(t, hasKeptObjectsSeries(t, "proj"))
+	})
 }
 
 // A reconcile of a project switched from a Helm text runs the upgrade with the preparation: the

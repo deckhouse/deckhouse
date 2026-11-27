@@ -6,8 +6,7 @@ spec:
   description: >-
     A project named like an additional namespace of another project (<project>-<suffix>) is a
     separate project: the Project webhook admits it with a warning that says so, and the
-    controller sends the NamedLikeAdditionalNamespace Warning event on the new project. The
-    MultitenancyManagerProjectNamedLikeAdditionalNamespace alert is not checked (see README).
+    controller sends the NamedLikeAdditionalNamespace Warning event on the new project.
   concurrent: false
   catch:
     - description: Show the projects and the events on failure

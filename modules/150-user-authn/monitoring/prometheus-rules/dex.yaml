@@ -23,7 +23,8 @@
         ```
 
   - alert: D8DexConnectorNotInitialized
-    expr: min by (connector_id, connector_type) (dex_connector_open{job="dex", namespace="d8-user-authn"}) == 0
+    # The DexProvider "commander" belongs to Deckhouse Commander, and the user cannot change it.
+    expr: min by (connector_id, connector_type) (dex_connector_open{job="dex", namespace="d8-user-authn", connector_id!="commander"}) == 0
     for: 5m
     labels:
       severity_level: "6"

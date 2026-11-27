@@ -128,39 +128,6 @@
 
         A growing `user_authz_webhook_rules_watch_errors_total` on one instance points at its watch; a `user_authz_webhook_rules_directory_updated_timestamp_seconds` that has stopped moving points at rules that are no longer updated. Deleting the lagging Pod is the last resort: the DaemonSet recreates it, and on a cluster with a single master node every request that the authorization webhook has to answer is denied while the Pod restarts. Control plane components, kubelets, and the ServiceAccounts of the `kube-system` and `d8-*` namespaces keep working, because the webhook does not check them.
 
-  - alert: D8UserAuthzRulePropagationLag
-    expr: |
-      (
-        time() - min(user_authz_webhook_rules_directory_updated_timestamp_seconds{job="user-authz-webhook", namespace="d8-user-authz"}) > 3600
-      )
-      and
-      (
-        time() - max(user_authz_webhook_rules_directory_updated_timestamp_seconds{job="user-authz-webhook", namespace="d8-user-authz"}) < 3600
-      )
-    for: 15m
-    labels:
-      severity_level: "6"
-      tier: cluster
-      d8_module: user-authz
-      d8_component: user-authz-webhook
-    annotations:
-      plk_protocol_version: "1"
-      plk_markup_format: "markdown"
-      plk_create_group_if_not_exists__d8_user_authz_webhook_malfunctioning: "D8UserAuthzWebhookMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
-      plk_grouped_by__d8_user_authz_webhook_malfunctioning: "D8UserAuthzWebhookMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
-      summary: One user-authz webhook instance stopped picking up rule changes.
-      description: |-
-        One instance of `user-authz-webhook` has not updated its rules for more than an hour while another instance has. The rules are changing in the cluster and this instance does not see the changes.
-
-        Find the instance and check its log:
-
-        ```bash
-        d8 k -n d8-user-authz get pods -l app=user-authz-webhook -o wide
-        d8 k -n d8-user-authz logs -l app=user-authz-webhook -c webhook --tail=100
-        ```
-
-        An instance whose watch keeps failing becomes not ready, so check the readiness of the Pod as well.
-
   - alert: D8UserAuthzRevocationCheckStale
     expr: |
       max by (namespace, pod) (

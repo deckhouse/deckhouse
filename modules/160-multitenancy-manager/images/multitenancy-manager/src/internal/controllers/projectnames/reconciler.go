@@ -65,8 +65,9 @@ const (
 )
 
 // namedLikeAdditionalNamespace is 1 for every pair of projects where project is named
-// "<prefix_project>-<suffix>". The MultitenancyManagerProjectNamedLikeAdditionalNamespace alert
-// (monitoring/prometheus-rules/project-names.yaml) fires on it:
+// "<prefix_project>-<suffix>". No alert reads it: such a pair is a normal one (app and app-dev), and
+// the NamedLikeAdditionalNamespace Warning event tells about a new pair. The series is kept for
+// debugging:
 //
 //	max by (project, prefix_project) (d8_multitenancy_project_named_like_additional_namespace) > 0
 //

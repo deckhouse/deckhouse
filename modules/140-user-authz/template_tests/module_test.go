@@ -973,7 +973,7 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 
 		// An instance that is not ready is precisely the one the alerts are about — its rules are
 		// unlisted or no longer tracking the cluster. Dropping it from the scrape would leave
-		// RulesNotSynced, RulesWatchErrors, DirectoryDiverged and RulePropagationLag blind at the
+		// RulesNotSynced, RulesWatchErrors and DirectoryDiverged blind at the
 		// moment each became true.
 		It("Should scrape instances that are not ready", func() {
 			for _, name := range []string{"user-authz-webhook", "permission-browser-apiserver"} {

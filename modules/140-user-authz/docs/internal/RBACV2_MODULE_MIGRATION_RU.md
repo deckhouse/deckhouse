@@ -610,7 +610,9 @@ ClusterRole с лейблом `rbac.deckhouse.io/aggregate-to-<lineage>-as` вл
 лейбл, не будучи custom capability, после обновления продолжает агрегироваться, а её следующий `UPDATE` —
 в том числе повторный apply из GitOps — будет отклонён. Такие роли экспортируются как
 `d8_user_authz_foreign_aggregation_label{name, lineage, kind}` и поднимают алерт
-`D8UserAuthzForeignAggregationLabel`; перечислите их до обновления:
+`D8UserAuthzForeignAggregationLabel`, кроме ClusterRole модулей (лейбл `heritage: deckhouse` или `module`
+либо имя `d8:`, кроме `d8:custom:`). Роли вашего модуля алерт не показывает, поэтому перечислите их
+до обновления:
 
 ```bash
 d8 k get clusterroles -o json | jq -r '.items[]

@@ -202,7 +202,7 @@ d8 k -n d8-system set env deploy/deckhouse USE_NELM=false
 
 Если миграция не смогла подготовить все биндинги, релиз не стартует, а биндинги остаются в прежнем состоянии.
 
-После миграции время релиза больше не зависит от числа правил. Алерт `D8UserAuthzReleaseSlow` срабатывает, если применение релиза модуля повторно занимает больше 5 минут, а `D8UserAuthzRenderSlow` — если рендеринг его шаблонов повторно занимает больше 30 секунд. Оба указывают на API-сервер или на нехватку CPU у пода Deckhouse, а не на правила.
+После миграции время релиза больше не зависит от числа правил.
 
 ## Как проверить, что контроллер поддерживает биндинги в актуальном состоянии?
 
@@ -284,7 +284,6 @@ Deckhouse экспортирует следующие метрики хуков 
 **Алерты.** Для контроллера модуль поставляет следующие алерты:
 
 - `D8UserAuthzControllerUnavailable` и `D8UserAuthzControllerTargetDown` — у контроллера недоступные реплики или его метрики не собираются 5 минут;
-- `D8UserAuthzControllerReconcileErrorsHigh` — устойчивый поток ошибок reconcile;
 - `D8UserAuthzBindingsDrift` — биндинги какого-то вида 15 минут не приводятся к желаемому состоянию;
 - `D8UserAuthzAuthorizationRulesInvalid` и `D8UserAuthzAuthorizationRuleInvalid` — число и имена правил, биндинги которых не применяются 10 минут;
 - `D8UserAuthzCustomRolesNotAggregated` — агрегированная ClusterRole уровня доступа остаётся пустой, хотя кастомные роли для неё есть.
@@ -350,7 +349,6 @@ Permission Browser отдаёт те же метрики с префиксом `
 | `D8UserAuthzWebhookRulesQuarantined` | Правило 10 минут не компилируется |
 | `D8UserAuthzWebhookRulesWatchErrors` | Вебхук 10 минут не может следить за изменениями правил |
 | `D8UserAuthzWebhookDirectoryDiverged` | Экземпляры 10 минут используют разные наборы правил, поэтому на один и тот же запрос приходит разный ответ в зависимости от master-узла, на который он попал |
-| `D8UserAuthzRulePropagationLag` | Один экземпляр час не обновлял правила, а другой обновлял |
 | `D8UserAuthzPermissionBrowserUnavailable` | У Permission Browser есть недоступные реплики |
 
 ## Почему изменение ClusterAuthorizationRule применяется не сразу?
@@ -722,7 +720,8 @@ Deckhouse Platform создаёт объекты RoleBinding для субъек
 Кастомная capability старой схемы тоже могла перейти в другие роли (подробнее — в разделе [«Замена capability»](#замена-capability).
 
 Такие роли перечисляется в алерте `D8UserAuthzLegacyRBACv2CustomRoleFound`.
-Он срабатывает на каждый объект ClusterRole без лейбла `heritage: deckhouse` и с полем `aggregationRule`, у которого есть селектор, требующий лейбл `rbac.deckhouse.io/kind: manage` или `use`, есть селектор, требующий такой лейбл агрегации, или есть лейбл `rbac.deckhouse.io/use-role` без `rbac.deckhouse.io/scope: system` или `subsystem`, независимо от имени роли.
+Он срабатывает на каждый объект ClusterRole с полем `aggregationRule`, у которого есть селектор, требующий лейбл `rbac.deckhouse.io/kind: manage` или `use`, есть селектор, требующий такой лейбл агрегации, или есть лейбл `rbac.deckhouse.io/use-role` без `rbac.deckhouse.io/scope: system` или `subsystem`.
+ClusterRole модулей в нём не указываются: с лейблом `heritage: deckhouse` или `module`, а также с именем, которое начинается с `d8:`, но не с `d8:custom:`. Такие роли модуль исправляет в своём релизе.
 Роль без поля `aggregationRule`, например [замороженная ранее](#замороженные-роли), в него не попадает.
 Чтобы получить список таких ролей, используйте команду:
 
@@ -736,6 +735,8 @@ d8 k get clusterroles -o json | jq -r '
         | capture("^rbac\\.deckhouse\\.io/aggregate-to-(?<lineage>.+)-as$").lineage]) as $carried
   | .items[]
   | select(.metadata.labels.heritage != "deckhouse" and .aggregationRule != null)
+  | select((.metadata.labels.module // "") == "")
+  | select((.metadata.name | startswith("d8:") | not) or (.metadata.name | startswith("d8:custom:")))
   | (.metadata.labels["rbac.deckhouse.io/subsystem"] // "") as $own
   | select(
       (

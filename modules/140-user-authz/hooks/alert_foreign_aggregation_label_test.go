@@ -66,6 +66,25 @@ rules: []
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
+  name: virtualization-legacy-view
+  labels:
+    module: virtualization
+    rbac.deckhouse.io/kind: use
+    rbac.deckhouse.io/aggregate-to-kubernetes-as: viewer
+rules: []
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: "d8:manage:permission:module:virtualization:view"
+  labels:
+    rbac.deckhouse.io/kind: manage
+    rbac.deckhouse.io/aggregate-to-all-as: viewer
+rules: []
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
   name: plain
 rules: []
 `
@@ -86,7 +105,7 @@ rules: []
 			f.BindingContexts.Set(f.KubeStateSet(roles))
 			f.RunHook()
 		})
-		It("flags only the roles that carry the label without being a custom capability or a platform role", func() {
+		It("flags only the roles that carry the label without being a custom capability or a ClusterRole of a module", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(series()).To(Equal(map[string]string{
 				"smuggled/namespace":           "",

@@ -517,6 +517,74 @@ aggregationRule:
 rules: []
 `
 
+// stateModuleRoles has old-scheme roles of a module, told by the module label or by a d8: name
+// without heritage: deckhouse, which the user cannot change, next to a custom role with the same
+// selector, and a custom role whose lineage only a capability of a module carries.
+const stateModuleRoles = `
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: virtualization-legacy-manager
+  labels:
+    module: virtualization
+aggregationRule:
+  clusterRoleSelectors:
+    - matchLabels:
+        rbac.deckhouse.io/kind: manage
+        module: virtualization
+rules: []
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:manage:virtualization:manager
+  labels:
+    rbac.deckhouse.io/use-role: admin
+aggregationRule:
+  clusterRoleSelectors:
+    - matchLabels:
+        rbac.deckhouse.io/kind: manage
+        rbac.deckhouse.io/aggregate-to-virtualization-as: manager
+rules: []
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:custom:legacy:manager
+  labels:
+    rbac.deckhouse.io/kind: custom-role
+aggregationRule:
+  clusterRoleSelectors:
+    - matchLabels:
+        rbac.deckhouse.io/kind: manage
+        module: virtualization
+rules: []
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:system-capability:mymodule:view
+  labels:
+    module: mymodule
+    rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/aggregate-to-mymodule-as: viewer
+rules: []
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:custom:system:mymodule-viewers
+  labels:
+    rbac.deckhouse.io/kind: custom-role
+    rbac.deckhouse.io/scope: system
+aggregationRule:
+  clusterRoleSelectors:
+    - matchLabels:
+        rbac.deckhouse.io/aggregate-to-mymodule-as: viewer
+rules: []
+`
+
 // expectedLegacyCustomRoles are the roles of stateLegacyCustomRoles the hook reports, sorted.
 var expectedLegacyCustomRoles = []string{
 	"custom:all-levels",
@@ -589,6 +657,31 @@ var _ = Describe("User Authz hooks :: discovery legacy custom roles ::", func() 
 					Labels: map[string]string{"name": name},
 				}))
 			}
+		})
+	})
+
+	Context("Cluster with old-scheme roles of a module", func() {
+		BeforeEach(func() {
+			requirements.RemoveValue(LegacyRBACv2CustomRolesValueKey)
+			f.BindingContexts.Set(f.KubeStateSet(stateModuleRoles))
+			f.RunHook()
+		})
+
+		It("leaves the roles of the module out of the requirement value and the alert, and keeps a capability of the module as a carrier", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			value, exists := requirements.GetValue(LegacyRBACv2CustomRolesValueKey)
+			Expect(exists).To(BeTrue())
+			Expect(value).To(Equal([]string{"d8:custom:legacy:manager"}))
+
+			m := f.MetricsCollector.CollectedMetrics()
+			Expect(m).To(HaveLen(2))
+			Expect(m[1]).To(BeEquivalentTo(operation.MetricOperation{
+				Name:   "d8_rbacv2_legacy_custom_role",
+				Group:  "d8_rbacv2_legacy_custom_role",
+				Action: operation.ActionGaugeSet,
+				Value:  ptr.To(1.0),
+				Labels: map[string]string{"name": "d8:custom:legacy:manager"},
+			}))
 		})
 	})
 

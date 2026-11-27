@@ -529,7 +529,9 @@ of that lineage, and the aggregation controller reads nothing but the label. The
 webhook sees writes: a role that already carries the label without being a custom capability keeps
 aggregating after the upgrade, and its next `UPDATE` — a GitOps re-apply included — is refused. Such
 roles are exported as `d8_user_authz_foreign_aggregation_label{name, lineage, kind}` and raise the
-`D8UserAuthzForeignAggregationLabel` alert; list them before upgrading:
+`D8UserAuthzForeignAggregationLabel` alert, except the ClusterRoles of modules (the `heritage: deckhouse`
+or `module` label, or a `d8:` name other than `d8:custom:`). The alert does not show the roles of your
+module, so list them before upgrading:
 
 ```bash
 d8 k get clusterroles -o json | jq -r '.items[]

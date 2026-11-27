@@ -321,8 +321,6 @@ The system stores the temporary login state (a one-time authentication request) 
 
 DexAuthenticator ends the sessions of a user within seconds after a `Lock`, `ResetPassword`, `Reset2FA` or `Logout` operation and after the user is deleted. A request with an ended session gets the same answer as a request without a session.
 
-If DexAuthenticator does not receive the revocations, the `D8UserAuthnRevocationFeedNotConsumed` alert fires after 15 minutes.
-
 When a user signs out of an application, DexAuthenticator revokes the refresh token of the session in Dex. A copy of the session cookie stops working too.
 
 With the [browser sessions of Dex](usage.html#browser-sessions-of-dex) enabled, DexAuthenticator then sends the browser to Dex to end the session of Dex, and the browser is signed out of the other applications it signed in to through this session. Sign the user out with a navigation, not with a script request, which does not follow the redirect to Dex:

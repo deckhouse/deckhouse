@@ -35,8 +35,9 @@ import (
 // writes: a role that already carried the label before the check existed keeps aggregating after
 // the upgrade, and its next UPDATE is refused without warning. This hook is what surfaces both: it
 // exports every such role as a metric, and the alert on it says what to do before the role is
-// touched. Roles the platform itself renders (heritage: deckhouse) are the platform roles and the
-// built-in capabilities; they are held to the contract by the template test instead.
+// touched. The ClusterRoles of the modules (isModuleClusterRole), including a module released on
+// its own, are left out: the user who gets the alert cannot change them. The roles the platform
+// renders are held to the contract by the template test instead.
 const (
 	foreignAggregationLabelMetric = "d8_user_authz_foreign_aggregation_label"
 	aggregationLabelPrefix        = "rbac.deckhouse.io/aggregate-to-"
@@ -66,7 +67,7 @@ type foreignAggregatingRole struct {
 
 func filterForeignAggregatingClusterRole(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	labels := obj.GetLabels()
-	if labels["heritage"] == "deckhouse" || labels[rbacKindLabel] == customCapabilityKind {
+	if isModuleClusterRole(obj.GetName(), labels) || labels[rbacKindLabel] == customCapabilityKind {
 		return nil, nil
 	}
 	var lineages []string

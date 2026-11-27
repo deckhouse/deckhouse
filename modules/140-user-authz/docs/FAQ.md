@@ -202,7 +202,7 @@ d8 k -n d8-system set env deploy/deckhouse USE_NELM=false
 
 If the migration cannot prepare every binding, the release does not start and the bindings stay as they were.
 
-After the migration, the release no longer grows with the number of rules. The `D8UserAuthzReleaseSlow` alert fires when applying the module release repeatedly takes more than 5 minutes, and `D8UserAuthzRenderSlow` fires when rendering its templates repeatedly takes more than 30 seconds. Both point at the API server or at a Deckhouse Pod short of CPU rather than at the rules.
+After the migration, the release no longer grows with the number of rules.
 
 ## How do I check that the controller keeps the bindings in sync?
 
@@ -284,7 +284,6 @@ Deckhouse exports the following metrics of the module hooks:
 **Alerts.** The module ships the following alerts for the controller:
 
 - `D8UserAuthzControllerUnavailable` and `D8UserAuthzControllerTargetDown` when the controller has unavailable replicas or is not scraped for 5 minutes.
-- `D8UserAuthzControllerReconcileErrorsHigh` on a sustained reconcile error rate.
 - `D8UserAuthzBindingsDrift` when bindings of some kind stay out of the desired state for 15 minutes.
 - `D8UserAuthzAuthorizationRulesInvalid` and `D8UserAuthzAuthorizationRuleInvalid` counting and naming the rules whose bindings cannot be applied for 10 minutes.
 - `D8UserAuthzCustomRolesNotAggregated` when the aggregated ClusterRole of an access level stays empty although custom roles for it exist.
@@ -350,7 +349,6 @@ The module ships the following alerts for both components:
 | `D8UserAuthzWebhookRulesQuarantined` | A rule has not compiled for 10 minutes |
 | `D8UserAuthzWebhookRulesWatchErrors` | The rules informer has been failing to watch the rules for 10 minutes |
 | `D8UserAuthzWebhookDirectoryDiverged` | Instances have been using different sets of rules for 10 minutes, so the same request is answered differently depending on the master node that receives it |
-| `D8UserAuthzRulePropagationLag` | One instance has not updated its rules for an hour while another one has |
 | `D8UserAuthzPermissionBrowserUnavailable` | Permission Browser has unavailable replicas |
 
 ## Why does a change to a ClusterAuthorizationRule take up to 30 seconds to take effect?
@@ -723,7 +721,8 @@ A compatibility alias of an old role, a ClusterRole with the `rbac.deckhouse.io/
 A custom capability of the old scheme may also have moved to other roles (for details, see [Replacing a capability](#replacing-a-capability)).
 
 Such roles are listed in the `D8UserAuthzLegacyRBACv2CustomRoleFound` alert.
-It fires for every ClusterRole without the `heritage: deckhouse` label and with an `aggregationRule` field that has a selector requiring `rbac.deckhouse.io/kind: manage` or `use`, has a selector requiring such an aggregation label, or carries `rbac.deckhouse.io/use-role` without `rbac.deckhouse.io/scope: system` or `subsystem`, whatever the name of the role.
+It fires for every ClusterRole with an `aggregationRule` field that has a selector requiring `rbac.deckhouse.io/kind: manage` or `use`, has a selector requiring such an aggregation label, or carries `rbac.deckhouse.io/use-role` without `rbac.deckhouse.io/scope: system` or `subsystem`.
+The ClusterRoles of modules are not listed: those with the `heritage: deckhouse` or `module` label and those whose names start with `d8:` but not with `d8:custom:`. A module fixes such roles in its own release.
 A role without `aggregationRule`, such as a [role frozen earlier](#roles-frozen-earlier), is not listed.
 To list such roles, use the command:
 
@@ -737,6 +736,8 @@ d8 k get clusterroles -o json | jq -r '
         | capture("^rbac\\.deckhouse\\.io/aggregate-to-(?<lineage>.+)-as$").lineage]) as $carried
   | .items[]
   | select(.metadata.labels.heritage != "deckhouse" and .aggregationRule != null)
+  | select((.metadata.labels.module // "") == "")
+  | select((.metadata.name | startswith("d8:") | not) or (.metadata.name | startswith("d8:custom:")))
   | (.metadata.labels["rbac.deckhouse.io/subsystem"] // "") as $own
   | select(
       (

@@ -71,9 +71,10 @@
         Settings version 3 rejects `idTokenTTL >= 6h`. A ModuleConfig of an earlier settings version with such a value is still accepted and its value is converted to `5h59m`, so Dex already runs with `5h59m`; this alert keeps firing until the ModuleConfig itself is updated.
 
   - alert: D8UserAuthnDexProviderTokenExchangeDeprecated
+    # The DexProvider "commander" belongs to Deckhouse Commander, and the user cannot change it.
     expr: |
       sum by (connector_id) (
-        increase(dex_token_exchange_total{connector_type!="tokenexchange", result="success"}[24h])
+        increase(dex_token_exchange_total{connector_type!="tokenexchange", connector_id!="commander", result="success"}[24h])
       ) > 0
     labels:
       severity_level: "8"
