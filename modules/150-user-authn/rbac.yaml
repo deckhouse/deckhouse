@@ -1,0 +1,847 @@
+# The RBAC of the module, declared for the dmt rbac linter. `dmt lint --linter rbac --fix` writes the
+# capabilities (templates/rbacv2/), the legacy roles (templates/user-authz-cluster-roles.yaml), the
+# accounts (templates/<component>/rbac-for-us.yaml), the admin-kubeconfig access
+# (templates/rbac-for-us.yaml), the access of other subjects (templates/<component>/rbac-to-us.yaml) and
+# the Prometheus access of Dex (templates/dex/rbac-to-us.yaml) from this file, so a change to the rights
+# of the module starts here.
+#
+# Lint also with --values-file template_tests/testdata/rbac-values-ldap-basic-auth.yaml: only a render
+# with basic authentication for an LDAP provider has the Revocation access of basic-auth-proxy (the
+# "revocations" access below). CI lints with the default values, so it does not check that entry.
+#
+# Not described here, hand-written as they are:
+# - the account dexclient-controller (templates/dexclient-controller/rbac-for-us.yaml): several of its
+#   rules depend on the API versions of the cluster (ValidatingAdmissionPolicy, Gateway API HTTPRoute and
+#   ReferenceGrant), and rbac.yaml has no condition on a single rule;
+# - the accounts dex-authenticator and dex-authenticator-system
+#   (templates/shared-dex-authenticator/rbac-for-us.yaml): rendered inside {{ range }}.
+#
+# The account user-api mounts its token (automountServiceAccountToken: true) until its pods mount it
+# themselves.
+apiVersion: rbac.deckhouse.io/v1alpha1
+resources:
+  - group: deckhouse.io
+    resource: dexauthenticators
+    namespace:
+      manager:
+        - create
+        - delete
+        - deletecollection
+        - patch
+        - update
+      viewer:
+        - get
+        - list
+        - watch
+    legacy:
+      Editor:
+        - create
+        - delete
+        - deletecollection
+        - patch
+        - update
+      User:
+        - get
+        - list
+        - watch
+  - group: deckhouse.io
+    resource: dexauthenticators/allow-access-to-kubernetes
+    reason: 'the subresource carries the authority to let an OAuth2 client reach the Kubernetes API, delegated cluster-wide; the admission policy of the allow-access-to-kubernetes annotation checks it, and no controller serves it'
+    system:
+      manager:
+        - create
+    legacy:
+      ClusterAdmin:
+        - create
+  - group: deckhouse.io
+    resource: dexclients
+    namespace:
+      manager:
+        - create
+        - delete
+        - deletecollection
+        - patch
+        - update
+      viewer:
+        - get
+        - list
+        - watch
+    legacy:
+      Editor:
+        - create
+        - delete
+        - deletecollection
+        - patch
+        - update
+      User:
+        - get
+        - list
+        - watch
+  - group: deckhouse.io
+    resource: dexclients/allow-access-to-kubernetes
+    reason: 'the subresource carries the authority to let an OAuth2 client reach the Kubernetes API, delegated cluster-wide; the admission policy of the allow-access-to-kubernetes annotation checks it, and no controller serves it'
+    system:
+      manager:
+        - create
+    legacy:
+      ClusterAdmin:
+        - create
+  - group: deckhouse.io
+    resource: dexproviderchecks
+    system:
+      manager:
+        - create
+        - get
+        - list
+        - watch
+      viewer:
+        - get
+        - list
+        - watch
+    legacy:
+      ClusterAdmin:
+        - create
+        - delete
+        - deletecollection
+        - get
+        - list
+        - patch
+        - update
+        - watch
+  - group: deckhouse.io
+    resource: dexproviders
+    system:
+      manager:
+        - create
+        - delete
+        - deletecollection
+        - patch
+        - update
+      viewer:
+        - get
+        - list
+        - watch
+    legacy:
+      ClusterAdmin:
+        - create
+        - delete
+        - deletecollection
+        - get
+        - list
+        - patch
+        - update
+        - watch
+  - group: deckhouse.io
+    resource: dexproviders/sensitive
+    system:
+      manager:
+        - get
+        - list
+        - watch
+    legacy:
+      ClusterAdmin:
+        - get
+        - list
+        - watch
+  - group: deckhouse.io
+    resource: groups
+    system:
+      manager:
+        - create
+        - delete
+        - deletecollection
+        - patch
+        - update
+      viewer:
+        - get
+        - list
+        - watch
+    legacy:
+      ClusterAdmin:
+        - create
+        - delete
+        - deletecollection
+        - get
+        - list
+        - patch
+        - update
+        - watch
+  - group: deckhouse.io
+    resource: tokenexchangeproviders
+    system:
+      manager:
+        - create
+        - delete
+        - deletecollection
+        - patch
+        - update
+      viewer:
+        - get
+        - list
+        - watch
+    legacy:
+      ClusterAdmin:
+        - create
+        - delete
+        - deletecollection
+        - get
+        - list
+        - patch
+        - update
+        - watch
+  - group: deckhouse.io
+    resource: useraccounts
+    system:
+      manager:
+        - get
+        - list
+        - watch
+      viewer:
+        - get
+        - list
+        - watch
+    legacy:
+      ClusterAdmin:
+        - create
+        - delete
+        - deletecollection
+        - get
+        - list
+        - patch
+        - update
+        - watch
+  - group: deckhouse.io
+    resource: useroperations
+    system:
+      manager:
+        - create
+        - get
+        - list
+        - watch
+    legacy:
+      ClusterAdmin:
+        - create
+        - delete
+        - deletecollection
+        - get
+        - list
+        - patch
+        - update
+        - watch
+  - group: deckhouse.io
+    resource: useroperations/sensitive
+    legacy:
+      ClusterAdmin:
+        - get
+        - list
+        - watch
+  - group: deckhouse.io
+    resource: users
+    system:
+      manager:
+        - create
+        - delete
+        - deletecollection
+        - patch
+        - update
+      viewer:
+        - get
+        - list
+        - watch
+    legacy:
+      ClusterAdmin:
+        - create
+        - delete
+        - deletecollection
+        - get
+        - list
+        - patch
+        - update
+        - watch
+  - group: deckhouse.io
+    resource: users/sensitive
+    legacy:
+      ClusterAdmin:
+        - get
+        - list
+        - watch
+  # The internal Dex storage is granted to no level of either role model. Restricting it to `list` is
+  # not a mitigation: a collection read returns whole objects, and they carry the password hashes of
+  # local users (passwords), refresh tokens, signing keys and the client secrets of the connectors.
+  - group: dex.coreos.com
+    resource: authcodes
+    noAccess: internal storage of Dex, used by the components of the module; users work with the deckhouse.io resources
+  - group: dex.coreos.com
+    resource: authrequests
+    noAccess: internal storage of Dex, used by the components of the module; users work with the deckhouse.io resources
+  - group: dex.coreos.com
+    resource: authsessions
+    noAccess: internal storage of Dex, used by the components of the module; users work with the deckhouse.io resources
+  - group: dex.coreos.com
+    resource: connectors
+    noAccess: internal storage of Dex, used by the components of the module; users work with the deckhouse.io resources
+  - group: dex.coreos.com
+    resource: devicerequests
+    noAccess: internal storage of Dex, used by the components of the module; users work with the deckhouse.io resources
+  - group: dex.coreos.com
+    resource: devicetokens
+    noAccess: internal storage of Dex, used by the components of the module; users work with the deckhouse.io resources
+  - group: dex.coreos.com
+    resource: oauth2clients
+    noAccess: internal storage of Dex, used by the components of the module; users work with the deckhouse.io resources
+  - group: dex.coreos.com
+    resource: offlinesessionses
+    noAccess: internal storage of Dex, used by the components of the module; users work with the deckhouse.io resources
+  - group: dex.coreos.com
+    resource: passwords
+    noAccess: internal storage of Dex, used by the components of the module; users work with the deckhouse.io resources
+  - group: dex.coreos.com
+    resource: refreshtokens
+    noAccess: internal storage of Dex, used by the components of the module; users work with the deckhouse.io resources
+  - group: dex.coreos.com
+    resource: revocations
+    noAccess: internal storage of Dex, used by the components of the module; users work with the deckhouse.io resources
+  - group: dex.coreos.com
+    resource: signingkeies
+    noAccess: internal storage of Dex, used by the components of the module; users work with the deckhouse.io resources
+  - group: dex.coreos.com
+    resource: useridentities
+    noAccess: internal storage of Dex, used by the components of the module; users work with the deckhouse.io resources
+serviceAccounts:
+  - name: basic-auth-proxy
+    path: basic-auth-proxy
+  - name: controller
+    path: controller
+    labels:
+      app: user-authn-controller
+    clusterRules:
+      - apiGroups:
+          - authentication.k8s.io
+        resources:
+          - tokenreviews
+        verbs:
+          - create
+      - apiGroups:
+          - deckhouse.io
+        resources:
+          - useraccounts
+        verbs:
+          - get
+          - list
+          - watch
+          - create
+          - update
+          - patch
+          - delete
+      - apiGroups:
+          - deckhouse.io
+        resources:
+          - useraccounts/status
+        verbs:
+          - get
+          - update
+          - patch
+      - apiGroups:
+          - deckhouse.io
+        resources:
+          - users
+        verbs:
+          - get
+          - list
+          - watch
+          - delete
+      - apiGroups:
+          - deckhouse.io
+        resources:
+          - users/sensitive
+          - dexproviders/sensitive
+          - useroperations/sensitive
+        verbs:
+          - get
+          - list
+          - watch
+      - apiGroups:
+          - deckhouse.io
+        resources:
+          - users/status
+        verbs:
+          - get
+          - update
+          - patch
+      - apiGroups:
+          - deckhouse.io
+        resources:
+          - groups
+        verbs:
+          - get
+          - list
+          - watch
+          - patch
+          - update
+      - apiGroups:
+          - deckhouse.io
+        resources:
+          - dexproviders
+        verbs:
+          - get
+          - list
+          - watch
+          - update
+      - apiGroups:
+          - deckhouse.io
+        resources:
+          - tokenexchangeproviders
+        verbs:
+          - get
+          - list
+          - watch
+          - update
+          - patch
+      - apiGroups:
+          - deckhouse.io
+        resources:
+          - tokenexchangeproviders/status
+        verbs:
+          - update
+          - patch
+      - apiGroups:
+          - deckhouse.io
+        resources:
+          - dexproviderchecks
+        verbs:
+          - get
+          - list
+          - watch
+          - create
+          - update
+          - patch
+          - delete
+      - apiGroups:
+          - deckhouse.io
+        resources:
+          - dexproviderchecks/status
+        verbs:
+          - get
+          - update
+          - patch
+      - apiGroups:
+          - deckhouse.io
+        resources:
+          - useroperations
+        verbs:
+          - get
+          - list
+          - watch
+          - update
+          - patch
+          - delete
+      - apiGroups:
+          - deckhouse.io
+        resources:
+          - useroperations/status
+        verbs:
+          - get
+          - update
+          - patch
+      - apiGroups:
+          - dex.coreos.com
+        resources:
+          - passwords
+        verbs:
+          - get
+          - list
+          - watch
+          - create
+          - patch
+          - update
+          - delete
+      - apiGroups:
+          - dex.coreos.com
+        resources:
+          - offlinesessionses
+        verbs:
+          - get
+          - list
+          - watch
+          - patch
+          - update
+          - delete
+      - apiGroups:
+          - dex.coreos.com
+        resources:
+          - refreshtokens
+        verbs:
+          - get
+          - list
+          - watch
+          - delete
+      - apiGroups:
+          - dex.coreos.com
+        resources:
+          - useridentities
+        verbs:
+          - get
+          - list
+          - watch
+          - create
+          - update
+          - delete
+      - apiGroups:
+          - dex.coreos.com
+        resources:
+          - authsessions
+        verbs:
+          - get
+          - list
+          - watch
+          - patch
+          - delete
+      - apiGroups:
+          - deckhouse.io
+        resources:
+          - dexclients
+        verbs:
+          - get
+          - list
+          - watch
+      - apiGroups:
+          - deckhouse.io
+        resources:
+          - dexauthenticators
+        verbs:
+          - get
+          - list
+          - watch
+      - apiGroups:
+          - ""
+        resources:
+          - events
+        verbs:
+          - create
+          - patch
+      - apiGroups:
+          - events.k8s.io
+        resources:
+          - events
+        verbs:
+          - create
+          - patch
+      - apiGroups:
+          - ""
+        resources:
+          - namespaces
+        verbs:
+          - get
+    namespaceRules:
+      - apiGroups:
+          - ""
+        resources:
+          - secrets
+        verbs:
+          - get
+      - apiGroups:
+          - dex.coreos.com
+        resources:
+          - connectors
+        verbs:
+          - get
+          - list
+          - watch
+          - create
+          - update
+          - delete
+      - apiGroups:
+          - ""
+        resources:
+          - configmaps
+        verbs:
+          - get
+          - list
+          - watch
+      - apiGroups:
+          - ""
+        resources:
+          - configmaps
+        verbs:
+          - create
+      - apiGroups:
+          - ""
+        resources:
+          - configmaps
+        resourceNames:
+          - dexprovider-group-prefixes
+        verbs:
+          - update
+      - apiGroups:
+          - dex.coreos.com
+        resources:
+          - revocations
+        verbs:
+          - get
+          - list
+          - watch
+          - create
+          - delete
+      - apiGroups:
+          - dex.coreos.com
+        resources:
+          - authcodes
+          - authrequests
+        verbs:
+          - list
+          - delete
+      - apiGroups:
+          - dex.coreos.com
+        resources:
+          - oauth2clients
+        verbs:
+          - list
+          - watch
+          - create
+      - apiGroups:
+          - dex.coreos.com
+        resources:
+          - oauth2clients
+        resourceNames:
+          - nn2wezlsnzsxizltzpzjzzeeeirsk
+        verbs:
+          - get
+          - update
+          - delete
+      - apiGroups:
+          - coordination.k8s.io
+        resources:
+          - leases
+        verbs:
+          - get
+          - list
+          - watch
+          - create
+          - update
+          - patch
+          - delete
+  - name: dex
+    path: dex
+    labels:
+      app: dex
+    namespaceRules:
+      - apiGroups:
+          - dex.coreos.com
+        resources:
+          - authcodes
+          - authrequests
+          - authsessions
+          - connectors
+          - oauth2clients
+          - offlinesessionses
+          - passwords
+          - refreshtokens
+          - signingkeies
+          - useridentities
+        verbs:
+          - list
+          - watch
+          - create
+          - update
+          - patch
+          - delete
+          - deletecollection
+      - apiGroups:
+          - dex.coreos.com
+        resources:
+          - revocations
+        verbs:
+          - get
+          - create
+          - list
+          - update
+    bindClusterRoles:
+      - d8:rbac-proxy
+    extraClusterRoles:
+      - name: crd
+        rules:
+          - apiGroups:
+              - apiextensions.k8s.io
+            resources:
+              - customresourcedefinitions
+            verbs:
+              - get
+              - list
+              - watch
+              - create
+              - update
+              - patch
+              - delete
+              - deletecollection
+          - apiGroups:
+              - dex.coreos.com
+            resources:
+              - authcodes
+              - authrequests
+              - connectors
+              - authsessions
+              - devicerequests
+              - devicetokens
+              - oauth2clients
+              - offlinesessionses
+              - passwords
+              - refreshtokens
+              - signingkeies
+              - useridentities
+            verbs:
+              - get
+              - list
+              - watch
+              - create
+              - update
+              - patch
+              - delete
+              - deletecollection
+          - apiGroups:
+              - dex.coreos.com
+            resources:
+              - revocations
+            verbs:
+              - get
+              - create
+              - list
+              - update
+  - name: user-api
+    path: user-api
+    labels:
+      app: user-api
+    clusterRules:
+      - apiGroups:
+          - deckhouse.io
+        resources:
+          - useroperations
+        verbs:
+          - create
+          - get
+      - apiGroups:
+          - deckhouse.io
+        resources:
+          - useraccounts
+        verbs:
+          - list
+          - watch
+      - apiGroups:
+          - dex.coreos.com
+        resources:
+          - passwords
+        verbs:
+          - get
+          - list
+          - watch
+    automountServiceAccountToken: true
+prometheusAccess:
+  path: dex
+  name: prometheus-metrics
+  deployments:
+    - dex
+  when: (.Values.global.enabledModules | has "prometheus")
+  labels:
+    app: dex
+access:
+  - name: admin-kubeconfig
+    subjects:
+      - kind: Group
+        name: kubeadm:cluster-admins
+    clusterRules:
+      - apiGroups:
+          - deckhouse.io
+        resources:
+          - dexauthenticators
+          - dexclients
+          - dexproviderchecks
+          - dexproviders
+          - groups
+          - tokenexchangeproviders
+          - useroperations
+          - users
+        verbs:
+          - get
+          - list
+          - watch
+          - create
+          - delete
+          - deletecollection
+          - patch
+          - update
+      - apiGroups:
+          - deckhouse.io
+        resources:
+          - useraccounts
+        verbs:
+          - get
+          - list
+          - watch
+      - apiGroups:
+          - dex.coreos.com
+        resources:
+          - authcodes
+          - authrequests
+          - connectors
+          - authsessions
+          - devicerequests
+          - devicetokens
+          - oauth2clients
+          - offlinesessionses
+          - passwords
+          - refreshtokens
+          - revocations
+          - signingkeies
+          - useridentities
+        verbs:
+          - get
+          - list
+          - watch
+          - create
+          - delete
+          - deletecollection
+          - patch
+          - update
+  # The CA in the ConfigMap user-api-ca is public: every service account may read it, so that the
+  # clients of user-api inside the cluster verify its certificate. Before this declaration the Role
+  # and the RoleBinding were user-api-ca-reader in templates/user-api/rbac-for-us.yaml; the placement
+  # rule keeps the access of other subjects in rbac-to-us.yaml under an access-to- name.
+  - name: ca-reader
+    path: user-api
+    subjects:
+      - kind: Group
+        name: system:serviceaccounts
+    labels:
+      app: user-api
+    namespaceRules:
+      - apiGroups:
+          - ""
+        resources:
+          - configmaps
+        resourceNames:
+          - user-api-ca
+        verbs:
+          - get
+  # The proxy evicts the cached checks of an LDAP user whose credentials are revoked, as soon as the
+  # Revocation object appears. Crowd and OIDC check passwords past Dex, and a revocation does not apply
+  # to them, hence the condition. It is an access entry, not namespaceRules of the account, because the
+  # account renders whenever the module does and the Role only for LDAP, and an account has one
+  # condition for all its objects. Before this declaration the Role and the RoleBinding were
+  # basic-auth-proxy in templates/basic-auth-proxy/rbac-for-us.yaml.
+  - name: revocations
+    path: basic-auth-proxy
+    when: include "is_basic_auth_ldap_enabled" .
+    subjects:
+      - kind: ServiceAccount
+        name: basic-auth-proxy
+        namespace: d8-user-authn
+    labels:
+      app: basic-auth-proxy
+    namespaceRules:
+      - apiGroups:
+          - dex.coreos.com
+        resources:
+          - revocations
+        verbs:
+          - get
+          - list
+          - watch

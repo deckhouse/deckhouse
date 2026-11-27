@@ -300,7 +300,7 @@ var _ = Describe("Module :: user-authn :: helm template :: basic auth proxy", fu
 		It("Should let the proxy follow the revocations in its namespace", func() {
 			Expect(hec.RenderError).ToNot(HaveOccurred())
 
-			role := hec.KubernetesResource("Role", "d8-user-authn", "basic-auth-proxy")
+			role := hec.KubernetesResource("Role", "d8-user-authn", "access-to-basic-auth-proxy-revocations")
 			Expect(role.Exists()).To(BeTrue())
 			Expect(role.Field("rules").String()).To(MatchJSON(`[{
 				"apiGroups": ["dex.coreos.com"],
@@ -308,10 +308,10 @@ var _ = Describe("Module :: user-authn :: helm template :: basic auth proxy", fu
 				"verbs": ["get", "list", "watch"]
 			}]`))
 
-			roleBinding := hec.KubernetesResource("RoleBinding", "d8-user-authn", "basic-auth-proxy")
+			roleBinding := hec.KubernetesResource("RoleBinding", "d8-user-authn", "access-to-basic-auth-proxy-revocations")
 			Expect(roleBinding.Exists()).To(BeTrue())
 			Expect(roleBinding.Field("roleRef.kind").String()).To(Equal("Role"))
-			Expect(roleBinding.Field("roleRef.name").String()).To(Equal("basic-auth-proxy"))
+			Expect(roleBinding.Field("roleRef.name").String()).To(Equal("access-to-basic-auth-proxy-revocations"))
 			Expect(roleBinding.Field("subjects").String()).To(MatchJSON(`[{
 				"kind": "ServiceAccount",
 				"name": "basic-auth-proxy",
@@ -395,8 +395,8 @@ var _ = Describe("Module :: user-authn :: helm template :: basic auth proxy", fu
 				// Nothing of Dex for a provider that does not go through Dex.
 				Expect(proxy.Field(`spec.template.spec.containers.#(name=="proxy").env.#(name=="DEX_TRUSTED_PROXY_SECRET")`).Exists()).To(BeFalse())
 				Expect(proxy.Field(`spec.template.spec.containers.#(name=="proxy").args`).String()).ToNot(ContainSubstring("--ldap-dex-url"))
-				Expect(hec.KubernetesResource("Role", "d8-user-authn", "basic-auth-proxy").Exists()).To(BeFalse())
-				Expect(hec.KubernetesResource("RoleBinding", "d8-user-authn", "basic-auth-proxy").Exists()).To(BeFalse())
+				Expect(hec.KubernetesResource("Role", "d8-user-authn", "access-to-basic-auth-proxy-revocations").Exists()).To(BeFalse())
+				Expect(hec.KubernetesResource("RoleBinding", "d8-user-authn", "access-to-basic-auth-proxy-revocations").Exists()).To(BeFalse())
 			})
 		})
 	}
@@ -410,7 +410,7 @@ var _ = Describe("Module :: user-authn :: helm template :: basic auth proxy", fu
 
 		It("Should not let the proxy read revocations", func() {
 			Expect(hec.RenderError).ToNot(HaveOccurred())
-			Expect(hec.KubernetesResource("Role", "d8-user-authn", "basic-auth-proxy").Exists()).To(BeFalse())
+			Expect(hec.KubernetesResource("Role", "d8-user-authn", "access-to-basic-auth-proxy-revocations").Exists()).To(BeFalse())
 		})
 	})
 
@@ -429,7 +429,7 @@ var _ = Describe("Module :: user-authn :: helm template :: basic auth proxy", fu
 			Expect(hec.RenderError).ToNot(HaveOccurred())
 			Expect(hec.KubernetesResource("Deployment", "d8-user-authn", "basic-auth-proxy").Exists()).To(BeFalse())
 			Expect(hec.KubernetesResource("Secret", "d8-user-authn", "basic-auth-cert").Exists()).To(BeFalse())
-			Expect(hec.KubernetesResource("Role", "d8-user-authn", "basic-auth-proxy").Exists()).To(BeFalse())
+			Expect(hec.KubernetesResource("Role", "d8-user-authn", "access-to-basic-auth-proxy-revocations").Exists()).To(BeFalse())
 			Expect(hec.KubernetesResource("ConfigMap", "d8-user-authn", "control-plane-configurator").Field("data.enableBasicAuth").Exists()).To(BeFalse())
 			Expect(hec.KubernetesResource("SecurityPolicyException", "d8-system", "user-authn-proxy-cert-generate-job").Exists()).To(BeTrue())
 		})

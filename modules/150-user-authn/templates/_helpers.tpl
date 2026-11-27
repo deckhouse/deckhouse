@@ -22,6 +22,21 @@
   {{- end }}
 {{- end }}
 
+{{- /* basic-auth-proxy runs and an LDAP provider enables basic authentication: the proxy then evicts the */}}
+{{- /* cached checks of an LDAP user whose credentials are revoked, and needs to read Revocation objects. */}}
+{{- /* rbac.yaml gates that access with it. */}}
+{{- define "is_basic_auth_ldap_enabled" }}
+  {{- if include "is_basic_auth_enabled" . }}
+    {{- range $provider := .Values.userAuthn.internal.providers }}
+      {{- if eq $provider.type "LDAP" }}
+        {{- if $provider.ldap.enableBasicAuth }}
+          not empty string
+        {{- end }}
+      {{- end }}
+    {{- end }}
+  {{- end }}
+{{- end }}
+
 {{- /* Returns "true" when Gateway API objects may be rendered: the module setting overrides */ -}}
 {{- /* the global one, and an unset flag means enabled. Unlike helm_lib_module_gateway_enabled */ -}}
 {{- /* it does not require a resolvable default Gateway — authenticator routes name their */ -}}

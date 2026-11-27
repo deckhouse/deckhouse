@@ -1,0 +1,33 @@
+{{- if include "is_basic_auth_ldap_enabled" . }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: access-to-basic-auth-proxy-revocations
+  namespace: d8-{{ $.Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "basic-auth-proxy")) | nindent 2 }}
+rules:
+- apiGroups:
+  - dex.coreos.com
+  resources:
+  - revocations
+  verbs:
+  - get
+  - list
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: access-to-basic-auth-proxy-revocations
+  namespace: d8-{{ $.Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "basic-auth-proxy")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: access-to-basic-auth-proxy-revocations
+subjects:
+- kind: ServiceAccount
+  name: basic-auth-proxy
+  namespace: d8-{{ $.Chart.Name }}
+{{- end }}

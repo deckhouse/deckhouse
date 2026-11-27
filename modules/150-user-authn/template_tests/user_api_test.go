@@ -215,7 +215,7 @@ var _ = Describe("Module :: user-authn :: helm template :: user-api", func() {
 			Expect(configMap.Field(`data.ca\.crt`).String()).To(Equal("user-api-ca"))
 			Expect(configMap.Field("data").Map()).To(HaveLen(1))
 
-			role := hec.KubernetesResource("Role", "d8-user-authn", "user-api-ca-reader")
+			role := hec.KubernetesResource("Role", "d8-user-authn", "access-to-user-api-ca-reader")
 			Expect(role.Exists()).To(BeTrue())
 			Expect(role.Field("rules").String()).To(MatchJSON(`[{
 				"apiGroups": [""],
@@ -224,10 +224,10 @@ var _ = Describe("Module :: user-authn :: helm template :: user-api", func() {
 				"verbs": ["get"]
 			}]`))
 
-			roleBinding := hec.KubernetesResource("RoleBinding", "d8-user-authn", "user-api-ca-reader")
+			roleBinding := hec.KubernetesResource("RoleBinding", "d8-user-authn", "access-to-user-api-ca-reader")
 			Expect(roleBinding.Exists()).To(BeTrue())
 			Expect(roleBinding.Field("roleRef.kind").String()).To(Equal("Role"))
-			Expect(roleBinding.Field("roleRef.name").String()).To(Equal("user-api-ca-reader"))
+			Expect(roleBinding.Field("roleRef.name").String()).To(Equal("access-to-user-api-ca-reader"))
 			Expect(roleBinding.Field("subjects").String()).To(MatchJSON(`[{
 				"apiGroup": "rbac.authorization.k8s.io",
 				"kind": "Group",

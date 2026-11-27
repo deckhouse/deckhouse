@@ -1,0 +1,22 @@
+# Values for `dmt lint --linter rbac --values-file` of the module: they turn on basic authentication
+# for an LDAP provider, the only render that has the Revocation access of basic-auth-proxy (the
+# "revocations" access in rbac.yaml). The default values of CI and of a plain `dmt lint` do not render
+# it, so this entry is checked only by a run with this file.
+userAuthn:
+  internal:
+    publishAPI:
+      enabled: true
+    basicAuthProxyCert: dGVzdC12YWx1ZQ==
+    basicAuthProxyKey: dGVzdC12YWx1ZQ==
+    providers:
+      - id: ldapID
+        displayName: ldapName
+        type: LDAP
+        ldap:
+          enableBasicAuth: true
+          host: ldap.example.com:636
+          userSearch:
+            baseDN: cn=users,dc=example,dc=com
+            username: uid
+            idAttr: uid
+            emailAttr: mail
