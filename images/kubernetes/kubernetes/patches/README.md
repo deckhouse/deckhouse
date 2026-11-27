@@ -461,6 +461,12 @@ kube-apiserver can read zstd-compressed etcd values and writes values without co
 - Decompression runs after decryption or signature verification. Undecodable values can still be deleted with `AllowUnsafeMalformedObjectDeletion`.
 - A compressed value is reported as stale, so a no-op update rewrites it without compression.
 
+### cbor-cr-unknown-fields.patch (1.33–1.37)
+
+With `CBORServingAndStorage` enabled, a CBOR create or update request for a custom resource could silently drop fields outside its CRD schema. The patch reports their paths in a BadRequest response for `fieldValidation=Strict` and in Warning headers for `Warn` (the default).
+
+Run `GOWORK=off go test -mod=mod ./test/integration/apiserver -run '^TestFieldValidationCustomResourceEncodings$' -count=1` on the patched tree with etcd on PATH. [Upstream PR #144491](https://github.com/kubernetes/kubernetes/pull/144491)
+
 ### cbor-decode-limits.patch (1.33-1.35)
 
 Raises the limits of the CBOR decoder (`staging/src/k8s.io/apimachinery/pkg/runtime/serializer/cbor/internal/modes/decode.go`) to the values of upstream 1.36: nesting depth from 64 to 10000, array elements from 1024 to the library maximum, map pairs from 1024 to 2097152. The request body limit of kube-apiserver still bounds the input.
