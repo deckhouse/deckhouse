@@ -52,7 +52,7 @@ spec:
             global:
               kubeconfigGeneratorMasterCA: ""
 ---
-# [<en>] Deckhouse module settings.
+# [<en>] deckhouse module settings.
 # [<en>] https://deckhouse.io/modules/deckhouse/configuration.html
 # [<ru>] Настройки модуля deckhouse.
 # [<ru>] https://deckhouse.ru/modules/deckhouse/configuration.html
@@ -65,18 +65,18 @@ spec:
   enabled: true
   settings:
     bundle: Default
-    # [<ru>] Канал обновлений Deckhouse. Канал Early Access можно использовать в production-окружениях.
+    # [<ru>] Канал обновлений Deckhouse Platform. Канал Early Access можно использовать в production-окружениях.
     # [<ru>] Если планируется использовать несколько кластеров, то рекомендуется установить на них разные каналы обновлений.
     # [<ru>] Подробнее: https://deckhouse.ru/products/kubernetes-platform/documentation/v1/reference/release-channels.html
-    # [<en>] Deckhouse release channel. The Early Access channel can be used in production environments.
+    # [<en>] Deckhouse Platform release channel. The Early Access channel can be used in production environments.
     # [<en>] If you plan to use several clusters, it is recommended to use different release channels on them.
     # [<en>] More info: https://deckhouse.io/products/kubernetes-platform/documentation/v1/reference/release-channels.html
     releaseChannel: EarlyAccess
     logLevel: Info
 ---
-# [<en>] Global Deckhouse settings.
+# [<en>] Global Deckhouse Platform settings.
 # [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters
-# [<ru>] Глобальные настройки Deckhouse.
+# [<ru>] Глобальные настройки Deckhouse Platform.
 # [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/reference/api/global.html#%D0%BF%D0%B0%D1%80%D0%B0%D0%BC%D0%B5%D1%82%D1%80%D1%8B
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
