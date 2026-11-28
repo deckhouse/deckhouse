@@ -9,3 +9,19 @@ positive:
         effectiveStorageClass: test
         auth: {}
       loadBalancer: { }
+    - inlet: HostPort
+      hostPort: 5416
+    - inlet: ExternalIP
+      externalIP: 192.168.0.1
+negative:
+  configValues:
+    - inlet: LoadBalancer
+      hostPort: 5416
+    - inlet: ExternalIP
+      hostPort: 5416
+    - inlet: Direct
+      externalIP: 192.168.0.1
+    - inlet: HostPort
+      externalIP: 192.168.0.1
+    - hostPort: 5416
+    - externalIP: 192.168.0.1
